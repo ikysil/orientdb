@@ -102,11 +102,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = null;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -125,11 +121,7 @@ public class KeyNormalizerBenchmark {
     types[0] = null;
     types[1] = OType.INTEGER;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -140,11 +132,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = OType.INTEGER;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -155,11 +143,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = OType.FLOAT;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -170,11 +154,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = OType.DOUBLE;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -185,11 +165,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = OType.BOOLEAN;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -200,11 +176,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = OType.LONG;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -215,11 +187,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = OType.BYTE;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -230,11 +198,7 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[1];
     types[0] = OType.SHORT;
 
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -244,11 +208,7 @@ public class KeyNormalizerBenchmark {
 
     final OType[] types = new OType[1];
     types[0] = OType.STRING;
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
@@ -262,37 +222,21 @@ public class KeyNormalizerBenchmark {
     final OType[] types = new OType[2];
     types[0] = OType.STRING;
     types[1] = OType.STRING;
-    try {
-      keyNormalizer.normalize(compositeKey, types);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(compositeKey, types);
   }
 
   @Benchmark
   public void normalizeCompositeDate() {
-    try {
-      keyNormalizer.normalize(dateTimeCompositeKey, dateTimeTypes);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(dateTimeCompositeKey, dateTimeTypes);
   }
 
   @Benchmark
   public void normalizeCompositeDateTime() {
-    try {
-      keyNormalizer.normalize(dateCompositeKey, dateTypes);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(dateCompositeKey, dateTypes);
   }
 
   @Benchmark
   public void normalizeCompositeBinary() {
-    try {
-      keyNormalizer.normalize(binaryCompositeKey, binaryTypes);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    keyNormalizer.normalize(binaryCompositeKey, binaryTypes);
   }
 }

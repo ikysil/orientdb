@@ -1,31 +1,39 @@
 package com.orientechnologies.orient.core.storage.index.nkbtree.binarybtree;
 
+import com.ibm.icu.text.Collator;
 import com.orientechnologies.common.comparator.OComparatorFactory;
-import com.orientechnologies.common.exception.OException;
-import com.orientechnologies.common.exception.OHighLevelException;
 import com.orientechnologies.common.io.OFileUtils;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.*;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
+import com.orientechnologies.orient.core.index.OCompositeKey;
+import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperationsManager;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import com.orientechnologies.orient.core.storage.index.nkbtree.normalizers.KeyNormalizers;
+import org.junit.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+
 import java.util.*;
 
 public class BinaryBTreeTestIT {
+  private static KeyNormalizers keyNormalizers;
+  private static OType[] types;
+
   private OAtomicOperationsManager atomicOperationsManager;
   private BinaryBTree binaryBTree;
   private OrientDB orientDB;
 
   private String dbName;
+
+  @BeforeClass
+  public static void beforeClass() {
+    keyNormalizers = new KeyNormalizers(Locale.ENGLISH, Collator.NO_DECOMPOSITION);
+    types = new OType[] {OType.STRING};
+  }
 
   @Before
   public void before() throws Exception {
@@ -71,157 +79,110 @@ public class BinaryBTreeTestIT {
   public void testKeyPut() throws Exception {
     final int keysCount = 1_000_000;
 
-    final int rollbackInterval = 100;
     String[] lastKey = new String[1];
-    for (int i = 0; i < keysCount / rollbackInterval; i++) {
-      for (int n = 0; n < 2; n++) {
-        final int iterationCounter = i;
-        final int rollbackCounter = n;
-        try {
-          atomicOperationsManager.executeInsideAtomicOperation(
-              null,
-              atomicOperation -> {
-                for (int j = 0; j < rollbackInterval; j++) {
-                  final String key = Integer.toString(iterationCounter * rollbackInterval + j);
-                  binaryBTree.put(
-                      atomicOperation,
-                      key.getBytes(StandardCharsets.UTF_8),
-                      new ORecordId(
-                          (iterationCounter * rollbackInterval + j) % 32000,
-                          iterationCounter * rollbackInterval + j));
+    for (int i = 0; i < keysCount; i++) {
+      final int iteration = i;
+      atomicOperationsManager.executeInsideAtomicOperation(
+          null,
+          atomicOperation -> {
+            final String key = Integer.toString(iteration);
+            binaryBTree.put(
+                atomicOperation,
+                stringToLexicalBytes(key),
+                new ORecordId(iteration % 32000, iteration));
 
-                  if (rollbackCounter == 1) {
-                    if ((iterationCounter * rollbackInterval + j) % 100_000 == 0) {
-                      System.out.printf(
-                          "%d items loaded out of %d%n",
-                          iterationCounter * rollbackInterval + j, keysCount);
-                    }
+            if ((iteration + 1) % 100_000 == 0) {
+              System.out.printf("%d items loaded out of %d%n", iteration + 1, keysCount);
+            }
 
-                    if (lastKey[0] == null) {
-                      lastKey[0] = key;
-                    } else if (key.compareTo(lastKey[0]) > 0) {
-                      lastKey[0] = key;
-                    }
-                  }
-                }
-                if (rollbackCounter == 0) {
-                  throw new RollbackException();
-                }
-              });
-        } catch (RollbackException ignore) {
-        }
-      }
+            if (lastKey[0] == null) {
+              lastKey[0] = key;
+            } else if (key.compareTo(lastKey[0]) > 0) {
+              lastKey[0] = key;
+            }
+          });
 
-      //      Assert.assertEquals("0", binaryBTree.firstKey());
-      //      Assert.assertEquals(lastKey[0], binaryBTree.lastKey());
+      Assert.assertArrayEquals(stringToLexicalBytes("0"), binaryBTree.firstKey());
+      Assert.assertArrayEquals(stringToLexicalBytes(lastKey[0]), binaryBTree.lastKey());
     }
 
     for (int i = 0; i < keysCount; i++) {
       Assert.assertEquals(
           i + " key is absent",
           new ORecordId(i % 32000, i),
-          binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
+          binaryBTree.get(stringToLexicalBytes(Integer.toString(i))));
       if (i % 100_000 == 0) {
         System.out.printf("%d items tested out of %d%n", i, keysCount);
       }
     }
+
     for (int i = keysCount; i < 2 * keysCount; i++) {
-      Assert.assertNull(binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
+      Assert.assertNull(binaryBTree.get(stringToLexicalBytes(Integer.toString(i))));
     }
   }
 
   @Test
   public void testKeyPutRandomUniform() throws Exception {
-    final NavigableSet<byte[]> keys =
-        new TreeSet<>(OComparatorFactory.INSTANCE.getComparator(byte[].class));
+    final TreeMap<String, ORID> keys = new TreeMap<>();
     final Random random = new Random();
     final int keysCount = 1_000_000;
 
-    final int rollbackRange = 100;
     while (keys.size() < keysCount) {
-      for (int n = 0; n < 2; n++) {
-        final int rollbackCounter = n;
-        try {
-          atomicOperationsManager.executeInsideAtomicOperation(
-              null,
-              atomicOperation -> {
-                for (int i = 0; i < rollbackRange; i++) {
-                  int val = random.nextInt(Integer.MAX_VALUE);
-                  String key = Integer.toString(val);
-                  binaryBTree.put(
-                      atomicOperation,
-                      key.getBytes(StandardCharsets.UTF_8),
-                      new ORecordId(val % 32000, val));
+      atomicOperationsManager.executeInsideAtomicOperation(
+          null,
+          atomicOperation -> {
+            int val = random.nextInt(Integer.MAX_VALUE);
+            String key = Integer.toString(val);
+            binaryBTree.put(
+                atomicOperation, stringToLexicalBytes(key), new ORecordId(val % 32000, val));
 
-                  if (rollbackCounter == 1) {
-                    keys.add(key.getBytes(StandardCharsets.UTF_8));
-                  }
-                  Assert.assertEquals(
-                      binaryBTree.get(key.getBytes(StandardCharsets.UTF_8)),
-                      new ORecordId(val % 32000, val));
-                }
-                if (rollbackCounter == 0) {
-                  throw new RollbackException();
-                }
-              });
-        } catch (RollbackException ignore) {
-        }
-      }
+            keys.put(key, new ORecordId(val % 32000, val));
+
+            Assert.assertEquals(
+                binaryBTree.get(stringToLexicalBytes(key)), new ORecordId(val % 32000, val));
+
+            Assert.assertArrayEquals(stringToLexicalBytes(keys.firstKey()), binaryBTree.firstKey());
+            Assert.assertArrayEquals(stringToLexicalBytes(keys.lastKey()), binaryBTree.lastKey());
+          });
     }
 
-    //    Assert.assertEquals(binaryBTree.firstKey(), keys.first());
-    //    Assert.assertEquals(binaryBTree.lastKey(), keys.last());
-    for (byte[] key : keys) {
-      final int val = Integer.parseInt(new String(key, StandardCharsets.UTF_8));
-      Assert.assertEquals(binaryBTree.get(key), new ORecordId(val % 32000, val));
+    for (Map.Entry<String, ORID> entry : keys.entrySet()) {
+      Assert.assertEquals(entry.getValue(), binaryBTree.get(stringToLexicalBytes(entry.getKey())));
     }
   }
 
   @Test
   public void testKeyPutRandomGaussian() throws Exception {
-    final NavigableSet<byte[]> keys =
-        new TreeSet<>(OComparatorFactory.INSTANCE.getComparator(byte[].class));
+    final TreeMap<String, ORID> keys = new TreeMap<>();
     long seed = System.currentTimeMillis();
     System.out.println("testKeyPutRandomGaussian seed : " + seed);
 
     Random random = new Random(seed);
     final int keysCount = 1_000_000;
-    final int rollbackRange = 100;
 
     while (keys.size() < keysCount) {
-      for (int n = 0; n < 2; n++) {
-        final int rollbackCounter = n;
-        try {
-          atomicOperationsManager.executeInsideAtomicOperation(
-              null,
-              atomicOperation -> {
-                for (int i = 0; i < rollbackRange; i++) {
-                  int val;
-                  do {
-                    val = (int) (random.nextGaussian() * Integer.MAX_VALUE / 2 + Integer.MAX_VALUE);
-                  } while (val < 0);
+      atomicOperationsManager.executeInsideAtomicOperation(
+          null,
+          atomicOperation -> {
+            int val;
+            do {
+              val = (int) (random.nextGaussian() * Integer.MAX_VALUE / 2 + Integer.MAX_VALUE);
+            } while (val < 0);
 
-                  final byte[] key = Integer.toString(val).getBytes(StandardCharsets.UTF_8);
-                  binaryBTree.put(atomicOperation, key, new ORecordId(val % 32000, val));
-                  if (rollbackCounter == 1) {
-                    keys.add(key);
-                  }
-                  Assert.assertEquals(binaryBTree.get(key), new ORecordId(val % 32000, val));
-                }
-                if (rollbackCounter == 0) {
-                  throw new RollbackException();
-                }
-              });
-        } catch (RollbackException ignore) {
-        }
-      }
+            final String key = Integer.toString(val);
+            binaryBTree.put(
+                atomicOperation, stringToLexicalBytes(key), new ORecordId(val % 32000, val));
+            keys.put(key, new ORecordId(val % 32000, val));
+            Assert.assertEquals(
+                new ORecordId(val % 32000, val), binaryBTree.get(stringToLexicalBytes(key)));
+          });
     }
-    //    Assert.assertEquals(binaryBTree.firstKey(), keys.first());
-    //    Assert.assertEquals(binaryBTree.lastKey(), keys.last());
 
-    for (byte[] key : keys) {
-      int val = Integer.parseInt(new String(key, StandardCharsets.UTF_8));
-      Assert.assertEquals(binaryBTree.get(key), new ORecordId(val % 32000, val));
+    Assert.assertArrayEquals(stringToLexicalBytes(keys.firstKey()), binaryBTree.firstKey());
+    Assert.assertArrayEquals(stringToLexicalBytes(keys.lastKey()), binaryBTree.lastKey());
+
+    for (Map.Entry<String, ORID> entry : keys.entrySet()) {
+      Assert.assertEquals(entry.getValue(), binaryBTree.get(stringToLexicalBytes(entry.getKey())));
     }
   }
 
@@ -229,44 +190,47 @@ public class BinaryBTreeTestIT {
   public void testKeyDeleteRandomUniform() throws Exception {
     final int keysCount = 1_000_000;
 
-    final NavigableSet<byte[]> keys =
-        new TreeSet<>(OComparatorFactory.INSTANCE.getComparator(byte[].class));
+    final TreeMap<String, ORID> keyMap = new TreeMap<>();
     for (int i = 0; i < keysCount; i++) {
-      final byte[] key = Integer.toString(i).getBytes(StandardCharsets.UTF_8);
+      final String key = Integer.toString(i);
       final int k = i;
       atomicOperationsManager.executeInsideAtomicOperation(
           null,
-          atomicOperation -> binaryBTree.put(atomicOperation, key, new ORecordId(k % 32000, k)));
-      keys.add(key);
+          atomicOperation ->
+              binaryBTree.put(
+                  atomicOperation, stringToLexicalBytes(key), new ORecordId(k % 32000, k)));
+      keyMap.put(key, new ORecordId(k % 32000, k));
     }
 
-    Iterator<byte[]> keysIterator = keys.iterator();
+    Iterator<String> keysIterator = keyMap.keySet().iterator();
     while (keysIterator.hasNext()) {
-      final byte[] key = keysIterator.next();
-      if (Integer.parseInt(new String(key, StandardCharsets.UTF_8)) % 3 == 0) {
+      final String key = keysIterator.next();
+      final long val = keyMap.get(key).getClusterPosition();
+      if (val % 3 == 0) {
         atomicOperationsManager.executeInsideAtomicOperation(
-            null, atomicOperation -> binaryBTree.remove(atomicOperation, key));
+            null,
+            atomicOperation -> binaryBTree.remove(atomicOperation, stringToLexicalBytes(key)));
         keysIterator.remove();
       }
     }
 
-    // Assert.assertEquals(singleValueTree.firstKey(), keys.first());
-    // Assert.assertEquals(singleValueTree.lastKey(), keys.last());
+    Assert.assertArrayEquals(stringToLexicalBytes(keyMap.firstKey()), binaryBTree.firstKey());
+    Assert.assertArrayEquals(stringToLexicalBytes(keyMap.lastKey()), binaryBTree.lastKey());
 
-    for (final byte[] key : keys) {
-      int val = Integer.parseInt(new String(key, StandardCharsets.UTF_8));
+    for (final Map.Entry<String, ORID> entry : keyMap.entrySet()) {
+      long val = entry.getValue().getClusterPosition();
       if (val % 3 == 0) {
-        Assert.assertNull(binaryBTree.get(key));
+        Assert.assertNull(binaryBTree.get(stringToLexicalBytes(entry.getKey())));
       } else {
-        Assert.assertEquals(binaryBTree.get(key), new ORecordId(val % 32000, val));
+        Assert.assertEquals(
+            entry.getValue(), binaryBTree.get(stringToLexicalBytes(entry.getKey())));
       }
     }
   }
 
   @Test
   public void testKeyDeleteRandomGaussian() throws Exception {
-    final NavigableSet<byte[]> keys =
-        new TreeSet<>(OComparatorFactory.INSTANCE.getComparator(byte[].class));
+    final TreeMap<String, ORID> keys = new TreeMap<>();
 
     final int keysCount = 1_000_000;
     long seed = System.currentTimeMillis();
@@ -278,36 +242,42 @@ public class BinaryBTreeTestIT {
       if (val < 0) {
         continue;
       }
-      byte[] key = Integer.toString(val).getBytes(StandardCharsets.UTF_8);
+      String key = Integer.toString(val);
       atomicOperationsManager.executeInsideAtomicOperation(
           null,
           atomicOperation ->
-              binaryBTree.put(atomicOperation, key, new ORecordId(val % 32000, val)));
-      keys.add(key);
+              binaryBTree.put(
+                  atomicOperation, stringToLexicalBytes(key), new ORecordId(val % 32000, val)));
+      keys.put(key, new ORecordId(val % 32000, val));
 
-      Assert.assertEquals(binaryBTree.get(key), new ORecordId(val % 32000, val));
+      Assert.assertEquals(
+          binaryBTree.get(stringToLexicalBytes(key)), new ORecordId(val % 32000, val));
     }
 
-    Iterator<byte[]> keysIterator = keys.iterator();
+    Iterator<Map.Entry<String, ORID>> keysIterator = keys.entrySet().iterator();
 
     while (keysIterator.hasNext()) {
-      byte[] key = keysIterator.next();
+      final Map.Entry<String, ORID> entry = keysIterator.next();
 
-      if (Integer.parseInt(new String(key, StandardCharsets.UTF_8)) % 3 == 0) {
+      if (entry.getValue().getClusterPosition() % 3 == 0) {
         atomicOperationsManager.executeInsideAtomicOperation(
-            null, atomicOperation -> binaryBTree.remove(atomicOperation, key));
+            null,
+            atomicOperation ->
+                binaryBTree.remove(atomicOperation, stringToLexicalBytes(entry.getKey())));
         keysIterator.remove();
       }
     }
-    //    Assert.assertEquals(binaryBTree.firstKey(), keys.first());
-    //    Assert.assertEquals(binaryBTree.lastKey(), keys.last());
 
-    for (final byte[] key : keys) {
-      int val = Integer.parseInt(new String(key, StandardCharsets.UTF_8));
+    Assert.assertArrayEquals(stringToLexicalBytes(keys.firstKey()), binaryBTree.firstKey());
+    Assert.assertArrayEquals(stringToLexicalBytes(keys.lastKey()), binaryBTree.lastKey());
+
+    for (final Map.Entry<String, ORID> entry : keys.entrySet()) {
+      final int val = (int) entry.getValue().getClusterPosition();
       if (val % 3 == 0) {
-        Assert.assertNull(binaryBTree.get(key));
+        Assert.assertNull(binaryBTree.get(stringToLexicalBytes(entry.getKey())));
       } else {
-        Assert.assertEquals(binaryBTree.get(key), new ORecordId(val % 32000, val));
+        Assert.assertEquals(
+            new ORecordId(val % 32000, val), binaryBTree.get(stringToLexicalBytes(entry.getKey())));
       }
     }
   }
@@ -323,7 +293,7 @@ public class BinaryBTreeTestIT {
           atomicOperation ->
               binaryBTree.put(
                   atomicOperation,
-                  Integer.toString(key).getBytes(StandardCharsets.UTF_8),
+                  stringToLexicalBytes(Integer.toString(key)),
                   new ORecordId(key % 32000, key)));
     }
 
@@ -337,11 +307,11 @@ public class BinaryBTreeTestIT {
             atomicOperation ->
                 binaryBTree.put(
                     atomicOperation,
-                    Integer.toString(key).getBytes(StandardCharsets.UTF_8),
+                    stringToLexicalBytes(Integer.toString(key)),
                     new ORecordId(key % 32000, key)));
 
         Assert.assertEquals(
-            binaryBTree.get(Integer.toString(key).getBytes(StandardCharsets.UTF_8)),
+            binaryBTree.get(stringToLexicalBytes(Integer.toString(key))),
             new ORecordId(key % 32000, key));
       }
 
@@ -354,18 +324,18 @@ public class BinaryBTreeTestIT {
             atomicOperation ->
                 Assert.assertEquals(
                     binaryBTree.remove(
-                        atomicOperation, Integer.toString(key).getBytes(StandardCharsets.UTF_8)),
+                        atomicOperation, stringToLexicalBytes(Integer.toString(key))),
                     new ORecordId(key % 32000, key)));
       }
 
       final int start = (iterations + 1) * (keysCount / 2);
       for (int i = 0; i < (iterations + 2) * keysCount / 2; i++) {
         if (i < start) {
-          Assert.assertNull(binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
+          Assert.assertNull(binaryBTree.get(stringToLexicalBytes(Integer.toString(i))));
         } else {
           Assert.assertEquals(
               new ORecordId(i % 32000, i),
-              binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
+              binaryBTree.get(stringToLexicalBytes(Integer.toString(i))));
         }
       }
 
@@ -384,35 +354,31 @@ public class BinaryBTreeTestIT {
           atomicOperation ->
               binaryBTree.put(
                   atomicOperation,
-                  Integer.toString(k).getBytes(StandardCharsets.UTF_8),
+                  stringToLexicalBytes(Integer.toString(k)),
                   new ORecordId(k % 32000, k)));
     }
 
-    final int txInterval = 100;
-    for (int i = 0; i < keysCount / txInterval; i++) {
-      final int iterationsCounter = i;
+    for (int i = 0; i < keysCount; i++) {
+      final int iteration = i;
 
       atomicOperationsManager.executeInsideAtomicOperation(
           null,
           atomicOperation -> {
-            for (int j = 0; j < txInterval; j++) {
-              final int key = iterationsCounter * txInterval + j;
-              if (key % 3 == 0) {
-                Assert.assertEquals(
-                    binaryBTree.remove(
-                        atomicOperation, Integer.toString(key).getBytes(StandardCharsets.UTF_8)),
-                    new ORecordId(key % 32000, key));
-              }
+            if (iteration % 3 == 0) {
+              Assert.assertEquals(
+                  binaryBTree.remove(
+                      atomicOperation, stringToLexicalBytes(Integer.toString(iteration))),
+                  new ORecordId(iteration % 32000, iteration));
             }
           });
     }
 
     for (int i = 0; i < keysCount; i++) {
       if (i % 3 == 0) {
-        Assert.assertNull(binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
+        Assert.assertNull(binaryBTree.get(stringToLexicalBytes(Integer.toString(i))));
       } else {
         Assert.assertEquals(
-            binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)),
+            binaryBTree.get(stringToLexicalBytes(Integer.toString(i))),
             new ORecordId(i % 32000, i));
       }
     }
@@ -429,12 +395,11 @@ public class BinaryBTreeTestIT {
           atomicOperation ->
               binaryBTree.put(
                   atomicOperation,
-                  Integer.toString(key).getBytes(StandardCharsets.UTF_8),
+                  stringToLexicalBytes(Integer.toString(key)),
                   new ORecordId(key % 32000, key)));
 
       Assert.assertEquals(
-          binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)),
-          new ORecordId(i % 32000, i));
+          binaryBTree.get(stringToLexicalBytes(Integer.toString(i))), new ORecordId(i % 32000, i));
     }
     final int txInterval = 100;
 
@@ -450,14 +415,14 @@ public class BinaryBTreeTestIT {
               if (key % 3 == 0) {
                 Assert.assertEquals(
                     binaryBTree.remove(
-                        atomicOperation, Integer.toString(key).getBytes(StandardCharsets.UTF_8)),
+                        atomicOperation, stringToLexicalBytes(Integer.toString(key))),
                     new ORecordId(key % 32000, key));
               }
 
               if (key % 2 == 0) {
                 binaryBTree.put(
                     atomicOperation,
-                    Integer.toString(keysCount + key).getBytes(StandardCharsets.UTF_8),
+                    stringToLexicalBytes(Integer.toString(keysCount + key)),
                     new ORecordId((keysCount + key) % 32000, keysCount + key));
               }
             }
@@ -466,16 +431,16 @@ public class BinaryBTreeTestIT {
 
     for (int i = 0; i < keysCount; i++) {
       if (i % 3 == 0) {
-        Assert.assertNull(binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
+        Assert.assertNull(binaryBTree.get(stringToLexicalBytes(Integer.toString(i))));
       } else {
         Assert.assertEquals(
-            binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)),
+            binaryBTree.get(stringToLexicalBytes(Integer.toString(i))),
             new ORecordId(i % 32000, i));
       }
 
       if (i % 2 == 0) {
         Assert.assertEquals(
-            binaryBTree.get(Integer.toString(keysCount + i).getBytes(StandardCharsets.UTF_8)),
+            binaryBTree.get(stringToLexicalBytes(Integer.toString(keysCount + i))),
             new ORecordId((keysCount + i) % 32000, keysCount + i));
       }
     }
@@ -495,7 +460,7 @@ public class BinaryBTreeTestIT {
             atomicOperation ->
                 binaryBTree.put(
                     atomicOperation,
-                    Integer.toString(key).getBytes(StandardCharsets.UTF_8),
+                    stringToLexicalBytes(Integer.toString(key)),
                     new ORecordId(key % 32000, key)));
       }
 
@@ -505,8 +470,7 @@ public class BinaryBTreeTestIT {
             null,
             atomicOperation -> {
               Assert.assertEquals(
-                  binaryBTree.remove(
-                      atomicOperation, Integer.toString(key).getBytes(StandardCharsets.UTF_8)),
+                  binaryBTree.remove(atomicOperation, stringToLexicalBytes(Integer.toString(key))),
                   new ORecordId(key % 32000, key));
 
               if (key > 0 && key % 100_000 == 0) {
@@ -514,19 +478,17 @@ public class BinaryBTreeTestIT {
                   if (keyToVerify > key) {
                     Assert.assertEquals(
                         new ORecordId(keyToVerify % 32000, keyToVerify),
-                        binaryBTree.get(
-                            Integer.toString(keyToVerify).getBytes(StandardCharsets.UTF_8)));
+                        binaryBTree.get(stringToLexicalBytes(Integer.toString(keyToVerify))));
                   } else {
                     Assert.assertNull(
-                        binaryBTree.get(
-                            Integer.toString(keyToVerify).getBytes(StandardCharsets.UTF_8)));
+                        binaryBTree.get(stringToLexicalBytes(Integer.toString(keyToVerify))));
                   }
                 }
               }
             });
       }
       for (int i = 0; i < keysCount; i++) {
-        Assert.assertNull(binaryBTree.get(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
+        Assert.assertNull(binaryBTree.get(stringToLexicalBytes(Integer.toString(i))));
       }
 
       binaryBTree.assertFreePages();
@@ -637,25 +599,12 @@ public class BinaryBTreeTestIT {
     binaryBTree.assertFreePages();
   }
 
+  private static byte[] stringToLexicalBytes(final String value) {
+    return keyNormalizers.normalize(new OCompositeKey(value), types);
+  }
+
   enum Operation {
     INSERT,
     DELETE
-  }
-
-  static final class RollbackException extends OException implements OHighLevelException {
-    @SuppressWarnings("WeakerAccess")
-    public RollbackException() {
-      this("");
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    public RollbackException(String message) {
-      super(message);
-    }
-
-    @SuppressWarnings("unused")
-    public RollbackException(RollbackException exception) {
-      super(exception);
-    }
   }
 }

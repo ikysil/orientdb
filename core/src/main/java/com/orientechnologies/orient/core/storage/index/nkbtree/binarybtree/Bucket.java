@@ -1,5 +1,6 @@
 package com.orientechnologies.orient.core.storage.index.nkbtree.binarybtree;
 
+import com.orientechnologies.common.comparator.OComparatorFactory;
 import com.orientechnologies.common.serialization.types.OByteSerializer;
 import com.orientechnologies.common.serialization.types.OIntegerSerializer;
 import com.orientechnologies.common.serialization.types.OLongSerializer;
@@ -10,8 +11,7 @@ import com.orientechnologies.orient.core.storage.cache.OCacheEntry;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.base.ODurablePage;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public final class Bucket extends ODurablePage {
   private static final int RID_SIZE = OShortSerializer.SHORT_SIZE + OLongSerializer.LONG_SIZE;
@@ -522,5 +522,61 @@ public final class Bucket extends ODurablePage {
 
   public long getRightSibling() {
     return getLongValue(RIGHT_SIBLING_OFFSET);
+  }
+
+  static final class Entry implements Comparable<Entry> {
+    private final Comparator<byte[]> COMPARATOR =
+        OComparatorFactory.INSTANCE.getComparator(byte[].class);
+
+    protected final int leftChild;
+    protected final int rightChild;
+    public final byte[] key;
+    public final ORID value;
+
+    public Entry(final int leftChild, final int rightChild, final byte[] key, final ORID value) {
+      this.leftChild = leftChild;
+      this.rightChild = rightChild;
+      this.key = key;
+      this.value = value;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final Entry that = (Entry) o;
+      return leftChild == that.leftChild
+          && rightChild == that.rightChild
+          && Arrays.equals(key, that.key)
+          && Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(leftChild, rightChild, key, value);
+    }
+
+    @Override
+    public String toString() {
+      return "CellBTreeEntry{"
+          + "leftChild="
+          + leftChild
+          + ", rightChild="
+          + rightChild
+          + ", key="
+          + Arrays.toString(key)
+          + ", value="
+          + value
+          + '}';
+    }
+
+    @Override
+    public int compareTo(final Entry other) {
+      return COMPARATOR.compare(key, other.key);
+    }
   }
 }

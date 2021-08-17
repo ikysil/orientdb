@@ -3,7 +3,6 @@ package com.orientechnologies.orient.core.storage.index.nkbtree.normalizers;
 import com.ibm.icu.text.Collator;
 import com.orientechnologies.orient.core.index.OCompositeKey;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import java.io.IOException;
 import java.util.*;
 
 public class KeyNormalizers {
@@ -27,7 +26,7 @@ public class KeyNormalizers {
     this.collator.setDecomposition(decomposition);
   }
 
-  public byte[] normalize(final OCompositeKey key, final OType[] keyTypes) throws IOException {
+  public byte[] normalize(final OCompositeKey key, final OType[] keyTypes)  {
     if (key == null) {
       throw new IllegalArgumentException("Keys must not be null.");
     }
