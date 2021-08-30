@@ -605,7 +605,11 @@ public class BinaryBTreeTestIT {
   public void testIterateEntriesMajor() throws Exception {
     final int keysCount = 1_000_000;
 
-    NavigableMap<String, ORID> keyValues = new TreeMap<>();
+    final Collator collator = Collator.getInstance(Locale.ENGLISH);
+    collator.setDecomposition(Collator.NO_DECOMPOSITION);
+
+    NavigableMap<String, ORID> keyValues = new TreeMap<>(collator::compare);
+
     final long seed = System.nanoTime();
 
     System.out.println("testIterateEntriesMajor: " + seed);
@@ -624,11 +628,6 @@ public class BinaryBTreeTestIT {
                 atomicOperation, stringToLexicalBytes(key), new ORecordId(val % 32000, val));
             keyValues.put(key, new ORecordId(val % 32000, val));
           });
-
-      if (keyValues.size() == printCounter * 100_000) {
-        System.out.println(keyValues.size() + " entries were added.");
-        printCounter++;
-      }
     }
 
     assertIterateMajorEntries(keyValues, random, true, true);
@@ -639,6 +638,95 @@ public class BinaryBTreeTestIT {
 
     Assert.assertArrayEquals(binaryBTree.firstKey(), stringToLexicalBytes(keyValues.firstKey()));
     Assert.assertArrayEquals(binaryBTree.lastKey(), stringToLexicalBytes(keyValues.lastKey()));
+  }
+
+  @Test
+  public void testIterateEntriesMinor() throws Exception {
+    final int keysCount = 1_000_000;
+
+    final Collator collator = Collator.getInstance(Locale.ENGLISH);
+    collator.setDecomposition(Collator.NO_DECOMPOSITION);
+
+    NavigableMap<String, ORID> keyValues = new TreeMap<>(collator::compare);
+
+    final long seed = System.nanoTime();
+
+    System.out.println("testIterateEntriesMinor: " + seed);
+    final Random random = new Random(seed);
+
+    int printCounter = 0;
+
+    while (keyValues.size() < keysCount) {
+      atomicOperationsManager.executeInsideAtomicOperation(
+          null,
+          atomicOperation -> {
+            int val = random.nextInt(Integer.MAX_VALUE);
+            String key = Integer.toString(val);
+
+            binaryBTree.put(
+                atomicOperation, stringToLexicalBytes(key), new ORecordId(val % 32000, val));
+
+            keyValues.put(key, new ORecordId(val % 32000, val));
+          });
+    }
+
+    assertIterateMinorEntries(keyValues, random, true, true);
+    assertIterateMinorEntries(keyValues, random, false, true);
+
+    assertIterateMinorEntries(keyValues, random, true, false);
+    assertIterateMinorEntries(keyValues, random, false, false);
+
+    Assert.assertArrayEquals(stringToLexicalBytes(keyValues.firstKey()), binaryBTree.firstKey());
+    Assert.assertArrayEquals(stringToLexicalBytes(keyValues.lastKey()), binaryBTree.lastKey());
+  }
+
+  private void assertIterateMinorEntries(
+      NavigableMap<String, ORID> keyValues,
+      Random random,
+      boolean keyInclusive,
+      boolean ascSortOrder) {
+    String[] keys = new String[keyValues.size()];
+    int index = 0;
+
+    for (String key : keyValues.keySet()) {
+      keys[index] = key;
+      index++;
+    }
+
+    for (int i = 0; i < 100; i++) {
+      int toKeyIndex = random.nextInt(keys.length);
+      String toKey = keys[toKeyIndex];
+      if (random.nextBoolean()) {
+        toKey =
+            toKey.substring(0, toKey.length() - 1) + (char) (toKey.charAt(toKey.length() - 1) + 1);
+      }
+
+      final Iterator<ORawPair<byte[], ORID>> indexIterator;
+      try (Stream<ORawPair<byte[], ORID>> stream =
+          binaryBTree.iterateEntriesMinor(
+              stringToLexicalBytes(toKey), keyInclusive, ascSortOrder)) {
+        indexIterator = stream.iterator();
+
+        Iterator<Map.Entry<String, ORID>> iterator;
+        if (ascSortOrder) {
+          iterator = keyValues.headMap(toKey, keyInclusive).entrySet().iterator();
+        } else {
+          iterator = keyValues.headMap(toKey, keyInclusive).descendingMap().entrySet().iterator();
+        }
+
+        while (iterator.hasNext()) {
+          ORawPair<byte[], ORID> indexEntry = indexIterator.next();
+          Map.Entry<String, ORID> entry = iterator.next();
+
+          Assert.assertArrayEquals(stringToLexicalBytes(entry.getKey()), indexEntry.first);
+          Assert.assertEquals(indexEntry.second, entry.getValue());
+        }
+
+        //noinspection ConstantConditions
+        Assert.assertFalse(iterator.hasNext());
+        Assert.assertFalse(indexIterator.hasNext());
+      }
+    }
   }
 
   private void assertIterateMajorEntries(
@@ -674,11 +762,7 @@ public class BinaryBTreeTestIT {
         if (ascSortOrder) {
           iterator = keyValues.tailMap(fromKey, keyInclusive).entrySet().iterator();
         } else {
-          iterator =
-              keyValues
-                  .tailMap(fromKey, keyInclusive).descendingMap()
-                  .entrySet()
-                  .iterator();
+          iterator = keyValues.tailMap(fromKey, keyInclusive).descendingMap().entrySet().iterator();
         }
 
         while (iterator.hasNext()) {
