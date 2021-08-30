@@ -72,10 +72,6 @@ public class OUnsafeByteArrayComparator implements Comparator<byte[]> {
   }
 
   public int compare(byte[] arrayOne, byte[] arrayTwo) {
-    if (arrayOne.length > arrayTwo.length) return 1;
-
-    if (arrayOne.length < arrayTwo.length) return -1;
-
     final int WORDS = arrayOne.length / LONG_SIZE;
 
     for (int i = 0; i < WORDS * LONG_SIZE; i += LONG_SIZE) {
@@ -97,7 +93,7 @@ public class OUnsafeByteArrayComparator implements Comparator<byte[]> {
       if (diff != 0) return diff;
     }
 
-    return 0;
+    return arrayOne.length - arrayTwo.length;
   }
 
   private static boolean lessThanUnsigned(long longOne, long longTwo) {

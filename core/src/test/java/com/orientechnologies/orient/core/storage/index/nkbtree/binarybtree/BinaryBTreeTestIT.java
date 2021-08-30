@@ -3,6 +3,7 @@ package com.orientechnologies.orient.core.storage.index.nkbtree.binarybtree;
 import com.ibm.icu.text.Collator;
 import com.orientechnologies.common.comparator.OComparatorFactory;
 import com.orientechnologies.common.io.OFileUtils;
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.*;
 import com.orientechnologies.orient.core.id.ORID;
@@ -18,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class BinaryBTreeTestIT {
   private static KeyNormalizers keyNormalizers;
@@ -597,6 +599,101 @@ public class BinaryBTreeTestIT {
     }
 
     binaryBTree.assertFreePages();
+  }
+
+  @Test
+  public void testIterateEntriesMajor() throws Exception {
+    final int keysCount = 1_000_000;
+
+    NavigableMap<String, ORID> keyValues = new TreeMap<>();
+    final long seed = System.nanoTime();
+
+    System.out.println("testIterateEntriesMajor: " + seed);
+    final Random random = new Random(seed);
+
+    int printCounter = 0;
+
+    while (keyValues.size() < keysCount) {
+      atomicOperationsManager.executeInsideAtomicOperation(
+          null,
+          atomicOperation -> {
+            int val = random.nextInt(Integer.MAX_VALUE);
+            String key = Integer.toString(val);
+
+            binaryBTree.put(
+                atomicOperation, stringToLexicalBytes(key), new ORecordId(val % 32000, val));
+            keyValues.put(key, new ORecordId(val % 32000, val));
+          });
+
+      if (keyValues.size() == printCounter * 100_000) {
+        System.out.println(keyValues.size() + " entries were added.");
+        printCounter++;
+      }
+    }
+
+    assertIterateMajorEntries(keyValues, random, true, true);
+    assertIterateMajorEntries(keyValues, random, false, true);
+
+    assertIterateMajorEntries(keyValues, random, true, false);
+    assertIterateMajorEntries(keyValues, random, false, false);
+
+    Assert.assertArrayEquals(binaryBTree.firstKey(), stringToLexicalBytes(keyValues.firstKey()));
+    Assert.assertArrayEquals(binaryBTree.lastKey(), stringToLexicalBytes(keyValues.lastKey()));
+  }
+
+  private void assertIterateMajorEntries(
+      NavigableMap<String, ORID> keyValues,
+      Random random,
+      boolean keyInclusive,
+      boolean ascSortOrder) {
+    String[] keys = new String[keyValues.size()];
+    int index = 0;
+
+    for (String key : keyValues.keySet()) {
+      keys[index] = key;
+      index++;
+    }
+
+    for (int i = 0; i < 100; i++) {
+      final int fromKeyIndex = random.nextInt(keys.length);
+      String fromKey = keys[fromKeyIndex];
+
+      if (random.nextBoolean()) {
+        fromKey =
+            fromKey.substring(0, fromKey.length() - 1)
+                + (char) (fromKey.charAt(fromKey.length() - 1) - 1);
+      }
+
+      final Iterator<ORawPair<byte[], ORID>> indexIterator;
+      try (Stream<ORawPair<byte[], ORID>> stream =
+          binaryBTree.iterateEntriesMajor(
+              stringToLexicalBytes(fromKey), keyInclusive, ascSortOrder)) {
+        indexIterator = stream.iterator();
+
+        Iterator<Map.Entry<String, ORID>> iterator;
+        if (ascSortOrder) {
+          iterator = keyValues.tailMap(fromKey, keyInclusive).entrySet().iterator();
+        } else {
+          iterator =
+              keyValues
+                  .tailMap(fromKey, keyInclusive).descendingMap()
+                  .entrySet()
+                  .iterator();
+        }
+
+        while (iterator.hasNext()) {
+          final ORawPair<byte[], ORID> indexEntry = indexIterator.next();
+          final Map.Entry<String, ORID> entry = iterator.next();
+
+          Assert.assertArrayEquals(indexEntry.first, stringToLexicalBytes(entry.getKey()));
+          Assert.assertEquals(indexEntry.second, entry.getValue());
+        }
+
+        //noinspection ConstantConditions
+        Assert.assertFalse(iterator.hasNext());
+        Assert.assertFalse(indexIterator.hasNext());
+      }
+    }
   }
 
   private static byte[] stringToLexicalBytes(final String value) {

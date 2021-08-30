@@ -1,8 +1,10 @@
 package com.orientechnologies.orient.core.storage.index.nkbtree.binarybtree;
 
+import com.orientechnologies.common.comparator.OComparatorFactory;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.serialization.types.OLongSerializer;
 import com.orientechnologies.common.serialization.types.OShortSerializer;
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.exception.NotEmptyComponentCanNotBeRemovedException;
 import com.orientechnologies.orient.core.exception.OTooBigIndexKeyException;
 import com.orientechnologies.orient.core.id.ORID;
@@ -13,13 +15,20 @@ import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedSt
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperation;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperationsManager;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.base.ODurableComponent;
+import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OLogSequenceNumber;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public final class BinaryBTree extends ODurableComponent {
   private static final int ENTRY_POINT_INDEX = 0;
   private static final long ROOT_INDEX = 1;
+
+  private static final Comparator<byte[]> COMPARATOR =
+      OComparatorFactory.INSTANCE.getComparator(byte[].class);
 
   private final int spliteratorCacheSize;
   private final int maxKeySize;
@@ -913,6 +922,118 @@ public final class BinaryBTree extends ODurableComponent {
     }
   }
 
+  public Stream<ORawPair<byte[], ORID>> allEntries() {
+    atomicOperationsManager.acquireReadLock(this);
+    try {
+      acquireSharedLock();
+      try {
+        //noinspection resource
+        return StreamSupport.stream(new SpliteratorForward(null, null, false, false), false);
+      } finally {
+        releaseSharedLock();
+      }
+    } finally {
+      atomicOperationsManager.releaseReadLock(this);
+    }
+  }
+
+  public Stream<ORawPair<byte[], ORID>> iterateEntriesMinor(
+      final byte[] key, final boolean inclusive, final boolean ascSortOrder) {
+    atomicOperationsManager.acquireReadLock(this);
+    try {
+      acquireSharedLock();
+      try {
+        if (!ascSortOrder) {
+          return StreamSupport.stream(iterateEntriesMinorDesc(key, inclusive), false);
+        }
+
+        return StreamSupport.stream(iterateEntriesMinorAsc(key, inclusive), false);
+      } finally {
+        releaseSharedLock();
+      }
+    } finally {
+      atomicOperationsManager.releaseReadLock(this);
+    }
+  }
+
+  private Spliterator<ORawPair<byte[], ORID>> iterateEntriesMinorDesc(
+      byte[] key, final boolean inclusive) {
+    return new SpliteratorBackward(null, key, false, inclusive);
+  }
+
+  private Spliterator<ORawPair<byte[], ORID>> iterateEntriesMinorAsc(
+      byte[] key, final boolean inclusive) {
+    return new SpliteratorForward(null, key, false, inclusive);
+  }
+
+  public Stream<ORawPair<byte[], ORID>> iterateEntriesMajor(
+      final byte[] key, final boolean inclusive, final boolean ascSortOrder) {
+    atomicOperationsManager.acquireReadLock(this);
+    try {
+      acquireSharedLock();
+      try {
+        if (ascSortOrder) {
+          return StreamSupport.stream(iterateEntriesMajorAsc(key, inclusive), false);
+        }
+        return StreamSupport.stream(iterateEntriesMajorDesc(key, inclusive), false);
+      } finally {
+        releaseSharedLock();
+      }
+    } finally {
+      atomicOperationsManager.releaseReadLock(this);
+    }
+  }
+
+  private Spliterator<ORawPair<byte[], ORID>> iterateEntriesMajorAsc(
+      byte[] key, final boolean inclusive) {
+    return new SpliteratorForward(key, null, inclusive, false);
+  }
+
+  private Spliterator<ORawPair<byte[], ORID>> iterateEntriesMajorDesc(
+      byte[] key, final boolean inclusive) {
+    acquireSharedLock();
+    try {
+      return new SpliteratorBackward(key, null, inclusive, false);
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  public Stream<ORawPair<byte[], ORID>> iterateEntriesBetween(
+      final byte[] keyFrom,
+      final boolean fromInclusive,
+      final byte[] keyTo,
+      final boolean toInclusive,
+      final boolean ascSortOrder) {
+    atomicOperationsManager.acquireReadLock(this);
+    try {
+      acquireSharedLock();
+      try {
+        if (ascSortOrder) {
+          return StreamSupport.stream(
+              iterateEntriesBetweenAscOrder(keyFrom, fromInclusive, keyTo, toInclusive), false);
+        } else {
+          return StreamSupport.stream(
+              iterateEntriesBetweenDescOrder(keyFrom, fromInclusive, keyTo, toInclusive), false);
+        }
+      } finally {
+        releaseSharedLock();
+      }
+    } finally {
+      atomicOperationsManager.releaseReadLock(this);
+    }
+  }
+
+  private Spliterator<ORawPair<byte[], ORID>> iterateEntriesBetweenAscOrder(
+      byte[] keyFrom, final boolean fromInclusive, byte[] keyTo, final boolean toInclusive) {
+    return new SpliteratorForward(keyFrom, keyTo, fromInclusive, toInclusive);
+  }
+
+  private Spliterator<ORawPair<byte[], ORID>> iterateEntriesBetweenDescOrder(
+      byte[] keyFrom, final boolean fromInclusive, byte[] keyTo, final boolean toInclusive) {
+    return new SpliteratorBackward(keyFrom, keyTo, fromInclusive, toInclusive);
+  }
+
   private boolean balanceLeafNodeAfterItemDelete(
       final OAtomicOperation atomicOperation,
       final RemoveSearchResult removeSearchResult,
@@ -1397,6 +1518,406 @@ public final class BinaryBTree extends ODurableComponent {
       }
     } finally {
       releasePageFromRead(atomicOperation, cacheEntry);
+    }
+  }
+
+  private final class SpliteratorForward implements Spliterator<ORawPair<byte[], ORID>> {
+    private final byte[] fromKey;
+    private final byte[] toKey;
+    private final boolean fromKeyInclusive;
+    private final boolean toKeyInclusive;
+
+    private int pageIndex = -1;
+    private int itemIndex = -1;
+
+    private OLogSequenceNumber lastLSN = null;
+
+    private final List<ORawPair<byte[], ORID>> dataCache = new ArrayList<>();
+    private Iterator<ORawPair<byte[], ORID>> cacheIterator = Collections.emptyIterator();
+
+    private SpliteratorForward(
+        final byte[] fromKey,
+        final byte[] toKey,
+        final boolean fromKeyInclusive,
+        final boolean toKeyInclusive) {
+      this.fromKey = fromKey;
+      this.toKey = toKey;
+
+      this.toKeyInclusive = toKeyInclusive;
+      this.fromKeyInclusive = fromKeyInclusive;
+    }
+
+    @Override
+    public boolean tryAdvance(Consumer<? super ORawPair<byte[], ORID>> action) {
+      if (cacheIterator == null) {
+        return false;
+      }
+
+      if (cacheIterator.hasNext()) {
+        action.accept(cacheIterator.next());
+        return true;
+      }
+
+      fetchNextCachePortion();
+
+      cacheIterator = dataCache.iterator();
+
+      if (cacheIterator.hasNext()) {
+        action.accept(cacheIterator.next());
+        return true;
+      }
+
+      cacheIterator = null;
+
+      return false;
+    }
+
+    private void fetchNextCachePortion() {
+      final byte[] lastKey;
+      if (!dataCache.isEmpty()) {
+        lastKey = dataCache.get(dataCache.size() - 1).first;
+      } else {
+        lastKey = null;
+      }
+
+      dataCache.clear();
+      cacheIterator = Collections.emptyIterator();
+
+      atomicOperationsManager.acquireReadLock(BinaryBTree.this);
+      try {
+        acquireSharedLock();
+        try {
+          final OAtomicOperation atomicOperation = OAtomicOperationsManager.getCurrentOperation();
+          if (pageIndex > -1) {
+            if (readKeysFromBuckets(atomicOperation)) {
+              return;
+            }
+          }
+
+          // this can only happen if page LSN does not equal to stored LSN or index of current
+          // iterated page equals to -1
+          // so we only started iteration
+          if (dataCache.isEmpty()) {
+            // iteration just started
+            if (lastKey == null) {
+              if (this.fromKey != null) {
+                final BucketSearchResult searchResult = findBucket(fromKey, atomicOperation);
+                pageIndex = (int) searchResult.pageIndex;
+
+                if (searchResult.itemIndex >= 0) {
+                  if (fromKeyInclusive) {
+                    itemIndex = searchResult.itemIndex;
+                  } else {
+                    itemIndex = searchResult.itemIndex + 1;
+                  }
+                } else {
+                  itemIndex = -searchResult.itemIndex - 1;
+                }
+              } else {
+                final Optional<BucketSearchResult> bucketSearchResult = firstItem(atomicOperation);
+                if (bucketSearchResult.isPresent()) {
+                  final BucketSearchResult searchResult = bucketSearchResult.get();
+                  pageIndex = (int) searchResult.pageIndex;
+                  itemIndex = searchResult.itemIndex;
+                } else {
+                  return;
+                }
+              }
+
+            } else {
+              final BucketSearchResult bucketSearchResult = findBucket(lastKey, atomicOperation);
+
+              pageIndex = (int) bucketSearchResult.pageIndex;
+              if (bucketSearchResult.itemIndex >= 0) {
+                itemIndex = bucketSearchResult.itemIndex + 1;
+              } else {
+                itemIndex = -bucketSearchResult.itemIndex - 1;
+              }
+            }
+            lastLSN = null;
+            readKeysFromBuckets(atomicOperation);
+          }
+        } finally {
+          releaseSharedLock();
+        }
+      } catch (final IOException e) {
+        throw OException.wrapException(
+            new BinaryBTreeException("Error during element iteration", BinaryBTree.this), e);
+      } finally {
+        atomicOperationsManager.releaseReadLock(BinaryBTree.this);
+      }
+    }
+
+    private boolean readKeysFromBuckets(OAtomicOperation atomicOperation) throws IOException {
+      OCacheEntry cacheEntry = loadPageForRead(atomicOperation, fileId, pageIndex, false);
+      try {
+        Bucket bucket = new Bucket(cacheEntry);
+        if (lastLSN == null || bucket.getLSN().equals(lastLSN)) {
+          while (true) {
+            int bucketSize = bucket.size();
+            if (itemIndex >= bucketSize) {
+              pageIndex = (int) bucket.getRightSibling();
+
+              if (pageIndex < 0) {
+                return true;
+              }
+
+              itemIndex = 0;
+              releasePageFromRead(atomicOperation, cacheEntry);
+
+              cacheEntry = loadPageForRead(atomicOperation, fileId, pageIndex, false);
+              bucket = new Bucket(cacheEntry);
+
+              bucketSize = bucket.size();
+            }
+
+            lastLSN = bucket.getLSN();
+
+            for (; itemIndex < bucketSize && dataCache.size() < spliteratorCacheSize; itemIndex++) {
+              final Bucket.Entry entry = bucket.getEntry(itemIndex);
+
+              if (toKey != null) {
+                if (toKeyInclusive) {
+                  if (COMPARATOR.compare(entry.key, toKey) > 0) {
+                    return true;
+                  }
+                } else if (COMPARATOR.compare(entry.key, toKey) >= 0) {
+                  return true;
+                }
+              }
+
+              dataCache.add(new ORawPair<>(entry.key, entry.value));
+            }
+
+            if (dataCache.size() >= spliteratorCacheSize) {
+              return true;
+            }
+          }
+        }
+      } finally {
+        releasePageFromRead(atomicOperation, cacheEntry);
+      }
+
+      return false;
+    }
+
+    @Override
+    public Spliterator<ORawPair<byte[], ORID>> trySplit() {
+      return null;
+    }
+
+    @Override
+    public long estimateSize() {
+      return Long.MAX_VALUE;
+    }
+
+    @Override
+    public int characteristics() {
+      return SORTED | NONNULL | ORDERED;
+    }
+
+    @Override
+    public Comparator<? super ORawPair<byte[], ORID>> getComparator() {
+      return (pairOne, pairTwo) -> COMPARATOR.compare(pairOne.first, pairTwo.first);
+    }
+  }
+
+  private final class SpliteratorBackward implements Spliterator<ORawPair<byte[], ORID>> {
+    private final byte[] fromKey;
+    private final byte[] toKey;
+    private final boolean fromKeyInclusive;
+    private final boolean toKeyInclusive;
+
+    private int pageIndex = -1;
+    private int itemIndex = -1;
+
+    private OLogSequenceNumber lastLSN = null;
+
+    private final List<ORawPair<byte[], ORID>> dataCache = new ArrayList<>();
+    private Iterator<ORawPair<byte[], ORID>> cacheIterator = Collections.emptyIterator();
+
+    private SpliteratorBackward(
+        final byte[] fromKey,
+        final byte[] toKey,
+        final boolean fromKeyInclusive,
+        final boolean toKeyInclusive) {
+      this.fromKey = fromKey;
+      this.toKey = toKey;
+      this.fromKeyInclusive = fromKeyInclusive;
+      this.toKeyInclusive = toKeyInclusive;
+    }
+
+    @Override
+    public boolean tryAdvance(Consumer<? super ORawPair<byte[], ORID>> action) {
+      if (cacheIterator == null) {
+        return false;
+      }
+
+      if (cacheIterator.hasNext()) {
+        action.accept(cacheIterator.next());
+        return true;
+      }
+
+      fetchNextCachePortion();
+
+      cacheIterator = dataCache.iterator();
+
+      if (cacheIterator.hasNext()) {
+        action.accept(cacheIterator.next());
+        return true;
+      }
+
+      cacheIterator = null;
+
+      return false;
+    }
+
+    private void fetchNextCachePortion() {
+      final byte[] lastKey;
+      if (dataCache.isEmpty()) {
+        lastKey = null;
+      } else {
+        lastKey = dataCache.get(dataCache.size() - 1).first;
+      }
+
+      dataCache.clear();
+      cacheIterator = Collections.emptyIterator();
+
+      atomicOperationsManager.acquireReadLock(BinaryBTree.this);
+      try {
+        acquireSharedLock();
+        try {
+          final OAtomicOperation atomicOperation = OAtomicOperationsManager.getCurrentOperation();
+          if (pageIndex > -1) {
+            if (readKeysFromBuckets(atomicOperation)) {
+              return;
+            }
+          }
+
+          // this can only happen if page LSN does not equal to stored LSN or index of current
+          // iterated page equals to -1
+          // so we only started iteration
+          if (dataCache.isEmpty()) {
+            // iteration just started
+            if (lastKey == null) {
+              if (this.toKey != null) {
+                final BucketSearchResult searchResult = findBucket(toKey, atomicOperation);
+                pageIndex = (int) searchResult.pageIndex;
+
+                if (searchResult.itemIndex >= 0) {
+                  if (toKeyInclusive) {
+                    itemIndex = searchResult.itemIndex;
+                  } else {
+                    itemIndex = searchResult.itemIndex - 1;
+                  }
+                } else {
+                  itemIndex = -searchResult.itemIndex - 2;
+                }
+              } else {
+                final Optional<BucketSearchResult> bucketSearchResult = lastItem(atomicOperation);
+                if (bucketSearchResult.isPresent()) {
+                  final BucketSearchResult searchResult = bucketSearchResult.get();
+                  pageIndex = (int) searchResult.pageIndex;
+                  itemIndex = searchResult.itemIndex;
+                } else {
+                  return;
+                }
+              }
+
+            } else {
+              final BucketSearchResult bucketSearchResult = findBucket(lastKey, atomicOperation);
+
+              pageIndex = (int) bucketSearchResult.pageIndex;
+              if (bucketSearchResult.itemIndex >= 0) {
+                itemIndex = bucketSearchResult.itemIndex - 1;
+              } else {
+                itemIndex = -bucketSearchResult.itemIndex - 2;
+              }
+            }
+            lastLSN = null;
+            readKeysFromBuckets(atomicOperation);
+          }
+        } finally {
+          releaseSharedLock();
+        }
+      } catch (final IOException e) {
+        throw OException.wrapException(
+            new BinaryBTreeException("Error during element iteration", BinaryBTree.this), e);
+      } finally {
+        atomicOperationsManager.releaseReadLock(BinaryBTree.this);
+      }
+    }
+
+    private boolean readKeysFromBuckets(OAtomicOperation atomicOperation) throws IOException {
+      OCacheEntry cacheEntry = loadPageForRead(atomicOperation, fileId, pageIndex, false);
+      try {
+        Bucket bucket = new Bucket(cacheEntry);
+        if (lastLSN == null || bucket.getLSN().equals(lastLSN)) {
+          while (true) {
+            if (itemIndex < 0) {
+              pageIndex = (int) bucket.getLeftSibling();
+
+              if (pageIndex < 0) {
+                return true;
+              }
+
+              releasePageFromRead(atomicOperation, cacheEntry);
+
+              cacheEntry = loadPageForRead(atomicOperation, fileId, pageIndex, false);
+              bucket = new Bucket(cacheEntry);
+              final int bucketSize = bucket.size();
+              itemIndex = bucketSize - 1;
+            }
+
+            lastLSN = bucket.getLSN();
+
+            for (; itemIndex >= 0 && dataCache.size() < spliteratorCacheSize; itemIndex--) {
+              Bucket.Entry entry = bucket.getEntry(itemIndex);
+
+              if (fromKey != null) {
+                if (fromKeyInclusive) {
+                  if (COMPARATOR.compare(entry.key, fromKey) < 0) {
+                    return true;
+                  }
+                } else if (COMPARATOR.compare(entry.key, fromKey) <= 0) {
+                  return true;
+                }
+              }
+
+              //noinspection ObjectAllocationInLoop
+              dataCache.add(new ORawPair<>(entry.key, entry.value));
+            }
+
+            if (dataCache.size() >= spliteratorCacheSize) {
+              return true;
+            }
+          }
+        }
+      } finally {
+        releasePageFromRead(atomicOperation, cacheEntry);
+      }
+
+      return false;
+    }
+
+    @Override
+    public Spliterator<ORawPair<byte[], ORID>> trySplit() {
+      return null;
+    }
+
+    @Override
+    public long estimateSize() {
+      return Long.MAX_VALUE;
+    }
+
+    @Override
+    public int characteristics() {
+      return SORTED | NONNULL | ORDERED;
+    }
+
+    @Override
+    public Comparator<? super ORawPair<byte[], ORID>> getComparator() {
+      return (pairOne, pairTwo) -> -COMPARATOR.compare(pairOne.first, pairTwo.first);
     }
   }
 

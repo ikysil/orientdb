@@ -500,6 +500,34 @@ public final class Bucket extends ODurablePage {
     }
   }
 
+  public Entry getEntry(final int entryIndex) {
+    int entryPosition =
+        getIntValue(entryIndex * OIntegerSerializer.INT_SIZE + POSITIONS_ARRAY_OFFSET);
+
+    if (isLeaf()) {
+      final int keySize = getShortValue(entryPosition);
+      final byte[] key = getBinaryValue(entryPosition + OShortSerializer.SHORT_SIZE, keySize);
+
+      entryPosition += keySize + OShortSerializer.SHORT_SIZE;
+
+      final int clusterId = getShortValue(entryPosition);
+      final long clusterPosition = getLongValue(entryPosition + OShortSerializer.SHORT_SIZE);
+
+      return new Entry(-1, -1, key, new ORecordId(clusterId, clusterPosition));
+    } else {
+      final int leftChild = getIntValue(entryPosition);
+      entryPosition += OIntegerSerializer.INT_SIZE;
+
+      final int rightChild = getIntValue(entryPosition);
+      entryPosition += OIntegerSerializer.INT_SIZE;
+
+      final int keySize = getShortValue(entryPosition);
+      final byte[] key = getBinaryValue(entryPosition + OShortSerializer.SHORT_SIZE, keySize);
+
+      return new Entry(leftChild, rightChild, key, null);
+    }
+  }
+
   public void setLeftSibling(final long pageIndex) {
     setLongValue(LEFT_SIBLING_OFFSET, pageIndex);
   }
