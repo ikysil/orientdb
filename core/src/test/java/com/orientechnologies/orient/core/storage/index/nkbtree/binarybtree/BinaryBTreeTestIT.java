@@ -615,8 +615,6 @@ public class BinaryBTreeTestIT {
     System.out.println("testIterateEntriesMajor: " + seed);
     final Random random = new Random(seed);
 
-    int printCounter = 0;
-
     while (keyValues.size() < keysCount) {
       atomicOperationsManager.executeInsideAtomicOperation(
           null,
@@ -654,8 +652,6 @@ public class BinaryBTreeTestIT {
     System.out.println("testIterateEntriesMinor: " + seed);
     final Random random = new Random(seed);
 
-    int printCounter = 0;
-
     while (keyValues.size() < keysCount) {
       atomicOperationsManager.executeInsideAtomicOperation(
           null,
@@ -678,6 +674,125 @@ public class BinaryBTreeTestIT {
 
     Assert.assertArrayEquals(stringToLexicalBytes(keyValues.firstKey()), binaryBTree.firstKey());
     Assert.assertArrayEquals(stringToLexicalBytes(keyValues.lastKey()), binaryBTree.lastKey());
+  }
+
+  @Test
+  public void testIterateEntriesBetween() throws Exception {
+    final int keysCount = 1_000_000;
+    final Collator collator = Collator.getInstance(Locale.ENGLISH);
+    collator.setDecomposition(Collator.NO_DECOMPOSITION);
+
+    NavigableMap<String, ORID> keyValues = new TreeMap<>(collator::compare);
+
+    final long seed = System.nanoTime();
+    System.out.println("testIterateEntriesBetween seed: " + seed);
+    final Random random = new Random(seed);
+
+    while (keyValues.size() < keysCount) {
+      for (int n = 0; n < 2; n++) {
+        atomicOperationsManager.executeInsideAtomicOperation(
+            null,
+            atomicOperation -> {
+              int val = random.nextInt(Integer.MAX_VALUE);
+              String key = Integer.toString(val);
+
+              binaryBTree.put(
+                  atomicOperation, stringToLexicalBytes(key), new ORecordId(val % 32000, val));
+              keyValues.put(key, new ORecordId(val % 32000, val));
+            });
+      }
+    }
+    assertIterateBetweenEntries(keyValues, random, collator,true, true, true);
+    assertIterateBetweenEntries(keyValues, random, collator, true, false, true);
+    assertIterateBetweenEntries(keyValues, random, collator, false, true, true);
+    assertIterateBetweenEntries(keyValues, random, collator, false, false, true);
+
+    assertIterateBetweenEntries(keyValues, random, collator, true, true, false);
+    assertIterateBetweenEntries(keyValues, random, collator, true, false, false);
+    assertIterateBetweenEntries(keyValues, random, collator, false, true, false);
+    assertIterateBetweenEntries(keyValues, random, collator, false, false, false);
+
+    Assert.assertArrayEquals(stringToLexicalBytes(keyValues.firstKey()), binaryBTree.firstKey());
+    Assert.assertArrayEquals(stringToLexicalBytes(keyValues.lastKey()), binaryBTree.lastKey());
+  }
+
+  private void assertIterateBetweenEntries(
+      NavigableMap<String, ORID> keyValues,
+      Random random,
+      Collator collator,
+      boolean fromInclusive,
+      boolean toInclusive,
+      boolean ascSortOrder) {
+    String[] keys = new String[keyValues.size()];
+    int index = 0;
+
+    for (String key : keyValues.keySet()) {
+      keys[index] = key;
+      index++;
+    }
+
+    for (int i = 0; i < 100; i++) {
+      int fromKeyIndex = random.nextInt(keys.length);
+      int toKeyIndex = random.nextInt(keys.length);
+
+      if (fromKeyIndex > toKeyIndex) {
+        toKeyIndex = fromKeyIndex;
+      }
+
+      String fromKey = keys[fromKeyIndex];
+      String toKey = keys[toKeyIndex];
+
+      if (random.nextBoolean()) {
+        fromKey =
+            fromKey.substring(0, fromKey.length() - 1)
+                + (char) (fromKey.charAt(fromKey.length() - 1) - 1);
+      }
+
+      if (random.nextBoolean()) {
+        toKey =
+            toKey.substring(0, toKey.length() - 1) + (char) (toKey.charAt(toKey.length() - 1) + 1);
+      }
+
+      if (collator.compare(fromKey, toKey) > 0) {
+        fromKey = toKey;
+      }
+
+      final Iterator<ORawPair<byte[], ORID>> indexIterator;
+      try (Stream<ORawPair<byte[], ORID>> stream =
+          binaryBTree.iterateEntriesBetween(
+              stringToLexicalBytes(fromKey),
+              fromInclusive,
+              stringToLexicalBytes(toKey),
+              toInclusive,
+              ascSortOrder)) {
+        indexIterator = stream.iterator();
+
+        Iterator<Map.Entry<String, ORID>> iterator;
+        if (ascSortOrder) {
+          iterator =
+              keyValues.subMap(fromKey, fromInclusive, toKey, toInclusive).entrySet().iterator();
+        } else {
+          iterator =
+              keyValues
+                  .subMap(fromKey, fromInclusive, toKey, toInclusive)
+                  .descendingMap()
+                  .entrySet()
+                  .iterator();
+        }
+
+        while (iterator.hasNext()) {
+          final ORawPair<byte[], ORID> indexEntry = indexIterator.next();
+          Assert.assertNotNull(indexEntry);
+
+          Map.Entry<String, ORID> mapEntry = iterator.next();
+          Assert.assertArrayEquals(stringToLexicalBytes(mapEntry.getKey()), indexEntry.first);
+          Assert.assertEquals(mapEntry.getValue(), indexEntry.second);
+        }
+        //noinspection ConstantConditions
+        Assert.assertFalse(iterator.hasNext());
+        Assert.assertFalse(indexIterator.hasNext());
+      }
+    }
   }
 
   private void assertIterateMinorEntries(
