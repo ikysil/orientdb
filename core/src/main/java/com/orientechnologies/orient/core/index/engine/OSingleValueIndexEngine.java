@@ -10,6 +10,8 @@ public interface OSingleValueIndexEngine extends OV1IndexEngine {
 
   boolean remove(OAtomicOperation atomicOperation, Object key) throws IOException;
 
+  boolean rawRemove(OAtomicOperation atomicOperation, byte[] rawKey) throws IOException;
+
   @Override
   default boolean isMultiValue() {
     return false;

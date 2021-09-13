@@ -7,7 +7,6 @@ import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.testng.Assert;
@@ -73,23 +72,25 @@ public class IndexTxTest extends DocumentDBBaseTest {
     expectedResult.put("doc2", doc2.getIdentity());
 
     OIndex index = getIndex("IndexTxTestIndex");
-    Iterator<Object> keyIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keyIterator = keyStream.iterator();
+    Assert.assertEquals(2, index.getInternal().size());
 
-      while (keyIterator.hasNext()) {
-        String key = (String) keyIterator.next();
 
-        final ORID expectedValue = expectedResult.get(key);
-        final ORID value;
-        try (Stream<ORID> stream = index.getInternal().getRids(key)) {
-          value = stream.findAny().orElse(null);
-        }
+    ORID expectedValue = expectedResult.get("doc1");
+    try (Stream<ORID> stream = index.getInternal().getRids("doc1")) {
+      ORID value = stream.findAny().orElse(null);
 
-        Assert.assertNotNull(value);
-        Assert.assertTrue(value.isPersistent());
-        Assert.assertEquals(value, expectedValue);
-      }
+      Assert.assertNotNull(value);
+      Assert.assertTrue(value.isPersistent());
+      Assert.assertEquals(value, expectedValue);
+    }
+
+    expectedValue = expectedResult.get("doc2");
+    try (Stream<ORID> stream = index.getInternal().getRids("doc2")) {
+      ORID value = stream.findAny().orElse(null);
+
+      Assert.assertNotNull(value);
+      Assert.assertTrue(value.isPersistent());
+      Assert.assertEquals(value, expectedValue);
     }
   }
 }

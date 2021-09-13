@@ -17,6 +17,7 @@ package com.orientechnologies.spatial.engine;
 import static com.orientechnologies.lucene.builder.OLuceneQueryBuilder.EMPTY_METADATA;
 
 import com.orientechnologies.common.exception.OException;
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.lucene.collections.OLuceneResultSet;
 import com.orientechnologies.lucene.collections.OLuceneResultSetEmpty;
 import com.orientechnologies.lucene.query.OLuceneQueryContext;
@@ -32,6 +33,8 @@ import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperation;
 import com.orientechnologies.spatial.query.OSpatialQueryContext;
 import com.orientechnologies.spatial.shape.OShapeBuilder;
+
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -137,10 +140,25 @@ public class OLuceneGeoSpatialIndexEngine extends OLuceneSpatialIndexEngineAbstr
   }
 
   @Override
+  public boolean rawRemove(OAtomicOperation atomicOperation, byte[] key) throws IOException {
+    throw new UnsupportedOperationException("Raw entries are not supported in Lucene indexes");
+  }
+
+  @Override
   public boolean validatedPut(
       OAtomicOperation atomicOperation, Object key, ORID value, Validator<Object, ORID> validator) {
     throw new UnsupportedOperationException(
         "Validated put is not supported by OLuceneGeoSpatialIndexEngine");
+  }
+
+  @Override
+  public ORawPair<byte[], Object> getRawEntry(Object key) {
+    throw new UnsupportedOperationException("Raw entries are not supported in Lucene indexes");
+  }
+
+  @Override
+  public void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> updater) throws IOException {
+    throw new UnsupportedOperationException("Raw entries are not supported in Lucene indexes");
   }
 
   @Override

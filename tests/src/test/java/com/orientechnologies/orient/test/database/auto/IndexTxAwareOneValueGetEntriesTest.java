@@ -66,8 +66,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultOne = new HashSet<>();
-    Stream<ORawPair<Object, ORID>> stream =
-        index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    Stream<ORID> stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, resultOne);
     Assert.assertEquals(resultOne.size(), 2);
 
@@ -77,7 +76,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNotNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultTwo = new HashSet<>();
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2, 3), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2, 3), true);
     streamToSet(stream, resultTwo);
     Assert.assertEquals(resultTwo.size(), 3);
 
@@ -85,7 +84,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultThree = new HashSet<>();
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, resultThree);
 
     Assert.assertEquals(resultThree.size(), 2);
@@ -99,7 +98,6 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     database.begin();
     final OIndex index = database.getMetadata().getIndexManagerInternal().getIndex(database, INDEX);
-    Assert.assertTrue(index instanceof OIndexTxAwareOneValue);
 
     ODocument document = new ODocument(CLASS_NAME).field(PROPERTY_NAME, 1).save();
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 2).save();
@@ -108,8 +106,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultOne = new HashSet<>();
-    Stream<ORawPair<Object, ORID>> stream =
-        index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    Stream<ORID> stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, resultOne);
     Assert.assertEquals(resultOne.size(), 2);
 
@@ -119,7 +116,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNotNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultTwo = new HashSet<>();
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, resultTwo);
     Assert.assertEquals(resultTwo.size(), 1);
 
@@ -127,7 +124,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultThree = new HashSet<>();
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, resultThree);
     Assert.assertEquals(resultThree.size(), 2);
   }
@@ -140,7 +137,6 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     database.begin();
     final OIndex index = database.getMetadata().getIndexManagerInternal().getIndex(database, INDEX);
-    Assert.assertTrue(index instanceof OIndexTxAwareOneValue);
 
     ODocument document = new ODocument(CLASS_NAME).field(PROPERTY_NAME, 1).save();
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 2).save();
@@ -149,8 +145,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultOne = new HashSet<>();
-    Stream<ORawPair<Object, ORID>> stream =
-        index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    Stream<ORID> stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, resultOne);
     Assert.assertEquals(resultOne.size(), 2);
 
@@ -163,7 +158,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNotNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> resultTwo = new HashSet<>();
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, resultTwo);
     Assert.assertEquals(resultTwo.size(), 2);
 
@@ -179,7 +174,6 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
     database.begin();
 
     final OIndex index = database.getMetadata().getIndexManagerInternal().getIndex(database, INDEX);
-    Assert.assertTrue(index instanceof OIndexTxAwareOneValue);
 
     ODocument document = new ODocument(CLASS_NAME).field(PROPERTY_NAME, 1).save();
     document.field(PROPERTY_NAME, 0);
@@ -190,15 +184,14 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNotNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> result = new HashSet<>();
-    Stream<ORawPair<Object, ORID>> stream =
-        index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    Stream<ORID> stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, result);
 
     Assert.assertEquals(result.size(), 2);
 
     database.commit();
 
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, result);
     Assert.assertEquals(result.size(), 2);
   }
@@ -212,15 +205,13 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
     database.begin();
 
     final OIndex index = database.getMetadata().getIndexManagerInternal().getIndex(database, INDEX);
-    Assert.assertTrue(index instanceof OIndexTxAwareOneValue);
 
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 1).save();
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 2).save();
 
     Assert.assertNotNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> result = new HashSet<>();
-    Stream<ORawPair<Object, ORID>> stream =
-        index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    Stream<ORID> stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, result);
 
     Assert.assertEquals(result.size(), 2);
@@ -228,7 +219,7 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 3).save();
 
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2, 3), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2, 3), true);
     streamToSet(stream, result);
     Assert.assertEquals(result.size(), 3);
   }
@@ -242,7 +233,6 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
     database.begin();
 
     final OIndex index = database.getMetadata().getIndexManagerInternal().getIndex(database, INDEX);
-    Assert.assertTrue(index instanceof OIndexTxAwareOneValue);
 
     final ODocument document = new ODocument(CLASS_NAME).field(PROPERTY_NAME, 1).save();
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 2).save();
@@ -251,14 +241,13 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNotNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> result = new HashSet<>();
-    Stream<ORawPair<Object, ORID>> stream =
-        index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    Stream<ORID> stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, result);
     Assert.assertEquals(result.size(), 1);
 
     database.commit();
 
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, result);
     Assert.assertEquals(result.size(), 1);
   }
@@ -272,7 +261,6 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
     database.begin();
 
     final OIndex index = database.getMetadata().getIndexManagerInternal().getIndex(database, INDEX);
-    Assert.assertTrue(index instanceof OIndexTxAwareOneValue);
 
     ODocument document = new ODocument(CLASS_NAME).field(PROPERTY_NAME, 1).save();
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 2).save();
@@ -284,22 +272,20 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     Assert.assertNotNull(database.getTransaction().getIndexChanges(INDEX));
     Set<OIdentifiable> result = new HashSet<>();
-    Stream<ORawPair<Object, ORID>> stream =
-        index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    Stream<ORID> stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, result);
 
     Assert.assertEquals(result.size(), 2);
 
     database.commit();
 
-    stream = index.getInternal().streamEntries(Arrays.asList(1, 2), true);
+    stream = index.getInternal().stream(Arrays.asList(1, 2), true);
     streamToSet(stream, result);
     Assert.assertEquals(result.size(), 2);
   }
 
-  private static void streamToSet(
-      Stream<ORawPair<Object, ORID>> stream, Set<OIdentifiable> result) {
+  private static void streamToSet(Stream<ORID> stream, Set<OIdentifiable> result) {
     result.clear();
-    result.addAll(stream.map((entry) -> entry.second).collect(Collectors.toSet()));
+    result.addAll(stream.collect(Collectors.toSet()));
   }
 }

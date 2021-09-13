@@ -25,9 +25,7 @@ import com.orientechnologies.orient.core.storage.index.sbtree.singlevalue.v3.Cel
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Spliterators;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public final class OCellBTreeMultiValueIndexEngine
     implements OMultiValueIndexEngine, OCellBTreeIndexEngine {
@@ -44,6 +42,10 @@ public final class OCellBTreeMultiValueIndexEngine
   private final String name;
   private final int id;
   private final String nullTreeName;
+
+  @SuppressWarnings("rawtypes")
+  private volatile OBinarySerializer keySerializer;
+  private volatile OType[] keyTypes;
 
   public OCellBTreeMultiValueIndexEngine(
       int id, String name, OAbstractPaginatedStorage storage, final int version) {
@@ -111,6 +113,9 @@ public final class OCellBTreeMultiValueIndexEngine
       Map<String, String> engineProperties,
       OEncryption encryption) {
     try {
+      this.keySerializer = keySerializer;
+      this.keyTypes = keyTypes;
+
       if (mvTree != null) {
         //noinspection unchecked
         mvTree.create(keySerializer, keyTypes, keySize, encryption, atomicOperation);
@@ -232,6 +237,9 @@ public final class OCellBTreeMultiValueIndexEngine
       final OType[] keyTypes,
       @SuppressWarnings("rawtypes") final OBinarySerializer keySerializer,
       final OEncryption encryption) {
+    this.keySerializer = keySerializer;
+    this.keyTypes = keyTypes;
+
     if (mvTree != null) {
       //noinspection unchecked
       mvTree.load(name, keySize, keyTypes, keySerializer, encryption);
@@ -295,6 +303,18 @@ public final class OCellBTreeMultiValueIndexEngine
   }
 
   @Override
+  public boolean removeRaw(OAtomicOperation atomicOperation, byte[] rawKey, ORID value) {
+    final Object key;
+    if (rawKey == null) {
+      key = null;
+    } else {
+      key = keySerializer.deserializeNativeObject(rawKey, 0);
+    }
+
+    return remove(atomicOperation, key, value);
+  }
+
+  @Override
   public void clear(OAtomicOperation atomicOperation) {
     if (mvTree != null) {
       doClearMVTree(atomicOperation);
@@ -342,11 +362,25 @@ public final class OCellBTreeMultiValueIndexEngine
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream(ValuesTransformer valuesTransformer) {
+  public Stream<ORawPair<byte[], ORID>> getRawEntries(Object key) {
+    return get(key).map(rid  -> new ORawPair<>(serializeKey(key), rid));
+  }
+
+  @Override
+  public Stream<ORID> stream(ValuesTransformer valuesTransformer) {
+    return doStream().map(pair -> pair.second);
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer) {
+    return doStream().map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
+  }
+
+  private Stream<ORawPair<Object, ORID>> doStream() {
     if (mvTree != null) {
       final Object firstKey = mvTree.firstKey();
       if (firstKey == null) {
-        return emptyStream();
+        return Stream.empty();
       }
 
       return mvTree.iterateEntriesMajor(firstKey, true, true);
@@ -355,7 +389,7 @@ public final class OCellBTreeMultiValueIndexEngine
 
       final OCompositeKey firstKey = svTree.firstKey();
       if (firstKey == null) {
-        return emptyStream();
+        return Stream.empty();
       }
 
       return mapSVStream(svTree.iterateEntriesMajor(firstKey, true, true));
@@ -367,16 +401,16 @@ public final class OCellBTreeMultiValueIndexEngine
     return stream.map((entry) -> new ORawPair<>(extractKey(entry.first), entry.second));
   }
 
-  private static Stream<ORawPair<Object, ORID>> emptyStream() {
-    return StreamSupport.stream(Spliterators.emptySpliterator(), false);
+  @Override
+  public Stream<ORID> descStream(ValuesTransformer valuesTransformer) {
+    return doDescStream().map(pair -> pair.second);
   }
 
-  @Override
-  public Stream<ORawPair<Object, ORID>> descStream(ValuesTransformer valuesTransformer) {
+  private Stream<ORawPair<Object, ORID>> doDescStream() {
     if (mvTree != null) {
       final Object lastKey = mvTree.lastKey();
       if (lastKey == null) {
-        return emptyStream();
+        return Stream.empty();
       }
       return mvTree.iterateEntriesMinor(lastKey, true, false);
     } else {
@@ -384,21 +418,15 @@ public final class OCellBTreeMultiValueIndexEngine
 
       final OCompositeKey lastKey = svTree.lastKey();
       if (lastKey == null) {
-        return emptyStream();
+        return Stream.empty();
       }
       return mapSVStream(svTree.iterateEntriesMinor(lastKey, true, false));
     }
   }
 
   @Override
-  public Stream<Object> keyStream() {
-    if (mvTree != null) {
-      return mvTree.keyStream();
-    }
-
-    assert svTree != null;
-    //noinspection resource
-    return svTree.keyStream().map(OCellBTreeMultiValueIndexEngine::extractKey);
+  public Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer) {
+    return doDescStream().map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
   }
 
   @Override
@@ -436,13 +464,23 @@ public final class OCellBTreeMultiValueIndexEngine
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
+  public Stream<ORID> iterateBetween(
       Object rangeFrom,
       boolean fromInclusive,
       Object rangeTo,
       boolean toInclusive,
       boolean ascSortOrder,
       ValuesTransformer transformer) {
+    return doIterateBetween(rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder)
+        .map(pair -> pair.second);
+  }
+
+  private Stream<ORawPair<Object, ORID>> doIterateBetween(
+      Object rangeFrom,
+      boolean fromInclusive,
+      Object rangeTo,
+      boolean toInclusive,
+      boolean ascSortOrder) {
     if (mvTree != null) {
       return mvTree.iterateEntriesBetween(
           rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder);
@@ -468,6 +506,18 @@ public final class OCellBTreeMultiValueIndexEngine
         svTree.iterateEntriesBetween(fromKey, fromInclusive, toKey, toInclusive, ascSortOrder));
   }
 
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(
+      Object rangeFrom,
+      boolean fromInclusive,
+      Object rangeTo,
+      boolean toInclusive,
+      boolean ascSortOrder,
+      ValuesTransformer transformer) {
+    return doIterateBetween(rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
+  }
+
   private static OCompositeKey convertToCompositeKey(Object rangeFrom) {
     OCompositeKey firstKey;
     if (rangeFrom instanceof OCompositeKey) {
@@ -479,8 +529,13 @@ public final class OCellBTreeMultiValueIndexEngine
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
+  public Stream<ORID> iterateMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    return doIterateMajor(fromKey, isInclusive, ascSortOrder).map(pair -> pair.second);
+  }
+
+  private Stream<ORawPair<Object, ORID>> doIterateMajor(
+      Object fromKey, boolean isInclusive, boolean ascSortOrder) {
     if (mvTree != null) {
       return mvTree.iterateEntriesMajor(fromKey, isInclusive, ascSortOrder);
     }
@@ -491,8 +546,20 @@ public final class OCellBTreeMultiValueIndexEngine
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
+  public Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(
+      Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    return doIterateMajor(fromKey, isInclusive, ascSortOrder)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
+  }
+
+  @Override
+  public Stream<ORID> iterateMinor(
       Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    return doIterateMinor(toKey, isInclusive, ascSortOrder).map(pair -> pair.second);
+  }
+
+  private Stream<ORawPair<Object, ORID>> doIterateMinor(
+      Object toKey, boolean isInclusive, boolean ascSortOrder) {
     if (mvTree != null) {
       return mvTree.iterateEntriesMinor(toKey, isInclusive, ascSortOrder);
     }
@@ -500,6 +567,13 @@ public final class OCellBTreeMultiValueIndexEngine
 
     final OCompositeKey lastKey = convertToCompositeKey(toKey);
     return mapSVStream(svTree.iterateEntriesMinor(lastKey, isInclusive, ascSortOrder));
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(
+      Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    return doIterateMinor(toKey, isInclusive, ascSortOrder)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
   }
 
   @Override
@@ -580,6 +654,15 @@ public final class OCellBTreeMultiValueIndexEngine
   @Override
   public String getIndexNameByKey(Object key) {
     return name;
+  }
+
+  private byte[] serializeKey(final Object key) {
+    if (key == null) {
+      return null;
+    }
+
+    //noinspection unchecked
+    return keySerializer.serializeNativeAsWhole(key, (Object[]) keyTypes);
   }
 
   private static OType[] calculateTypes(final OType[] keyTypes) {

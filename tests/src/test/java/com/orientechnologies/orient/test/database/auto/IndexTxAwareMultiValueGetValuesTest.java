@@ -1,6 +1,5 @@
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndex;
@@ -332,8 +331,8 @@ public class IndexTxAwareMultiValueGetValuesTest extends DocumentDBBaseTest {
   }
 
   private static void streamToSet(
-      Stream<ORawPair<Object, ORID>> stream, Set<OIdentifiable> result) {
+      Stream<ORID> stream, Set<OIdentifiable> result) {
     result.clear();
-    result.addAll(stream.map((entry) -> entry.second).collect(Collectors.toSet()));
+    result.addAll(stream.collect(Collectors.toSet()));
   }
 }

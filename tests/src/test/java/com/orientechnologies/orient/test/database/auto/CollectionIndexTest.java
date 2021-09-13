@@ -72,17 +72,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionInTx() {
@@ -102,16 +93,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdate() {
@@ -126,17 +109,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("bacon")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("bacon").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateInTx() {
@@ -158,17 +132,9 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
 
     Assert.assertEquals(index.getInternal().size(), 2);
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
 
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("bacon")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("bacon").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateInTxRollback() {
@@ -186,17 +152,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
 
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateAddItem() {
@@ -214,17 +171,9 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 3);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs") && !key.equals("cookies")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("egs").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("cookies").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateAddItemInTx() {
@@ -249,17 +198,9 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
 
     Assert.assertEquals(index.getInternal().size(), 3);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs") && !key.equals("cookies")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("cookies").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateAddItemInTxRollback() {
@@ -278,17 +219,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateRemoveItemInTx() {
@@ -312,17 +244,7 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 1);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateRemoveItemInTxRollback() {
@@ -341,17 +263,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateRemoveItem() {
@@ -368,17 +281,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
 
     final OIndex index = getIndex("Collector.stringCollection");
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertEquals(index.getInternal().size(), 1);
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionRemove() {
@@ -427,17 +331,8 @@ public class CollectionIndexTest extends ObjectDBBaseTest {
     final OIndex index = getIndex("Collector.stringCollection");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keysIterator;
-    try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-      keysIterator = keyStream.iterator();
-
-      while (keysIterator.hasNext()) {
-        String key = (String) keysIterator.next();
-        if (!key.equals("spam") && !key.equals("eggs")) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids("spam").findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids("eggs").findAny().isPresent());
   }
 
   public void testIndexCollectionSQL() {

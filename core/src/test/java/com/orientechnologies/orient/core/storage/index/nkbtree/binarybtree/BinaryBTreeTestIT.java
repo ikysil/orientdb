@@ -13,13 +13,11 @@ import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperationsManager;
 import com.orientechnologies.orient.core.storage.index.nkbtree.normalizers.KeyNormalizers;
-import org.junit.*;
-
 import java.io.File;
 import java.io.IOException;
-
 import java.util.*;
 import java.util.stream.Stream;
+import org.junit.*;
 
 public class BinaryBTreeTestIT {
   private static KeyNormalizers keyNormalizers;
@@ -702,7 +700,7 @@ public class BinaryBTreeTestIT {
             });
       }
     }
-    assertIterateBetweenEntries(keyValues, random, collator,true, true, true);
+    assertIterateBetweenEntries(keyValues, random, collator, true, true, true);
     assertIterateBetweenEntries(keyValues, random, collator, true, false, true);
     assertIterateBetweenEntries(keyValues, random, collator, false, true, true);
     assertIterateBetweenEntries(keyValues, random, collator, false, false, true);

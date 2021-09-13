@@ -21,11 +21,14 @@
 package com.orientechnologies.orient.core.index.engine;
 
 import com.orientechnologies.common.serialization.types.OBinarySerializer;
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.encryption.OEncryption;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndexKeyUpdater;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperation;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -44,6 +47,8 @@ public interface OIndexEngine extends OBaseIndexEngine {
       throws IOException;
 
   boolean remove(OAtomicOperation atomicOperation, Object key) throws IOException;
+
+  boolean rawRemove(final OAtomicOperation atomicOperation, final byte[] key) throws IOException;
 
   /**
    * Puts the given value under the given key into this index engine. Validates the operation using
@@ -75,4 +80,9 @@ public interface OIndexEngine extends OBaseIndexEngine {
       int keySize,
       Map<String, String> engineProperties,
       OEncryption encryption);
+
+  ORawPair<byte[], Object> getRawEntry(Object key);
+
+  void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> updater) throws IOException;
+
 }

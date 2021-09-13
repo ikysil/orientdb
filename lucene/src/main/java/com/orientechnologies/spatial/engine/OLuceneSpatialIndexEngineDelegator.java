@@ -137,8 +137,23 @@ public class OLuceneSpatialIndexEngineDelegator
   }
 
   @Override
+  public ORawPair<byte[], Object> getRawEntry(Object key) {
+    return delegate.getRawEntry(key);
+  }
+
+  @Override
+  public void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> updater) throws IOException {
+    delegate.updateRaw(atomicOperation, key, updater);
+  }
+
+  @Override
   public boolean remove(OAtomicOperation atomicOperation, Object key) {
     return delegate.remove(atomicOperation, key);
+  }
+
+  @Override
+  public boolean rawRemove(OAtomicOperation atomicOperation, byte[] key) throws IOException {
+    return delegate.rawRemove(atomicOperation, key);
   }
 
   @Override

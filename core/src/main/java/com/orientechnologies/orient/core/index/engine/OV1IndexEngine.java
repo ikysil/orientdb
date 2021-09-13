@@ -1,6 +1,7 @@
 package com.orientechnologies.orient.core.index.engine;
 
 import com.orientechnologies.common.serialization.types.OBinarySerializer;
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.encryption.OEncryption;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.metadata.schema.OType;
@@ -27,4 +28,6 @@ public interface OV1IndexEngine extends OBaseIndexEngine {
       final OEncryption encryption);
 
   boolean isMultiValue();
+
+  Stream<ORawPair<byte[], ORID>> getRawEntries(Object key);
 }

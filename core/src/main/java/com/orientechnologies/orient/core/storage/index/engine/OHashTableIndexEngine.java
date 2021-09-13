@@ -40,6 +40,7 @@ import com.orientechnologies.orient.core.storage.index.hashindex.local.OMurmurHa
 import com.orientechnologies.orient.core.storage.index.hashindex.local.OSHA256HashFunction;
 import com.orientechnologies.orient.core.storage.index.hashindex.local.v2.LocalHashTableV2;
 import com.orientechnologies.orient.core.storage.index.hashindex.local.v3.OLocalHashTableV3;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
@@ -64,6 +65,11 @@ public final class OHashTableIndexEngine implements OIndexEngine {
 
   private final OHashTable<Object, Object> hashTable;
   private final AtomicLong bonsayFileId = new AtomicLong(0);
+
+  @SuppressWarnings("rawtypes")
+  private volatile OBinarySerializer keySerializer;
+
+  private volatile OType[] keyTypes;
 
   private final String name;
 
@@ -120,22 +126,25 @@ public final class OHashTableIndexEngine implements OIndexEngine {
   @Override
   public void create(
       OAtomicOperation atomicOperation,
-      OBinarySerializer valueSerializer,
+      @SuppressWarnings("rawtypes") OBinarySerializer valueSerializer,
       boolean isAutomatic,
       OType[] keyTypes,
       boolean nullPointerSupport,
-      OBinarySerializer keySerializer,
+      @SuppressWarnings("rawtypes") OBinarySerializer keySerializer,
       int keySize,
       Map<String, String> engineProperties,
       OEncryption encryption)
       throws IOException {
     final OHashFunction<Object> hashFunction;
 
+    this.keySerializer = keySerializer;
+    this.keyTypes = keyTypes;
+
     if (encryption != null) {
-      //noinspection unchecked
+      //noinspection unchecked,rawtypes
       hashFunction = new OSHA256HashFunction<>(keySerializer);
     } else {
-      //noinspection unchecked
+      //noinspection unchecked, rawtypes
       hashFunction = new OMurmurHash3HashFunction<>(keySerializer);
     }
 
@@ -184,28 +193,30 @@ public final class OHashTableIndexEngine implements OIndexEngine {
     }
   }
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
   public void load(
       String indexName,
-      OBinarySerializer valueSerializer,
+      @SuppressWarnings("rawtypes") OBinarySerializer valueSerializer,
       boolean isAutomatic,
-      OBinarySerializer keySerializer,
+      @SuppressWarnings("rawtypes") OBinarySerializer keySerializer,
       OType[] keyTypes,
       boolean nullPointerSupport,
       int keySize,
       Map<String, String> engineProperties,
       OEncryption encryption) {
 
+    this.keySerializer = keySerializer;
+    this.keyTypes = keyTypes;
+
     final OHashFunction<Object> hashFunction;
 
     if (encryption != null) {
-      //noinspection unchecked
       hashFunction = new OSHA256HashFunction<>(keySerializer);
     } else {
-      //noinspection unchecked
       hashFunction = new OMurmurHash3HashFunction<>(keySerializer);
     }
-    //noinspection unchecked
+
     hashTable.load(
         indexName,
         keyTypes,
@@ -222,6 +233,18 @@ public final class OHashTableIndexEngine implements OIndexEngine {
   }
 
   @Override
+  public boolean rawRemove(OAtomicOperation atomicOperation, byte[] rawKey) throws IOException {
+    final Object key;
+    if (rawKey == null) {
+      key = null;
+    } else {
+      key = keySerializer.deserializeNativeObject(rawKey, 0);
+    }
+
+    return remove(atomicOperation, key);
+  }
+
+  @Override
   public void clear(OAtomicOperation atomicOperation) throws IOException {
     doClearTable(atomicOperation);
   }
@@ -234,6 +257,11 @@ public final class OHashTableIndexEngine implements OIndexEngine {
   @Override
   public Object get(Object key) {
     return hashTable.get(key);
+  }
+
+  @Override
+  public ORawPair<byte[], Object> getRawEntry(final Object key) {
+    return new ORawPair<>(serializeKey(key), hashTable.get(key));
   }
 
   @Override
@@ -256,11 +284,25 @@ public final class OHashTableIndexEngine implements OIndexEngine {
     }
   }
 
+  @Override
+  public void updateRaw(OAtomicOperation atomicOperation, byte[] rawKey, OIndexKeyUpdater<Object> update)
+          throws IOException {
+    final Object key;
+    if (rawKey == null) {
+      key = null;
+    } else {
+      key = keySerializer.deserializeNativeObject(rawKey, 0);
+    }
+
+    update(atomicOperation, key, update);
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public boolean validatedPut(
       OAtomicOperation atomicOperation, Object key, ORID value, Validator<Object, ORID> validator)
       throws IOException {
+    //noinspection rawtypes
     return hashTable.validatedPut(atomicOperation, key, value, (Validator) validator);
   }
 
@@ -303,26 +345,49 @@ public final class OHashTableIndexEngine implements OIndexEngine {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
+  public Stream<ORID> iterateBetween(
       Object rangeFrom,
       boolean fromInclusive,
       Object rangeTo,
       boolean toInclusive,
       boolean ascSortOrder,
       ValuesTransformer transformer) {
-    throw new UnsupportedOperationException("iterateEntriesBetween");
+    throw new UnsupportedOperationException("iterateBetween");
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
+  public Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(
+      Object rangeFrom,
+      boolean fromInclusive,
+      Object rangeTo,
+      boolean toInclusive,
+      boolean ascSortOrder,
+      ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("iterateBetween");
+  }
+
+  @Override
+  public Stream<ORID> iterateMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    throw new UnsupportedOperationException("iterateEntriesMajor");
+    throw new UnsupportedOperationException("iterateMajor");
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
+  public Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(
+      Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("iterateMajor");
+  }
+
+  @Override
+  public Stream<ORID> iterateMinor(
       Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    throw new UnsupportedOperationException("iterateEntriesMinor");
+    throw new UnsupportedOperationException("iterateMinor");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(
+      Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("iterateMinor");
   }
 
   @Override
@@ -415,7 +480,111 @@ public final class OHashTableIndexEngine implements OIndexEngine {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream(final ValuesTransformer valuesTransformer) {
+  public Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer) {
+    return doStream(valuesTransformer)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
+  }
+
+  private Stream<ORawPair<Object, ORID>> doStream(final ValuesTransformer valuesTransformer) {
+    return StreamSupport.stream(
+        new Spliterator<ORawPair<Object, ORID>>() {
+          private int nextEntriesIndex;
+          private OHashTable.Entry<Object, Object>[] entries;
+
+          private Iterator<ORID> currentIterator = new OEmptyIterator<>();
+          private Object currentKey;
+
+          {
+            OHashTable.Entry<Object, Object> firstEntry = hashTable.firstEntry();
+            if (firstEntry == null) {
+              //noinspection unchecked
+              entries = OCommonConst.EMPTY_BUCKET_ENTRY_ARRAY;
+            } else {
+              entries = hashTable.ceilingEntries(firstEntry.key);
+            }
+
+            if (entries.length == 0) {
+              currentIterator = null;
+            }
+          }
+
+          @Override
+          public boolean tryAdvance(Consumer<? super ORawPair<Object, ORID>> action) {
+            if (currentIterator == null) {
+              return false;
+            }
+
+            if (currentIterator.hasNext()) {
+              final OIdentifiable identifiable = currentIterator.next();
+              action.accept(new ORawPair<>(currentKey, identifiable.getIdentity()));
+              return true;
+            }
+
+            while (currentIterator != null && !currentIterator.hasNext()) {
+              if (entries.length == 0) {
+                currentIterator = null;
+                return false;
+              }
+
+              final OHashTable.Entry<Object, Object> bucketEntry = entries[nextEntriesIndex];
+
+              currentKey = bucketEntry.key;
+
+              Object value = bucketEntry.value;
+              if (valuesTransformer != null) {
+                currentIterator = valuesTransformer.transformFromValue(value).iterator();
+              } else {
+                currentIterator = Collections.singletonList((ORID) value).iterator();
+              }
+
+              nextEntriesIndex++;
+
+              if (nextEntriesIndex >= entries.length) {
+                entries = hashTable.higherEntries(entries[entries.length - 1].key);
+
+                nextEntriesIndex = 0;
+              }
+            }
+
+            if (currentIterator != null) {
+              final OIdentifiable identifiable = currentIterator.next();
+              action.accept(new ORawPair<>(currentKey, identifiable.getIdentity()));
+              return true;
+            }
+
+            return false;
+          }
+
+          @Override
+          public Spliterator<ORawPair<Object, ORID>> trySplit() {
+            return null;
+          }
+
+          @Override
+          public long estimateSize() {
+            return Long.MAX_VALUE;
+          }
+
+          @Override
+          public int characteristics() {
+            return NONNULL;
+          }
+        },
+        false);
+  }
+
+  @Override
+  public Stream<ORID> descStream(final ValuesTransformer valuesTransformer) {
+    return doDescStream(valuesTransformer).map(pair -> pair.second);
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer) {
+    return doDescStream(valuesTransformer)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
+  }
+
+  private Stream<ORawPair<Object, ORID>> doDescStream(final ValuesTransformer valuesTransformer) {
     return StreamSupport.stream(
         new Spliterator<ORawPair<Object, ORID>>() {
           private int nextEntriesIndex;
@@ -503,57 +672,13 @@ public final class OHashTableIndexEngine implements OIndexEngine {
         false);
   }
 
-  @Override
-  public Stream<Object> keyStream() {
-    return StreamSupport.stream(
-        new Spliterator<Object>() {
-          private int nextEntriesIndex;
-          private OHashTable.Entry<Object, Object>[] entries;
+  private byte[] serializeKey(final Object key) {
+    if (key == null) {
+      return null;
+    }
 
-          {
-            OHashTable.Entry<Object, Object> firstEntry = hashTable.firstEntry();
-            if (firstEntry == null) {
-              //noinspection unchecked
-              entries = OCommonConst.EMPTY_BUCKET_ENTRY_ARRAY;
-            } else {
-              entries = hashTable.ceilingEntries(firstEntry.key);
-            }
-          }
-
-          @Override
-          public boolean tryAdvance(Consumer<? super Object> action) {
-            if (entries.length == 0) {
-              return false;
-            }
-
-            final OHashTable.Entry<Object, Object> bucketEntry = entries[nextEntriesIndex];
-            nextEntriesIndex++;
-            if (nextEntriesIndex >= entries.length) {
-              entries = hashTable.higherEntries(entries[entries.length - 1].key);
-
-              nextEntriesIndex = 0;
-            }
-
-            action.accept(bucketEntry.key);
-            return true;
-          }
-
-          @Override
-          public Spliterator<Object> trySplit() {
-            return null;
-          }
-
-          @Override
-          public long estimateSize() {
-            return Long.MAX_VALUE;
-          }
-
-          @Override
-          public int characteristics() {
-            return NONNULL;
-          }
-        },
-        false);
+    //noinspection unchecked
+    return keySerializer.serializeNativeAsWhole(key, (Object[]) keyTypes);
   }
 
   @Override

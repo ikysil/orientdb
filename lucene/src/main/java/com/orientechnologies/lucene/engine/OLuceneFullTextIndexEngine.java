@@ -133,6 +133,11 @@ public class OLuceneFullTextIndexEngine extends OLuceneIndexEngineAbstract {
   }
 
   @Override
+  public boolean rawRemove(OAtomicOperation atomicOperation, byte[] key) {
+    throw new UnsupportedOperationException("Raw entries are not supported for Lucene indexes");
+  }
+
+  @Override
   public Object get(final Object key) {
     return getInTx(key, null);
   }
@@ -165,6 +170,16 @@ public class OLuceneFullTextIndexEngine extends OLuceneIndexEngineAbstract {
   }
 
   @Override
+  public ORawPair<byte[], Object> getRawEntry(Object key) {
+    throw new UnsupportedOperationException("Raw entries are not supported for Lucene indexes");
+  }
+
+  @Override
+  public void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> updater) {
+    throw new UnsupportedOperationException("Raw entries are not supported for Lucene indexes");
+  }
+
+  @Override
   public Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
       Object rangeFrom,
       boolean fromInclusive,
@@ -172,7 +187,40 @@ public class OLuceneFullTextIndexEngine extends OLuceneIndexEngineAbstract {
       boolean toInclusive,
       boolean ascSortOrder,
       ValuesTransformer transformer) {
-    return LuceneIndexTransformer.transformToStream((OLuceneResultSet) get(rangeFrom), rangeFrom);
+    return LuceneIndexTransformer.transformToStream((OLuceneResultSet) get(rangeFrom));
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(Object rangeFrom, boolean fromInclusive,
+                                                                 Object rangeTo, boolean toInclusive, boolean ascSortOrder,
+                                                                 ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(Object fromKey, boolean isInclusive,
+                                                               boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(Object toKey, boolean isInclusive,
+                                                               boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+
   }
 
   private Set<OIdentifiable> getResults(
@@ -191,13 +239,13 @@ public class OLuceneFullTextIndexEngine extends OLuceneIndexEngineAbstract {
   @Override
   public Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    return null;
+    throw new UnsupportedOperationException("Iteration is not supported");
   }
 
   @Override
   public Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
       Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    return null;
+    throw new UnsupportedOperationException("Iteration is not supported");
   }
 
   @Override

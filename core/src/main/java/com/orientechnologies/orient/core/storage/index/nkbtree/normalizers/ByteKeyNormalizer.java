@@ -10,7 +10,7 @@ public final class ByteKeyNormalizer implements KeyNormalizer {
 
   @Override
   public int normalize(Object key, int offset, byte[] stream) {
-    stream[offset] =(byte) ((byte) key + Byte.MAX_VALUE + (byte) 1);
+    stream[offset] = (byte) ((byte) key + Byte.MAX_VALUE + (byte) 1);
 
     return offset + OByteSerializer.BYTE_SIZE;
   }

@@ -53,8 +53,7 @@ public class OLuceneOverlapOperator extends OLuceneSpatialOperator {
     //noinspection resource
     return index
         .getInternal()
-        .getRids(queryParams)
-        .map((rid) -> new ORawPair<>(new OSpatialCompositeKey(keyParams), rid));
+        .getRids(queryParams);
   }
 
   @Override

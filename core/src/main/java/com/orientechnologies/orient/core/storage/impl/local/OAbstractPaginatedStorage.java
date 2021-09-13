@@ -154,27 +154,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -3073,6 +3053,33 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
+  public ORawPair<byte[], Object> getRawKeyIndexValue(int indexId, final Object key)
+      throws OInvalidIndexEngineIdException {
+    indexId = extractInternalId(indexId);
+
+    try {
+      if (transaction.get() != null) {
+        return doGetRawIndexValue(indexId, key);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        return doGetRawIndexValue(indexId, key);
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Throwable ie) {
+      throw logAndPrepareForRethrow(ie, false);
+    }
+  }
+
   private Object doGetIndexValue(final int indexId, final Object key)
       throws OInvalidIndexEngineIdException {
     final int engineAPIVersion = extractEngineAPIVersion(indexId);
@@ -3084,6 +3091,19 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     final OBaseIndexEngine engine = indexEngines.get(indexId);
     assert indexId == engine.getId();
     return ((OIndexEngine) engine).get(key);
+  }
+
+  private ORawPair<byte[], Object> doGetRawIndexValue(final int indexId, final Object key)
+      throws OInvalidIndexEngineIdException {
+    final int engineAPIVersion = extractEngineAPIVersion(indexId);
+    if (engineAPIVersion != 0) {
+      throw new IllegalStateException(
+          "Unsupported version of index engine API. Required 0 but found " + engineAPIVersion);
+    }
+    checkIndexId(indexId);
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+    return ((OIndexEngine) engine).getRawEntry(key);
   }
 
   public Stream<ORID> getIndexValues(int indexId, final Object key)
@@ -3119,6 +3139,39 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
+  public Stream<ORawPair<byte[], ORID>> getRawIndexValues(int indexId, final Object key)
+      throws OInvalidIndexEngineIdException {
+    final int engineAPIVersion = extractEngineAPIVersion(indexId);
+    if (engineAPIVersion != 1) {
+      throw new IllegalStateException(
+          "Unsupported version of index engine API. Required 1 but found " + engineAPIVersion);
+    }
+
+    indexId = extractInternalId(indexId);
+
+    try {
+      if (transaction.get() != null) {
+        return doGetRawIndexValues(indexId, key);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        return doGetRawIndexValues(indexId, key);
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Throwable ie) {
+      throw logAndPrepareForRethrow(ie, false);
+    }
+  }
+
   private Stream<ORID> doGetIndexValues(final int indexId, final Object key)
       throws OInvalidIndexEngineIdException {
     checkIndexId(indexId);
@@ -3127,6 +3180,16 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     assert indexId == engine.getId();
 
     return ((OV1IndexEngine) engine).get(key);
+  }
+
+  private Stream<ORawPair<byte[], ORID>> doGetRawIndexValues(final int indexId, final Object key)
+      throws OInvalidIndexEngineIdException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+
+    return ((OV1IndexEngine) engine).getRawEntries(key);
   }
 
   public String getIndexNameByKey(int indexId, final Object key)
@@ -3224,6 +3287,63 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     } catch (final Throwable t) {
       throw logAndPrepareForRethrow(t);
     }
+  }
+
+  public void updateRawIndexEntry(
+      int indexId, final byte[] key, final OIndexKeyUpdater<Object> valueCreator)
+      throws OInvalidIndexEngineIdException {
+    final int engineAPIVersion = extractEngineAPIVersion(indexId);
+    final int internalIndexId = extractInternalId(indexId);
+
+    if (engineAPIVersion != 0) {
+      throw new IllegalStateException(
+          "Unsupported version of index engine API. Required 0 but found " + engineAPIVersion);
+    }
+
+    try {
+      if (transaction.get() != null) {
+        final OAtomicOperation atomicOperation = OAtomicOperationsManager.getCurrentOperation();
+        assert atomicOperation != null;
+        doUpdateRawIndexEntry(atomicOperation, indexId, key, valueCreator);
+        return;
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        makeStorageDirty();
+        atomicOperationsManager.executeInsideAtomicOperation(
+            null,
+            atomicOperation ->
+                doUpdateRawIndexEntry(atomicOperation, internalIndexId, key, valueCreator));
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final OInvalidIndexEngineIdException ie) {
+      throw logAndPrepareForRethrow(ie);
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee);
+    } catch (final Throwable t) {
+      throw logAndPrepareForRethrow(t);
+    }
+  }
+
+  private void doUpdateRawIndexEntry(
+      final OAtomicOperation atomicOperation,
+      final int indexId,
+      final byte[] key,
+      final OIndexKeyUpdater<Object> valueCreator)
+      throws OInvalidIndexEngineIdException, IOException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+
+    ((OIndexEngine) engine).updateRaw(atomicOperation, key, valueCreator);
   }
 
   public <T> T callIndexEngine(
@@ -3373,6 +3493,59 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     } catch (final Throwable t) {
       throw logAndPrepareForRethrow(t);
     }
+  }
+
+  public boolean removeRawRidIndexEntry(int indexId, final byte[] key, final ORID value)
+      throws OInvalidIndexEngineIdException {
+    final int engineAPIVersion = extractEngineAPIVersion(indexId);
+    final int internalIndexId = extractInternalId(indexId);
+
+    if (engineAPIVersion != 1) {
+      throw new IllegalStateException(
+          "Unsupported version of index engine API. Required 1 but found " + engineAPIVersion);
+    }
+
+    try {
+      if (transaction.get() != null) {
+        final OAtomicOperation atomicOperation = OAtomicOperationsManager.getCurrentOperation();
+        assert atomicOperation != null;
+        return removeRawRidIndexEntryInternal(atomicOperation, internalIndexId, key, value);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        makeStorageDirty();
+
+        return atomicOperationsManager.calculateInsideAtomicOperation(
+            null,
+            atomicOperation ->
+                removeRawRidIndexEntryInternal(atomicOperation, internalIndexId, key, value));
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final OInvalidIndexEngineIdException ie) {
+      throw logAndPrepareForRethrow(ie);
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee);
+    } catch (final Throwable t) {
+      throw logAndPrepareForRethrow(t);
+    }
+  }
+
+  private boolean removeRawRidIndexEntryInternal(
+      final OAtomicOperation atomicOperation, final int indexId, final byte[] key, final ORID value)
+      throws OInvalidIndexEngineIdException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert engine.getId() == indexId;
+
+    return ((OMultiValueIndexEngine) engine).removeRaw(atomicOperation, key, value);
   }
 
   private boolean removeRidIndexEntryInternal(
@@ -3530,7 +3703,7 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
-  public Stream<ORawPair<Object, ORID>> iterateIndexEntriesBetween(
+  public Stream<ORID> iterateIndexEntriesBetween(
       int indexId,
       final Object rangeFrom,
       final boolean fromInclusive,
@@ -3543,7 +3716,7 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
 
     try {
       if (transaction.get() != null) {
-        return doIterateIndexEntriesBetween(
+        return doIterateIndexBetween(
             indexId, rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder, transformer);
       }
 
@@ -3552,7 +3725,7 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
         checkIfThreadIsInterrupted();
         checkOpenness();
 
-        return doIterateIndexEntriesBetween(
+        return doIterateIndexBetween(
             indexId, rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder, transformer);
       } finally {
         stateLock.releaseReadLock();
@@ -3566,7 +3739,43 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
-  private Stream<ORawPair<Object, ORID>> doIterateIndexEntriesBetween(
+  public Stream<ORawPair<byte[], ORID>> iterateRawIndexEntriesBetween(
+      int indexId,
+      final Object rangeFrom,
+      final boolean fromInclusive,
+      final Object rangeTo,
+      final boolean toInclusive,
+      final boolean ascSortOrder,
+      final OBaseIndexEngine.ValuesTransformer transformer)
+      throws OInvalidIndexEngineIdException {
+    indexId = extractInternalId(indexId);
+
+    try {
+      if (transaction.get() != null) {
+        return doIterateRawIndexBetween(
+            indexId, rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder, transformer);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        return doIterateRawIndexBetween(
+            indexId, rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder, transformer);
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Throwable ie) {
+      throw logAndPrepareForRethrow(ie, false);
+    }
+  }
+
+  private Stream<ORID> doIterateIndexBetween(
       final int indexId,
       final Object rangeFrom,
       final boolean fromInclusive,
@@ -3580,11 +3789,29 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     final OBaseIndexEngine engine = indexEngines.get(indexId);
     assert indexId == engine.getId();
 
-    return engine.iterateEntriesBetween(
+    return engine.iterateBetween(
         rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder, transformer);
   }
 
-  public Stream<ORawPair<Object, ORID>> iterateIndexEntriesMajor(
+  private Stream<ORawPair<byte[], ORID>> doIterateRawIndexBetween(
+      final int indexId,
+      final Object rangeFrom,
+      final boolean fromInclusive,
+      final Object rangeTo,
+      final boolean toInclusive,
+      final boolean ascSortOrder,
+      final OBaseIndexEngine.ValuesTransformer transformer)
+      throws OInvalidIndexEngineIdException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+
+    return engine.iterateBetweenRawEntries(
+        rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder, transformer);
+  }
+
+  public Stream<ORID> iterateIndexEntriesMajor(
       int indexId,
       final Object fromKey,
       final boolean isInclusive,
@@ -3616,7 +3843,41 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
-  private Stream<ORawPair<Object, ORID>> doIterateIndexEntriesMajor(
+  public Stream<ORawPair<byte[], ORID>> iterateRawIndexEntriesMajor(
+      int indexId,
+      final Object fromKey,
+      final boolean isInclusive,
+      final boolean ascSortOrder,
+      final OBaseIndexEngine.ValuesTransformer transformer)
+      throws OInvalidIndexEngineIdException {
+    indexId = extractInternalId(indexId);
+
+    try {
+      if (transaction.get() != null) {
+        return doIterateRawIndexEntriesMajor(
+            indexId, fromKey, isInclusive, ascSortOrder, transformer);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        return doIterateRawIndexEntriesMajor(
+            indexId, fromKey, isInclusive, ascSortOrder, transformer);
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Throwable ie) {
+      throw logAndPrepareForRethrow(ie, false);
+    }
+  }
+
+  private Stream<ORID> doIterateIndexEntriesMajor(
       final int indexId,
       final Object fromKey,
       final boolean isInclusive,
@@ -3628,10 +3889,25 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     final OBaseIndexEngine engine = indexEngines.get(indexId);
     assert indexId == engine.getId();
 
-    return engine.iterateEntriesMajor(fromKey, isInclusive, ascSortOrder, transformer);
+    return engine.iterateMajor(fromKey, isInclusive, ascSortOrder, transformer);
   }
 
-  public Stream<ORawPair<Object, ORID>> iterateIndexEntriesMinor(
+  private Stream<ORawPair<byte[], ORID>> doIterateRawIndexEntriesMajor(
+      final int indexId,
+      final Object fromKey,
+      final boolean isInclusive,
+      final boolean ascSortOrder,
+      final OBaseIndexEngine.ValuesTransformer transformer)
+      throws OInvalidIndexEngineIdException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+
+    return engine.iterateMajorRawEntries(fromKey, isInclusive, ascSortOrder, transformer);
+  }
+
+  public Stream<ORID> iterateIndexEntriesMinor(
       int indexId,
       final Object toKey,
       final boolean isInclusive,
@@ -3663,7 +3939,41 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
-  private Stream<ORawPair<Object, ORID>> doIterateIndexEntriesMinor(
+  public Stream<ORawPair<byte[], ORID>> iterateRawIndexEntriesMinor(
+      int indexId,
+      final Object toKey,
+      final boolean isInclusive,
+      final boolean ascSortOrder,
+      final OBaseIndexEngine.ValuesTransformer transformer)
+      throws OInvalidIndexEngineIdException {
+    indexId = extractInternalId(indexId);
+
+    try {
+      if (transaction.get() != null) {
+        return doIterateRawIndexEntriesMinor(
+            indexId, toKey, isInclusive, ascSortOrder, transformer);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        return doIterateRawIndexEntriesMinor(
+            indexId, toKey, isInclusive, ascSortOrder, transformer);
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Throwable ie) {
+      throw logAndPrepareForRethrow(ie, false);
+    }
+  }
+
+  private Stream<ORawPair<byte[], ORID>> doIterateRawIndexEntriesMinor(
       final int indexId,
       final Object toKey,
       final boolean isInclusive,
@@ -3675,10 +3985,53 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     final OBaseIndexEngine engine = indexEngines.get(indexId);
     assert indexId == engine.getId();
 
-    return engine.iterateEntriesMinor(toKey, isInclusive, ascSortOrder, transformer);
+    return engine.iterateMinorRawEntries(toKey, isInclusive, ascSortOrder, transformer);
   }
 
-  public Stream<ORawPair<Object, ORID>> getIndexStream(
+  private Stream<ORID> doIterateIndexEntriesMinor(
+      final int indexId,
+      final Object toKey,
+      final boolean isInclusive,
+      final boolean ascSortOrder,
+      final OBaseIndexEngine.ValuesTransformer transformer)
+      throws OInvalidIndexEngineIdException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+
+    return engine.iterateMinor(toKey, isInclusive, ascSortOrder, transformer);
+  }
+
+  public Stream<ORawPair<byte[], ORID>> getIndexRawStream(
+      int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
+      throws OInvalidIndexEngineIdException {
+    indexId = extractInternalId(indexId);
+
+    try {
+      if (transaction.get() != null) {
+        return doGetIndexRawStream(indexId, valuesTransformer);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        return doGetIndexRawStream(indexId, valuesTransformer);
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Throwable ie) {
+      throw logAndPrepareForRethrow(ie, false);
+    }
+  }
+
+  public Stream<ORID> getIndexStream(
       int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
       throws OInvalidIndexEngineIdException {
     indexId = extractInternalId(indexId);
@@ -3706,7 +4059,18 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
-  private Stream<ORawPair<Object, ORID>> doGetIndexStream(
+  private Stream<ORawPair<byte[], ORID>> doGetIndexRawStream(
+      final int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
+      throws OInvalidIndexEngineIdException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+
+    return engine.rawStream(valuesTransformer);
+  }
+
+  private Stream<ORID> doGetIndexStream(
       final int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
       throws OInvalidIndexEngineIdException {
     checkIndexId(indexId);
@@ -3754,6 +4118,17 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     assert indexId == engine.getId();
 
     return engine.descStream(valuesTransformer);
+  }
+
+  private Stream<ORawPair<byte[] , ORID>> doGetRawIndexDescStream(
+          final int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
+          throws OInvalidIndexEngineIdException {
+    checkIndexId(indexId);
+
+    final OBaseIndexEngine engine = indexEngines.get(indexId);
+    assert indexId == engine.getId();
+
+    return engine.rawDescStream(valuesTransformer);
   }
 
   public Stream<Object> getIndexKeyStream(int indexId) throws OInvalidIndexEngineIdException {

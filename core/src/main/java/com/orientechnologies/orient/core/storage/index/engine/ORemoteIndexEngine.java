@@ -122,6 +122,21 @@ public class ORemoteIndexEngine implements OIndexEngine {
       OAtomicOperation atomicOperation, Object key, OIndexKeyUpdater<Object> updater) {}
 
   @Override
+  public boolean rawRemove(OAtomicOperation atomicOperation, byte[] key) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ORawPair<byte[], Object> getRawEntry(Object key) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> valueCreator) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public boolean validatedPut(
       OAtomicOperation atomicOperation, Object key, ORID value, Validator<Object, ORID> validator) {
     return false;

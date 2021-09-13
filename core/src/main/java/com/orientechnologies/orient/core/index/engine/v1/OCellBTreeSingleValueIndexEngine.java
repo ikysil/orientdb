@@ -28,6 +28,11 @@ public final class OCellBTreeSingleValueIndexEngine
   private final String name;
   private final int id;
 
+  @SuppressWarnings("rawtypes")
+  private volatile OBinarySerializer keySerializer;
+
+  private volatile OType[] keyTypes;
+
   public OCellBTreeSingleValueIndexEngine(
       int id, String name, OAbstractPaginatedStorage storage, int version) {
     this.name = name;
@@ -70,14 +75,17 @@ public final class OCellBTreeSingleValueIndexEngine
   @Override
   public void create(
       OAtomicOperation atomicOperation,
-      OBinarySerializer valueSerializer,
+      @SuppressWarnings("rawtypes") OBinarySerializer valueSerializer,
       boolean isAutomatic,
       OType[] keyTypes,
       boolean nullPointerSupport,
-      OBinarySerializer keySerializer,
+      @SuppressWarnings("rawtypes") OBinarySerializer keySerializer,
       int keySize,
       Map<String, String> engineProperties,
       OEncryption encryption) {
+    this.keySerializer = keySerializer;
+    this.keyTypes = keyTypes;
+
     try {
       //noinspection unchecked
       sbTree.create(atomicOperation, keySerializer, keyTypes, keySize, encryption);
@@ -118,8 +126,11 @@ public final class OCellBTreeSingleValueIndexEngine
       String indexName,
       final int keySize,
       final OType[] keyTypes,
-      final OBinarySerializer keySerializer,
+      @SuppressWarnings("rawtypes") final OBinarySerializer keySerializer,
       final OEncryption encryption) {
+    this.keySerializer = keySerializer;
+    this.keyTypes = keyTypes;
+
     //noinspection unchecked
     sbTree.load(indexName, keySize, keyTypes, keySerializer, encryption);
   }
@@ -132,6 +143,18 @@ public final class OCellBTreeSingleValueIndexEngine
       throw OException.wrapException(
           new OIndexException("Error during removal of key " + key + " from index " + name), e);
     }
+  }
+
+  @Override
+  public boolean rawRemove(OAtomicOperation atomicOperation, byte[] rawKey) throws IOException {
+    final Object key;
+    if (rawKey != null) {
+      key = keySerializer.deserializeNativeObject(rawKey, 0);
+    } else {
+      key = null;
+    }
+
+    return remove(atomicOperation, key);
   }
 
   @Override
@@ -159,28 +182,43 @@ public final class OCellBTreeSingleValueIndexEngine
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream(ValuesTransformer valuesTransformer) {
+  public Stream<ORawPair<byte[], ORID>> getRawEntries(Object key) {
+    final ORID rid = sbTree.get(key);
+    if (rid == null) {
+      return Stream.empty();
+    }
+
+    return Stream.of(new ORawPair<>(serializeKey(key),rid));
+  }
+
+  @Override
+  public Stream<ORID> stream(ValuesTransformer valuesTransformer) {
     final Object firstKey = sbTree.firstKey();
     if (firstKey == null) {
       return Stream.empty();
     }
 
-    return sbTree.iterateEntriesMajor(firstKey, true, true);
+    return sbTree.iterateEntriesMajor(firstKey, true, true).map(pair -> pair.second);
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream(ValuesTransformer valuesTransformer) {
+  public Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer) {
+    return null;
+  }
+
+  @Override
+  public Stream<ORID> descStream(ValuesTransformer valuesTransformer) {
     final Object lastKey = sbTree.lastKey();
     if (lastKey == null) {
       return Stream.empty();
     }
 
-    return sbTree.iterateEntriesMinor(lastKey, true, false);
+    return sbTree.iterateEntriesMinor(lastKey, true, false).map(pair -> pair.second);
   }
 
   @Override
-  public Stream<Object> keyStream() {
-    return sbTree.keyStream();
+  public Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer) {
+    return null;
   }
 
   @Override
@@ -205,27 +243,57 @@ public final class OCellBTreeSingleValueIndexEngine
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
+  public Stream<ORID> iterateBetween(
       Object rangeFrom,
       boolean fromInclusive,
       Object rangeTo,
       boolean toInclusive,
       boolean ascSortOrder,
       ValuesTransformer transformer) {
-    return sbTree.iterateEntriesBetween(
-        rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder);
+    return sbTree
+        .iterateEntriesBetween(rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder)
+        .map(pair -> pair.second);
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
+  public Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(
+      Object rangeFrom,
+      boolean fromInclusive,
+      Object rangeTo,
+      boolean toInclusive,
+      boolean ascSortOrder,
+      ValuesTransformer transformer) {
+    return sbTree
+        .iterateEntriesBetween(rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
+  }
+
+  @Override
+  public Stream<ORID> iterateMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    return sbTree.iterateEntriesMajor(fromKey, isInclusive, ascSortOrder);
+    return sbTree.iterateEntriesMajor(fromKey, isInclusive, ascSortOrder).map(pair -> pair.second);
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
+  public Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(
+      Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    return sbTree
+        .iterateEntriesMajor(fromKey, isInclusive, ascSortOrder)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
+  }
+
+  @Override
+  public Stream<ORID> iterateMinor(
       Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    return sbTree.iterateEntriesMinor(toKey, isInclusive, ascSortOrder);
+    return sbTree.iterateEntriesMinor(toKey, isInclusive, ascSortOrder).map(pair -> pair.second);
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(
+      Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    return sbTree
+        .iterateEntriesMinor(toKey, isInclusive, ascSortOrder)
+        .map(pair -> new ORawPair<>(serializeKey(pair.first), pair.second));
   }
 
   @Override
@@ -247,5 +315,14 @@ public final class OCellBTreeSingleValueIndexEngine
   @Override
   public String getIndexNameByKey(Object key) {
     return name;
+  }
+
+  private byte[] serializeKey(final Object key) {
+    if (key == null) {
+      return null;
+    }
+
+    //noinspection unchecked
+    return keySerializer.serializeNativeAsWhole(key, (Object[]) keyTypes);
   }
 }

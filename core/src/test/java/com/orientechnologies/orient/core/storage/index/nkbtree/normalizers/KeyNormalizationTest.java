@@ -6,7 +6,6 @@ import com.orientechnologies.common.comparator.OUnsafeByteArrayComparator;
 import com.orientechnologies.common.comparator.OUnsafeByteArrayComparatorV2;
 import com.orientechnologies.orient.core.index.OCompositeKey;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;

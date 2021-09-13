@@ -798,20 +798,17 @@ public class OLocalPaginatedStorage extends OAbstractPaginatedStorage {
 
     diskWriteAheadLog.addSegmentOverflowListener(
         (segment) -> {
-          if (status != STATUS.OPEN) {
-            return;
-          }
-
-          final Future<Void> oldAppender = segmentAppender.get();
-          if (oldAppender == null || oldAppender.isDone()) {
-            final Future<Void> appender =
-                segmentAdderExecutor.submit(new SegmentAdder(segment, diskWriteAheadLog));
-
-            if (segmentAppender.compareAndSet(oldAppender, appender)) {
+          stateLock.acquireReadLock();
+          try {
+            if (status != STATUS.OPEN) {
               return;
             }
 
-            appender.cancel(false);
+            diskWriteAheadLog.appendSegment(segment + 1);
+
+            atomicOperationsTable.compactTable();
+          } finally {
+            stateLock.releaseReadLock();
           }
         });
 
@@ -911,24 +908,6 @@ public class OLocalPaginatedStorage extends OAbstractPaginatedStorage {
       try {
         if (status != STATUS.OPEN) {
           return null;
-        }
-
-        stateLock.acquireReadLock();
-        try {
-          if (status != STATUS.OPEN) {
-            return null;
-          }
-
-          final long freezeId = atomicOperationsManager.freezeComponentOperations();
-          try {
-            wal.appendSegment(segment + 1);
-          } finally {
-            atomicOperationsManager.releaseComponentOperations(freezeId);
-          }
-
-          atomicOperationsTable.compactTable();
-        } finally {
-          stateLock.releaseReadLock();
         }
 
       } catch (final Exception e) {

@@ -83,19 +83,8 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docTwo.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionInTx() {
@@ -123,18 +112,8 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-
-        if (!key.getIdentity().equals(docOne.getIdentity()) && !key.equals(docTwo.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdate() {
@@ -163,18 +142,8 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docThree.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docThree.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateInTx() {
@@ -210,19 +179,8 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docThree.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docThree.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateInTxRollback() {
@@ -253,18 +211,8 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docTwo.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateAddItem() {
@@ -298,19 +246,9 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 3);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docTwo.getIdentity())
-            && !key.getIdentity().equals(docThree.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docThree.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateAddItemInTx() {
@@ -345,19 +283,9 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 3);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docTwo.getIdentity())
-            && !key.getIdentity().equals(docThree.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docThree.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateAddItemInTxRollback() {
@@ -387,18 +315,8 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docTwo.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateRemoveItemInTx() {
@@ -419,7 +337,7 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     try {
       database.begin();
       ODocument loadedDocument = database.load(document.getIdentity());
-      loadedDocument.<List>field("linkCollection").remove(docTwo.getIdentity());
+      loadedDocument.<List<OIdentifiable>>field("linkCollection").remove(docTwo.getIdentity());
       loadedDocument.save();
       database.commit();
     } catch (Exception e) {
@@ -430,17 +348,7 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 1);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateRemoveItemInTxRollback() {
@@ -460,25 +368,15 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
 
     database.begin();
     ODocument loadedDocument = database.load(document.getIdentity());
-    loadedDocument.<List>field("linkCollection").remove(docTwo.getIdentity());
+    loadedDocument.<List<OIdentifiable>>field("linkCollection").remove(docTwo.getIdentity());
     loadedDocument.save();
     database.rollback();
 
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docTwo.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionUpdateRemoveItem() {
@@ -509,18 +407,7 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     OIndex index = getIndex("linkCollectionIndex");
     Assert.assertEquals(index.getInternal().size(), 1);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-
-        if (!key.getIdentity().equals(docOne.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionRemove() {
@@ -594,18 +481,8 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
 
     Assert.assertEquals(index.getInternal().size(), 2);
 
-    Iterator<Object> keyIterator;
-    try (Stream<Object> indexKeyStream = index.getInternal().keyStream()) {
-      keyIterator = indexKeyStream.iterator();
-
-      while (keyIterator.hasNext()) {
-        OIdentifiable key = (OIdentifiable) keyIterator.next();
-        if (!key.getIdentity().equals(docOne.getIdentity())
-            && !key.getIdentity().equals(docTwo.getIdentity())) {
-          Assert.fail("Unknown key found: " + key);
-        }
-      }
-    }
+    Assert.assertTrue(index.getInternal().getRids(docOne.getIdentity()).findAny().isPresent());
+    Assert.assertTrue(index.getInternal().getRids(docTwo.getIdentity()).findAny().isPresent());
   }
 
   public void testIndexCollectionSQL() {
@@ -631,6 +508,6 @@ public class LinkListIndexTest extends DocumentDBBaseTest {
     Assert.assertEquals(result.size(), 1);
     Assert.assertEquals(
         Arrays.asList(docOne.getIdentity(), docTwo.getIdentity()),
-        result.get(0).<List>field("linkCollection"));
+        result.get(0).<List<OIdentifiable>>field("linkCollection"));
   }
 }

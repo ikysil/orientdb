@@ -145,8 +145,7 @@ public class OLuceneNearOperator extends OQueryTargetOperator {
 
     return index
         .getInternal()
-        .getRids(new OSpatialCompositeKey(keyParams).setMaxDistance(distance).setContext(iContext))
-        .map((rid) -> new ORawPair<>(new OSpatialCompositeKey(keyParams), rid));
+        .getRids(new OSpatialCompositeKey(keyParams).setMaxDistance(distance).setContext(iContext));
   }
 
   @Override

@@ -26,7 +26,7 @@ public class KeyNormalizers {
     this.collator.setDecomposition(decomposition);
   }
 
-  public byte[] normalize(final OCompositeKey key, final OType[] keyTypes)  {
+  public byte[] normalize(final OCompositeKey key, final OType[] keyTypes) {
     if (key == null) {
       throw new IllegalArgumentException("Keys must not be null.");
     }

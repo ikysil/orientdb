@@ -13,7 +13,8 @@ import com.orientechnologies.common.serialization.types.OLongSerializer;
 import com.orientechnologies.common.serialization.types.OShortSerializer;
 import com.orientechnologies.common.serialization.types.OStringSerializer;
 import com.orientechnologies.common.serialization.types.OUTF8Serializer;
-
+import com.orientechnologies.orient.core.index.OCompositeKey;
+import com.orientechnologies.orient.core.metadata.schema.OType;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Calendar;
@@ -21,9 +22,6 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-
-import com.orientechnologies.orient.core.index.OCompositeKey;
-import com.orientechnologies.orient.core.metadata.schema.OType;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.profile.StackProfiler;
 import org.openjdk.jmh.runner.Runner;
@@ -43,7 +41,6 @@ public class KeyNormalizerVsSerializerBenchmark {
   private final byte[] binary = new byte[] {1, 2, 3, 4, 5, 6};
   private final Date date = new GregorianCalendar(2013, Calendar.NOVEMBER, 5).getTime();
   private Date dateTime;
-
 
   public static void main(String[] args) throws RunnerException {
     final Options opt =
@@ -148,7 +145,8 @@ public class KeyNormalizerVsSerializerBenchmark {
 
   @Benchmark
   public byte[] stringNormalizer() throws Exception {
-    return keyNormalizers.normalize(new OCompositeKey("abcdefghokadnar"), new OType[] {OType.STRING});
+    return keyNormalizers.normalize(
+        new OCompositeKey("abcdefghokadnar"), new OType[] {OType.STRING});
   }
 
   @Benchmark

@@ -347,8 +347,8 @@ public class IndexTxAwareOneValueGetValuesTest extends DocumentDBBaseTest {
   }
 
   private static void streamToSet(
-      Stream<ORawPair<Object, ORID>> stream, Set<OIdentifiable> result) {
+      Stream<ORID> stream, Set<OIdentifiable> result) {
     result.clear();
-    result.addAll(stream.map((entry) -> entry.second).collect(Collectors.toSet()));
+    result.addAll(stream.collect(Collectors.toSet()));
   }
 }

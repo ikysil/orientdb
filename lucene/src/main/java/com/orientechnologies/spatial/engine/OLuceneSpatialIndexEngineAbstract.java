@@ -79,6 +79,39 @@ public abstract class OLuceneSpatialIndexEngineAbstract extends OLuceneIndexEngi
       OIndexDefinition indexDefinition, ODocument metadata);
 
   @Override
+  public Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(
+      Object rangeFrom,
+      boolean fromInclusive,
+      Object rangeTo,
+      boolean toInclusive,
+      boolean ascSortOrder,
+      ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(
+      Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(
+      Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer) {
+    throw new UnsupportedOperationException("Iteration is not supported");
+  }
+
+  @Override
   public IndexWriter createIndexWriter(Directory directory) throws IOException {
     OLuceneIndexWriterFactory fc = new OLuceneIndexWriterFactory();
 
@@ -93,7 +126,7 @@ public abstract class OLuceneSpatialIndexEngineAbstract extends OLuceneIndexEngi
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
+  public Stream<ORID> iterateBetween(
       Object rangeFrom,
       boolean fromInclusive,
       Object rangeTo,
@@ -104,24 +137,19 @@ public abstract class OLuceneSpatialIndexEngineAbstract extends OLuceneIndexEngi
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
+  public Stream<ORID> iterateMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
     return null;
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
+  public Stream<ORID> iterateMinor(
       Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
     return null;
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream(ValuesTransformer valuesTransformer) {
-    return null;
-  }
-
-  @Override
-  public Stream<Object> keyStream() {
+  public Stream<ORID> stream(ValuesTransformer valuesTransformer) {
     return null;
   }
 

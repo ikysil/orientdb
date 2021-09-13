@@ -68,7 +68,7 @@ public class OQueryOperatorIn extends OQueryOperatorEqualityNotNulls {
     final OIndexDefinition indexDefinition = index.getDefinition();
 
     final OIndexInternal internalIndex = index.getInternal();
-    Stream<ORawPair<Object, ORID>> stream;
+    Stream<ORID> stream;
     if (!internalIndex.canBeUsedInEqualityOperators()) return null;
 
     if (indexDefinition.getParamCount() == 1) {

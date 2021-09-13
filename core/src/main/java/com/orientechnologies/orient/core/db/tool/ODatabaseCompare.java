@@ -58,7 +58,6 @@ public class ODatabaseCompare extends ODatabaseImpExpAbstract {
   private final ODatabaseDocumentInternal databaseOne;
   private final ODatabaseDocumentInternal databaseTwo;
 
-  private boolean compareEntriesForAutomaticIndexes = false;
   private boolean autoDetectExportImportMap = true;
 
   private int differences = 0;
@@ -568,33 +567,6 @@ public class ODatabaseCompare extends ODatabaseImpExpAbstract {
           ++differences;
         }
       }
-
-      if (((compareEntriesForAutomaticIndexes && !indexOne.getType().equals("DICTIONARY"))
-          || !indexOne.isAutomatic())) {
-
-        //noinspection resource
-        try (final Stream<Object> keyStream =
-            makeDbCall(databaseOne, database -> ((OIndexInternal) indexOne).keyStream())) {
-          final Iterator<Object> indexKeyIteratorOne =
-              makeDbCall(databaseOne, database -> keyStream.iterator());
-          while (makeDbCall(databaseOne, database -> indexKeyIteratorOne.hasNext())) {
-            final Object indexKey = makeDbCall(databaseOne, database -> indexKeyIteratorOne.next());
-
-            //noinspection resource
-            try (Stream<ORID> indexOneStream =
-                makeDbCall(databaseOne, database -> indexOne.getInternal().getRids(indexKey))) {
-              //noinspection resource
-              try (Stream<ORID> indexTwoValue =
-                  makeDbCall(databaseTwo, database -> indexTwo.getInternal().getRids(indexKey))) {
-                differences =
-                    compareIndexStreams(
-                        indexKey, indexOneStream, indexTwoValue, ridMapper, listener);
-              }
-            }
-            ok = ok && differences > 0;
-          }
-        }
-      }
     }
 
     if (ok) listener.onMessage("OK");
@@ -1097,14 +1069,6 @@ public class ODatabaseCompare extends ODatabaseImpExpAbstract {
 
   public void setCompareIndexMetadata(boolean compareIndexMetadata) {
     this.compareIndexMetadata = compareIndexMetadata;
-  }
-
-  public boolean isCompareEntriesForAutomaticIndexes() {
-    return compareEntriesForAutomaticIndexes;
-  }
-
-  public void setCompareEntriesForAutomaticIndexes(boolean compareEntriesForAutomaticIndexes) {
-    this.compareEntriesForAutomaticIndexes = compareEntriesForAutomaticIndexes;
   }
 
   public void setAutoDetectExportImportMap(boolean autoDetectExportImportMap) {

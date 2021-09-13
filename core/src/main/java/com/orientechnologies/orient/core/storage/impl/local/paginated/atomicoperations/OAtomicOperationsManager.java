@@ -20,7 +20,6 @@
 
 package com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations;
 
-import com.orientechnologies.common.concur.lock.OLockException;
 import com.orientechnologies.common.concur.lock.OOneEntryPerKeyLockManager;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.function.TxConsumer;
@@ -81,7 +80,6 @@ public class OAtomicOperationsManager {
   private final AtomicOperationIdGen idGen;
 
   private final OperationsFreezer atomicOperationsFreezer = new OperationsFreezer();
-  private final OperationsFreezer componentOperationsFreezer = new OperationsFreezer();
   private final AtomicOperationsTable atomicOperationsTable;
 
   public OAtomicOperationsManager(
@@ -192,36 +190,6 @@ public class OAtomicOperationsManager {
     }
   }
 
-  public boolean tryExecuteInsideComponentOperation(
-      final OAtomicOperation atomicOperation,
-      final ODurableComponent component,
-      final TxConsumer consumer) {
-    return tryExecuteInsideComponentOperation(atomicOperation, component.getLockName(), consumer);
-  }
-
-  private boolean tryExecuteInsideComponentOperation(
-      final OAtomicOperation atomicOperation, final String lockName, final TxConsumer consumer) {
-    Objects.requireNonNull(atomicOperation);
-    final boolean result = tryStartComponentOperation(atomicOperation, lockName);
-    if (!result) {
-      return false;
-    }
-
-    try {
-      consumer.accept(atomicOperation);
-    } catch (Exception e) {
-      throw OException.wrapException(
-          new OStorageException(
-              "Exception during execution of component operation inside of storage "
-                  + storage.getName()),
-          e);
-    } finally {
-      endComponentOperation(atomicOperation);
-    }
-
-    return true;
-  }
-
   public <T> T calculateInsideComponentOperation(
       final OAtomicOperation atomicOperation,
       final ODurableComponent component,
@@ -250,50 +218,10 @@ public class OAtomicOperationsManager {
       final OAtomicOperation atomicOperation, final String lockName) {
     acquireExclusiveLockTillOperationComplete(atomicOperation, lockName);
     atomicOperation.incrementComponentOperations();
-
-    componentOperationsFreezer.startOperation();
   }
 
   private void endComponentOperation(final OAtomicOperation atomicOperation) {
     atomicOperation.decrementComponentOperations();
-
-    componentOperationsFreezer.endOperation();
-  }
-
-  public long freezeComponentOperations() {
-    return componentOperationsFreezer.freezeOperations(null, null);
-  }
-
-  public void releaseComponentOperations(final long freezeId) {
-    componentOperationsFreezer.releaseOperations(freezeId);
-  }
-
-  private boolean tryStartComponentOperation(
-      final OAtomicOperation atomicOperation, final String lockName) {
-    final boolean result = tryAcquireExclusiveLockTillOperationComplete(atomicOperation, lockName);
-    if (!result) {
-      return false;
-    }
-
-    atomicOperation.incrementComponentOperations();
-    return true;
-  }
-
-  private boolean tryAcquireExclusiveLockTillOperationComplete(
-      OAtomicOperation operation, String lockName) {
-    if (operation.containsInLockedObjects(lockName)) {
-      return true;
-    }
-
-    try {
-      lockManager.acquireLock(lockName, OOneEntryPerKeyLockManager.LOCK.EXCLUSIVE, 1);
-    } catch (OLockException e) {
-      return false;
-    }
-    operation.addLockedObject(lockName);
-
-    componentOperationsFreezer.startOperation();
-    return true;
   }
 
   public static void alarmClearOfAtomicOperation() {

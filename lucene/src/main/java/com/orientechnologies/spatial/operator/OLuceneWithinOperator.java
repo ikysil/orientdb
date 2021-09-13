@@ -80,8 +80,7 @@ public class OLuceneWithinOperator extends OQueryTargetOperator {
     //noinspection resource
     return index
         .getInternal()
-        .getRids(new OSpatialCompositeKey(keyParams).setOperation(SpatialOperation.IsWithin))
-        .map((rid) -> new ORawPair<>(new OSpatialCompositeKey(keyParams), rid));
+        .getRids(new OSpatialCompositeKey(keyParams).setOperation(SpatialOperation.IsWithin));
   }
 
   @Override

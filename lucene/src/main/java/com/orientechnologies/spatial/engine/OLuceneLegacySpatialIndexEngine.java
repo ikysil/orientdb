@@ -19,6 +19,7 @@ package com.orientechnologies.spatial.engine;
 
 import static com.orientechnologies.lucene.builder.OLuceneQueryBuilder.EMPTY_METADATA;
 
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.lucene.collections.OLuceneResultSet;
 import com.orientechnologies.lucene.query.OLuceneQueryContext;
 import com.orientechnologies.lucene.tx.OLuceneTxChanges;
@@ -131,8 +132,6 @@ public class OLuceneLegacySpatialIndexEngine extends OLuceneSpatialIndexEngineAb
   private Set<OIdentifiable> searchWithin(
       OSpatialCompositeKey key, OCommandContext context, OLuceneTxChanges changes) {
 
-    Set<OIdentifiable> result = new HashSet<>();
-
     Shape shape = legacyBuilder.makeShape(key, ctx);
     if (shape == null) return null;
     SpatialArgs args = new SpatialArgs(SpatialOperation.IsWithin, shape);
@@ -215,10 +214,25 @@ public class OLuceneLegacySpatialIndexEngine extends OLuceneSpatialIndexEngineAb
   }
 
   @Override
+  public boolean rawRemove(OAtomicOperation atomicOperation, byte[] key) {
+    throw new UnsupportedOperationException("Raw entries are not supported in Lucene indexes");
+  }
+
+  @Override
   public boolean validatedPut(
       OAtomicOperation atomicOperation, Object key, ORID value, Validator<Object, ORID> validator) {
     throw new UnsupportedOperationException(
         "Validated put is not supported by OLuceneLegacySpatialIndexEngine");
+  }
+
+  @Override
+  public ORawPair<byte[], Object> getRawEntry(Object key) {
+    throw new UnsupportedOperationException("Raw entries are not supported in Lucene indexes");
+  }
+
+  @Override
+  public void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> updater) {
+    throw new UnsupportedOperationException("Raw entries are not supported in Lucene indexes");
   }
 
   @Override

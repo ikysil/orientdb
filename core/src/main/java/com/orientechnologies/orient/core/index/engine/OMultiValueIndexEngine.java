@@ -6,6 +6,8 @@ import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoper
 public interface OMultiValueIndexEngine extends OV1IndexEngine {
   boolean remove(OAtomicOperation atomicOperation, Object key, ORID value);
 
+  boolean removeRaw(OAtomicOperation atomicOperation,byte[] key, ORID value);
+
   @Override
   default boolean isMultiValue() {
     return true;
