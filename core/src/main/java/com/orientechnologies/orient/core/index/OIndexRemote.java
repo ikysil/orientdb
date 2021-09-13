@@ -27,13 +27,10 @@ import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.OInternalResultSet;
-import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -133,16 +130,6 @@ public abstract class OIndexRemote implements OIndex {
         return false;
       }
       return (Long) result.next().getProperty("size") > 0;
-    }
-  }
-
-  public long count(final Object iKey) {
-    try (final OResultSet result =
-        getDatabase().indexQuery(getName(), String.format(QUERY_COUNT, name), iKey)) {
-      if (!result.hasNext()) {
-        return 0;
-      }
-      return (Long) result.next().getProperty("size");
     }
   }
 
@@ -247,22 +234,6 @@ public abstract class OIndexRemote implements OIndex {
     return this;
   }
 
-  public long getSize() {
-    try (OResultSet result =
-        getDatabase().indexQuery(getName(), String.format(QUERY_SIZE, name)); ) {
-      if (result.hasNext()) return (Long) result.next().getProperty("size");
-    }
-    return 0;
-  }
-
-  public long getKeySize() {
-    try (OResultSet result =
-        getDatabase().indexQuery(getName(), String.format(QUERY_KEY_SIZE, name))) {
-      if (result.hasNext()) return (Long) result.next().getProperty("size");
-    }
-    return 0;
-  }
-
   public boolean isAutomatic() {
     return indexDefinition != null && indexDefinition.getClassName() != null;
   }
@@ -275,9 +246,6 @@ public abstract class OIndexRemote implements OIndex {
   public String getName() {
     return name;
   }
-
-  @Override
-  public void flush() {}
 
   public String getType() {
     return wrappedType;
@@ -361,173 +329,8 @@ public abstract class OIndexRemote implements OIndex {
   }
 
   @Override
-  public Object getFirstKey() {
-    throw new UnsupportedOperationException("getFirstKey");
-  }
-
-  @Override
-  public Object getLastKey() {
-    throw new UnsupportedOperationException("getLastKey");
-  }
-
-  @Override
-  public OIndexCursor iterateEntriesBetween(
-      Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
-    throw new UnsupportedOperationException("iterateEntriesBetween");
-  }
-
-  @Override
-  public OIndexCursor iterateEntriesMajor(Object fromKey, boolean fromInclusive, boolean ascOrder) {
-    throw new UnsupportedOperationException("iterateEntriesMajor");
-  }
-
-  @Override
-  public OIndexCursor iterateEntriesMinor(Object toKey, boolean toInclusive, boolean ascOrder) {
-    throw new UnsupportedOperationException("iterateEntriesMinor");
-  }
-
-  @Override
-  public OIndexCursor iterateEntries(Collection<?> keys, boolean ascSortOrder) {
-
-    final StringBuilder params = new StringBuilder(128);
-    if (!keys.isEmpty()) {
-      params.append("?");
-      for (int i = 1; i < keys.size(); i++) {
-        params.append(", ?");
-      }
-    }
-
-    final OResultSet res =
-        getDatabase()
-            .indexQuery(
-                getName(),
-                String.format(
-                    QUERY_ITERATE_ENTRIES, name, params.toString(), ascSortOrder ? "ASC" : "DESC"),
-                keys.toArray());
-
-    final OInternalResultSet copy = new OInternalResultSet(); // TODO a raw array instead...?
-    res.forEachRemaining(x -> copy.add(x));
-    res.close();
-
-    return new OIndexAbstractCursor() {
-
-      @Override
-      public Map.Entry<Object, OIdentifiable> nextEntry() {
-        if (!copy.hasNext()) return null;
-        final OResult next = copy.next();
-        return new Map.Entry<Object, OIdentifiable>() {
-          @Override
-          public Object getKey() {
-            return next.getProperty("key");
-          }
-
-          @Override
-          public OIdentifiable getValue() {
-            return next.getProperty("rid");
-          }
-
-          @Override
-          public OIdentifiable setValue(OIdentifiable value) {
-            throw new UnsupportedOperationException("cannot set value of index entry");
-          }
-        };
-      }
-    };
-  }
-
-  @Override
   public int getIndexId() {
     throw new UnsupportedOperationException("getIndexId");
-  }
-
-  @Override
-  public OIndexCursor cursor() {
-    OResultSet result = getDatabase().indexQuery(getName(), String.format(QUERY_ENTRIES, name));
-    final OInternalResultSet copy = new OInternalResultSet(); // TODO a raw array instead...?
-    result.forEachRemaining(x -> copy.add(x));
-    result.close();
-
-    return new OIndexAbstractCursor() {
-
-      @Override
-      public Map.Entry<Object, OIdentifiable> nextEntry() {
-        if (!copy.hasNext()) return null;
-
-        final OResult value = copy.next();
-
-        return new Map.Entry<Object, OIdentifiable>() {
-          @Override
-          public Object getKey() {
-            return value.getProperty("key");
-          }
-
-          @Override
-          public OIdentifiable getValue() {
-            return value.getProperty("rid");
-          }
-
-          @Override
-          public OIdentifiable setValue(OIdentifiable value) {
-            throw new UnsupportedOperationException("setValue");
-          }
-        };
-      }
-    };
-  }
-
-  @Override
-  public OIndexCursor descCursor() {
-    final OResultSet result =
-        getDatabase().indexQuery(getName(), String.format(QUERY_ENTRIES_DESC, name));
-    final OInternalResultSet copy = new OInternalResultSet(); // TODO a raw array instead...?
-    result.forEachRemaining(x -> copy.add(x));
-    result.close();
-
-    return new OIndexAbstractCursor() {
-
-      @Override
-      public Map.Entry<Object, OIdentifiable> nextEntry() {
-        if (!copy.hasNext()) return null;
-
-        final OResult value = copy.next();
-
-        return new Map.Entry<Object, OIdentifiable>() {
-          @Override
-          public Object getKey() {
-            return value.getProperty("key");
-          }
-
-          @Override
-          public OIdentifiable getValue() {
-            return value.getProperty("rid");
-          }
-
-          @Override
-          public OIdentifiable setValue(OIdentifiable value) {
-            throw new UnsupportedOperationException("setValue");
-          }
-        };
-      }
-    };
-  }
-
-  @Override
-  public OIndexKeyCursor keyCursor() {
-    final OResultSet result = getDatabase().indexQuery(getName(), String.format(QUERY_KEYS, name));
-    final OInternalResultSet copy = new OInternalResultSet(); // TODO a raw array instead...?
-    result.forEachRemaining(x -> copy.add(x));
-    result.close();
-    return new OIndexKeyCursor() {
-
-      @Override
-      public Object next(int prefetchSize) {
-        if (!copy.hasNext()) return null;
-
-        final OResult value = copy.next();
-
-        return value.getProperty("key");
-      }
-    };
   }
 
   @Override

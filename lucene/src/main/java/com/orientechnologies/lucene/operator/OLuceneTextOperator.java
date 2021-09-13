@@ -82,7 +82,7 @@ public class OLuceneTextOperator extends OQueryTargetOperator {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     if (!index.getType().toLowerCase().contains("fulltext")) {
       return null;

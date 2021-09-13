@@ -29,6 +29,8 @@ import com.orientechnologies.orient.core.index.engine.OIndexEngine;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperation;
+
+import java.io.IOException;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -143,7 +145,7 @@ public class ORemoteIndexEngine implements OIndexEngine {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
+  public Stream<ORID> iterateBetween(
       Object rangeFrom,
       boolean fromInclusive,
       Object rangeTo,
@@ -154,13 +156,13 @@ public class ORemoteIndexEngine implements OIndexEngine {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
+  public Stream<ORID> iterateMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
     throw new UnsupportedOperationException("stream");
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
+  public Stream<ORID> iterateMinor(
       Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
     throw new UnsupportedOperationException("stream");
   }
@@ -176,18 +178,46 @@ public class ORemoteIndexEngine implements OIndexEngine {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream(ValuesTransformer valuesTransformer) {
+  public Stream<ORID> stream(ValuesTransformer valuesTransformer) {
     throw new UnsupportedOperationException("stream");
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream(ValuesTransformer valuesTransformer) {
+  public Stream<ORID> descStream(ValuesTransformer valuesTransformer) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Stream<Object> keyStream() {
-    throw new UnsupportedOperationException("keyStream");
+  public Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(
+      Object rangeFrom,
+      boolean fromInclusive,
+      Object rangeTo,
+      boolean toInclusive,
+      boolean ascSortOrder,
+      ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration over remote index is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(
+      Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration over remote index is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(
+      Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
+    throw new UnsupportedOperationException("Iteration over remote index is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer) {
+    throw new UnsupportedOperationException("Iteration over remote index is not supported");
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer) {
+    throw new UnsupportedOperationException("Iteration over remote index is not supported");
   }
 
   @Override

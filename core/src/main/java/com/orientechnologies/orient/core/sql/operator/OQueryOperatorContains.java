@@ -139,11 +139,11 @@ public class OQueryOperatorContains extends OQueryOperatorEqualityNotNulls {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     final OIndexDefinition indexDefinition = index.getDefinition();
 
-    Stream<ORawPair<Object, ORID>> stream;
+    Stream<ORID> stream;
     final OIndexInternal internalIndex = index.getInternal();
     if (!internalIndex.canBeUsedInEqualityOperators()) return null;
 
@@ -155,7 +155,7 @@ public class OQueryOperatorContains extends OQueryOperatorEqualityNotNulls {
 
       if (key == null) return null;
 
-      stream = index.getInternal().getRids(key).map((rid) -> new ORawPair<>(key, rid));
+      stream = index.getInternal().getRids(key);
     } else {
       // in case of composite keys several items can be returned in case of we perform search
       // using part of composite key stored in index.
@@ -169,11 +169,11 @@ public class OQueryOperatorContains extends OQueryOperatorEqualityNotNulls {
 
       final Object keyTwo = compositeIndexDefinition.createSingleValue(keyParams);
       if (internalIndex.hasRangeQuerySupport()) {
-        stream = index.getInternal().streamEntriesBetween(keyOne, true, keyTwo, true, ascSortOrder);
+        stream = index.getInternal().streamBetween(keyOne, true, keyTwo, true, ascSortOrder);
       } else {
         int indexParamCount = indexDefinition.getParamCount();
         if (indexParamCount == keyParams.size()) {
-          stream = index.getInternal().getRids(keyOne).map((rid) -> new ORawPair<>(keyOne, rid));
+          stream = index.getInternal().getRids(keyOne);
         } else return null;
       }
     }

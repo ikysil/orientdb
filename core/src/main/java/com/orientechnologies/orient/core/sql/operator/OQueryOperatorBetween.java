@@ -130,11 +130,11 @@ public class OQueryOperatorBetween extends OQueryOperatorEqualityNotNulls {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     final OIndexDefinition indexDefinition = index.getDefinition();
 
-    Stream<ORawPair<Object, ORID>> stream;
+    Stream<ORID> stream;
     final OIndexInternal internalIndex = index.getInternal();
     if (!internalIndex.canBeUsedInEqualityOperators() || !internalIndex.hasRangeQuerySupport())
       return null;
@@ -154,7 +154,7 @@ public class OQueryOperatorBetween extends OQueryOperatorEqualityNotNulls {
       stream =
           index
               .getInternal()
-              .streamEntriesBetween(keyOne, leftInclusive, keyTwo, rightInclusive, ascSortOrder);
+              .streamBetween(keyOne, leftInclusive, keyTwo, rightInclusive, ascSortOrder);
     } else {
       final OCompositeIndexDefinition compositeIndexDefinition =
           (OCompositeIndexDefinition) indexDefinition;
@@ -188,7 +188,7 @@ public class OQueryOperatorBetween extends OQueryOperatorEqualityNotNulls {
       stream =
           index
               .getInternal()
-              .streamEntriesBetween(keyOne, leftInclusive, keyTwo, rightInclusive, ascSortOrder);
+              .streamBetween(keyOne, leftInclusive, keyTwo, rightInclusive, ascSortOrder);
     }
 
     updateProfiler(iContext, index, keyParams, indexDefinition);

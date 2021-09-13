@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -70,16 +69,6 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
         version,
         storage,
         binaryFormatVersion);
-  }
-
-  @Deprecated
-  @Override
-  public Collection<ORID> get(Object key) {
-    final List<ORID> rids;
-    try (Stream<ORID> stream = getRids(key)) {
-      rids = stream.collect(Collectors.toList());
-    }
-    return rids;
   }
 
   @Override
@@ -242,6 +231,30 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
   }
 
   @Override
+  public boolean removeRaw(byte[] key, OIdentifiable rid) {
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          if (apiVersion == 0) {
+            return doRemoveRawV0(indexId, storage, key, rid);
+          }
+
+          if (apiVersion == 1) {
+            return doRemoveRawV1(indexId, storage, key, rid);
+          }
+
+          throw new IllegalStateException("Invalid API version, " + apiVersion);
+        } catch (OInvalidIndexEngineIdException e) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
   public boolean doRemove(OAbstractPaginatedStorage storage, Object key, ORID rid)
       throws OInvalidIndexEngineIdException {
     if (apiVersion == 0) {
@@ -275,10 +288,33 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
     return removed.getValue();
   }
 
+  private static boolean doRemoveRawV0(
+          int indexId, OAbstractPaginatedStorage storage, byte[] key, OIdentifiable value)
+          throws OInvalidIndexEngineIdException {
+    final ORawPair<byte[], Object> pair =  storage.getRawKeyIndexValue(indexId, key);
+    if (pair == null) {
+      return false;
+    }
+
+    final OModifiableBoolean removed = new OModifiableBoolean(false);
+
+    final OIndexKeyUpdater<Object> creator = new EntityRemover(value, removed);
+
+    storage.updateRawIndexEntry(indexId, key, creator);
+
+    return removed.getValue();
+  }
+
   private static boolean doRemoveV1(
       int indexId, OAbstractPaginatedStorage storage, Object key, OIdentifiable value)
       throws OInvalidIndexEngineIdException {
     return storage.removeRidIndexEntry(indexId, key, value.getIdentity());
+  }
+
+  private static boolean doRemoveRawV1(
+          int indexId, OAbstractPaginatedStorage storage, byte[] key, OIdentifiable value)
+          throws OInvalidIndexEngineIdException {
+    return storage.removeRawRidIndexEntry(indexId, key, value.getIdentity());
   }
 
   public OIndexMultiValues create(
@@ -314,7 +350,7 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesBetween(
+  public Stream<ORID> streamBetween(
       Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
     fromKey = getCollatingValue(fromKey);
     toKey = getCollatingValue(toKey);
@@ -343,8 +379,36 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesMajor(
-      Object fromKey, boolean fromInclusive, boolean ascOrder) {
+  public Stream<ORawPair<byte[], ORID>> rawStreamBetween(
+      Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
+    fromKey = getCollatingValue(fromKey);
+    toKey = getCollatingValue(toKey);
+
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this,
+              storage.iterateRawIndexEntriesBetween(
+                  indexId,
+                  fromKey,
+                  fromInclusive,
+                  toKey,
+                  toInclusive,
+                  ascOrder,
+                  MultiValuesTransformer.INSTANCE));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORID> streamMajor(Object fromKey, boolean fromInclusive, boolean ascOrder) {
     fromKey = getCollatingValue(fromKey);
 
     acquireSharedLock();
@@ -365,8 +429,29 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesMinor(
-      Object toKey, boolean toInclusive, boolean ascOrder) {
+  public Stream<ORawPair<byte[], ORID>> rawStreamMajor(
+      Object fromKey, boolean fromInclusive, boolean ascOrder) {
+    fromKey = getCollatingValue(fromKey);
+
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this,
+              storage.iterateRawIndexEntriesMajor(
+                  indexId, fromKey, fromInclusive, ascOrder, MultiValuesTransformer.INSTANCE));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORID> streamMinor(Object toKey, boolean toInclusive, boolean ascOrder) {
     toKey = getCollatingValue(toKey);
 
     acquireSharedLock();
@@ -387,7 +472,29 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntries(Collection<?> keys, boolean ascSortOrder) {
+  public Stream<ORawPair<byte[], ORID>> rawStreamMinor(
+      Object toKey, boolean toInclusive, boolean ascOrder) {
+    toKey = getCollatingValue(toKey);
+
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this,
+              storage.iterateRawIndexEntriesMinor(
+                  indexId, toKey, toInclusive, ascOrder, MultiValuesTransformer.INSTANCE));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORID> stream(Collection<?> keys, boolean ascSortOrder) {
     final List<Object> sortedKeys = new ArrayList<>(keys);
     final Comparator<Object> comparator;
     if (ascSortOrder) {
@@ -414,16 +521,66 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
                         if (apiVersion == 0) {
                           //noinspection unchecked,resource
                           return Optional.ofNullable(
-                                  (Collection<ORID>) storage.getIndexValue(indexId, key))
-                              .map(
-                                  (rids) ->
-                                      rids.stream().map((rid) -> new ORawPair<>(entryKey, rid)))
+                                  ((Collection<ORID>) storage.getIndexValue(indexId, entryKey))
+                                      .stream())
                               .orElse(Stream.empty());
                         } else if (apiVersion == 1) {
                           //noinspection resource
-                          return storage
-                              .getIndexValues(indexId, key)
-                              .map((rid) -> new ORawPair<>(entryKey, rid));
+                          return storage.getIndexValues(indexId, key);
+                        } else {
+                          throw new IllegalStateException(
+                              "Invalid version of index API - " + apiVersion);
+                        }
+                      } catch (OInvalidIndexEngineIdException ignore) {
+                        doReloadIndexEngine();
+                      }
+                    }
+
+                  } finally {
+                    releaseSharedLock();
+                  }
+                }));
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawStream(Collection<?> keys, boolean ascSortOrder) {
+    final List<Object> sortedKeys = new ArrayList<>(keys);
+    final Comparator<Object> comparator;
+    if (ascSortOrder) {
+      comparator = ODefaultComparator.INSTANCE;
+    } else {
+      comparator = Collections.reverseOrder(ODefaultComparator.INSTANCE);
+    }
+
+    sortedKeys.sort(comparator);
+
+    //noinspection resource
+    return IndexStreamSecurityDecorator.decorateRawStream(
+        this,
+        sortedKeys.stream()
+            .flatMap(
+                (key) -> {
+                  key = getCollatingValue(key);
+
+                  final Object entryKey = key;
+                  acquireSharedLock();
+                  try {
+                    while (true) {
+                      try {
+                        if (apiVersion == 0) {
+                          final ORawPair<byte[], Object> pair =
+                              storage.getRawKeyIndexValue(indexId, entryKey);
+                          if (pair == null) {
+                            return Stream.empty();
+                          }
+
+                          //noinspection unchecked,resource
+                          final Collection<ORID> col = (Collection<ORID>) pair.second;
+
+                          return col.stream().map(rid -> new ORawPair<>(pair.first, rid));
+                        } else if (apiVersion == 1) {
+                          //noinspection resource
+                          return storage.getRawIndexValues(indexId, key);
                         } else {
                           throw new IllegalStateException(
                               "Invalid version of index API - " + apiVersion);
@@ -455,7 +612,7 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream() {
+  public Stream<ORID> stream() {
     acquireSharedLock();
     try {
       while (true) {
@@ -473,13 +630,48 @@ public abstract class OIndexMultiValues extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream() {
+  public Stream<ORawPair<byte[], ORID>> rawStream() {
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this, storage.getIndexRawStream(indexId, MultiValuesTransformer.INSTANCE));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORID> descStream() {
     acquireSharedLock();
     try {
       while (true) {
         try {
           return IndexStreamSecurityDecorator.decorateStream(
               this, storage.getIndexDescStream(indexId, MultiValuesTransformer.INSTANCE));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawDescStream() {
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this, storage.getIndexRawDescStream(indexId, MultiValuesTransformer.INSTANCE));
         } catch (OInvalidIndexEngineIdException ignore) {
           doReloadIndexEngine();
         }

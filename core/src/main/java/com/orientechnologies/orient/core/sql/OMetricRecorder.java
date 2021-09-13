@@ -48,9 +48,7 @@ public class OMetricRecorder {
         idxNames = new HashSet<String>();
         context.setVariable("involvedIndexes", idxNames);
       }
-      if (index instanceof OChainedIndexProxy) {
-        idxNames.addAll(((OChainedIndexProxy) index).getIndexNames());
-      } else idxNames.add(index.getName());
+      idxNames.add(index.getName());
     }
   }
 

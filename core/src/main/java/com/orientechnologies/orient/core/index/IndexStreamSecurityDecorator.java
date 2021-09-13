@@ -9,8 +9,8 @@ import com.orientechnologies.orient.core.metadata.security.OSecurityShared;
 import java.util.stream.Stream;
 
 public class IndexStreamSecurityDecorator {
-  public static Stream<ORawPair<Object, ORID>> decorateStream(
-      OIndex originalIndex, Stream<ORawPair<Object, ORID>> stream) {
+  public static Stream<ORID> decorateStream(
+          OIndex originalIndex, Stream<ORID> stream) {
     ODatabaseDocumentInternal db = ODatabaseRecordThreadLocal.instance().getIfDefined();
     if (db == null) {
       return stream;
@@ -27,7 +27,28 @@ public class IndexStreamSecurityDecorator {
     }
 
     return stream.filter(
-        (pair) -> OIndexInternal.securityFilterOnRead(originalIndex, pair.second) != null);
+        (rid) -> OIndexInternal.securityFilterOnRead(originalIndex, rid) != null);
+  }
+
+  public static Stream<ORawPair<byte[], ORID>> decorateRawStream(
+          OIndex originalIndex, Stream<ORawPair<byte[], ORID>> stream) {
+    ODatabaseDocumentInternal db = ODatabaseRecordThreadLocal.instance().getIfDefined();
+    if (db == null) {
+      return stream;
+    }
+
+    String indexClass = originalIndex.getDefinition().getClassName();
+    if (indexClass == null) {
+      return stream;
+    }
+    OSecurityInternal security = db.getSharedContext().getSecurity();
+    if (security instanceof OSecurityShared
+            && !((OSecurityShared) security).couldHaveActivePredicateSecurityRoles(db, indexClass)) {
+      return stream;
+    }
+
+    return stream.filter(
+            (pair) -> OIndexInternal.securityFilterOnRead(originalIndex, pair.second) != null);
   }
 
   public static Stream<ORID> decorateRidStream(OIndex originalIndex, Stream<ORID> stream) {

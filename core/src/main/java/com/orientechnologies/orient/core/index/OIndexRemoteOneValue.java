@@ -19,10 +19,9 @@
  */
 package com.orientechnologies.orient.core.index;
 
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
+
 import java.util.Set;
 
 /**
@@ -53,17 +52,7 @@ public class OIndexRemoteOneValue extends OIndexRemote {
         database);
   }
 
-  @Deprecated
-  public OIdentifiable get(final Object key) {
-    try (final OResultSet result =
-        getDatabase().indexQuery(getName(), String.format(QUERY_GET, name), key)) {
-      if (result != null && result.hasNext())
-        return ((OIdentifiable) result.next().getProperty("rid"));
-      return null;
-    }
-  }
-
-  @Override
+    @Override
   public boolean isUnique() {
     return true;
   }

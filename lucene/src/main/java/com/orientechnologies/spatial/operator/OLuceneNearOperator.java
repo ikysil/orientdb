@@ -120,7 +120,7 @@ public class OLuceneNearOperator extends OQueryTargetOperator {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     OIndexDefinition definition = index.getDefinition();
     int idxSize = definition.getFields().size();

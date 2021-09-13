@@ -26,6 +26,8 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
+
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 /**
@@ -54,14 +56,37 @@ public class OSQLFunctionIndexKeySize extends OSQLFunctionAbstract {
     if (index == null) {
       return null;
     }
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORawPair<byte[], ORID>> stream = index.getInternal().rawStream()) {
       try (Stream<ORID> rids = index.getInternal().getRids(null)) {
-        return stream.map((pair) -> pair.first).distinct().count() + rids.count();
+        return stream.map(pair -> new ArrayWrapper(pair.first)).distinct().count() + rids.count();
       }
     }
   }
 
   public String getSyntax() {
     return "indexKeySize(<indexName-string>)";
+  }
+
+  private static final class ArrayWrapper {
+    private final byte[] array;
+
+    private ArrayWrapper(byte[] array) {
+      this.array = array;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      ArrayWrapper that = (ArrayWrapper) o;
+
+      return Arrays.equals(array, that.array);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode(array);
+    }
   }
 }

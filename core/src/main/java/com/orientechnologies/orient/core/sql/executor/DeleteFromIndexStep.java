@@ -4,10 +4,12 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
+import com.orientechnologies.orient.core.exception.ODatabaseException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.index.OIndexDefinition;
 import com.orientechnologies.orient.core.index.OIndexInternal;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.parser.OAndBlock;
 import com.orientechnologies.orient.core.sql.parser.OBetweenCondition;
 import com.orientechnologies.orient.core.sql.parser.OBinaryCompareOperator;
@@ -37,17 +39,17 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
   private final OBooleanExpression ridCondition;
   private final boolean orderAsc;
 
-  private ORawPair<Object, ORID> nextEntry = null;
+  private ORawPair<byte[], ORID> nextEntry = null;
 
   private final OBooleanExpression condition;
 
   private boolean inited = false;
-  private Stream<ORawPair<Object, ORID>> stream;
-  private Iterator<ORawPair<Object, ORID>> streamIterator;
+  private Stream<ORawPair<byte[], ORID>> stream;
+  private Iterator<ORawPair<byte[] , ORID>> streamIterator;
 
   private long cost = 0;
 
-  private final Set<Stream<ORawPair<Object, ORID>>> acquiredStreams =
+  private final Set<Stream<ORawPair<byte[] ,ORID>>> acquiredStreams =
       Collections.newSetFromMap(new IdentityHashMap<>());
 
   public DeleteFromIndexStep(
@@ -96,11 +98,14 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
           if (!hasNext()) {
             throw new IllegalStateException();
           }
-          ORawPair<Object, ORID> entry = nextEntry;
           OResultInternal result = new OResultInternal();
-          ORID value = entry.second;
+          ORawPair<byte[], ORID> value = nextEntry;
 
-          index.remove(entry.first, value);
+          final ODocument document = (ODocument) getContext().getDatabase().load(value);
+          //if document is not deleted yet
+          if (document != null) {
+            index.getInternal().removeRaw(value.first, value.second);
+          }
           localCount++;
           nextEntry = loadNextEntry(ctx);
           return result;
@@ -129,7 +134,7 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
   }
 
   private void closeStreams() {
-    for (Stream<ORawPair<Object, ORID>> stream : acquiredStreams) {
+    for (Stream<ORawPair<byte[], ORID>> stream : acquiredStreams) {
       stream.close();
     }
     acquiredStreams.clear();
@@ -158,14 +163,14 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
     }
   }
 
-  private ORawPair<Object, ORID> loadNextEntry(OCommandContext commandContext) {
+  private ORawPair<byte[], ORID> loadNextEntry(OCommandContext commandContext) {
     while (streamIterator.hasNext()) {
-      final ORawPair<Object, ORID> entry = streamIterator.next();
+      final ORawPair<byte[], ORID> entry = streamIterator.next();
       if (ridCondition == null) {
         return entry;
       }
       OResultInternal res = new OResultInternal();
-      res.setProperty("rid", entry.second);
+      res.setProperty("rid", entry);
       if (ridCondition.evaluate(res, commandContext)) {
         return entry;
       }
@@ -205,12 +210,12 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
   }
 
   private void processFlatIteration() {
-    stream = orderAsc ? index.stream() : index.descStream();
+    stream = orderAsc ? index.rawStream() : index.rawDescStream();
     storeAcquiredStream(stream);
     streamIterator = stream.iterator();
   }
 
-  private void storeAcquiredStream(Stream<ORawPair<Object, ORID>> stream) {
+  private void storeAcquiredStream(Stream<ORawPair<byte[], ORID>> stream) {
     if (stream != null) {
       acquiredStreams.add(stream);
     }
@@ -223,7 +228,7 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
     OIndexDefinition indexDef = index.getDefinition();
     if (index.supportsOrderedIterations()) {
       stream =
-          index.streamEntriesBetween(
+          index.rawStreamBetween(
               toBetweenIndexKey(indexDef, secondValue),
               fromKeyIncluded,
               toBetweenIndexKey(indexDef, thirdValue),
@@ -231,7 +236,7 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
               orderAsc);
       storeAcquiredStream(stream);
     } else if (additional == null && allEqualities((OAndBlock) condition)) {
-      stream = index.streamEntries(toIndexKey(indexDef, secondValue), orderAsc);
+      stream = index.rawStream(toIndexKey(indexDef, secondValue), orderAsc);
       storeAcquiredStream(stream);
     } else {
       throw new UnsupportedOperationException(
@@ -270,7 +275,7 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
     Object secondValue = second.execute((OResult) null, ctx);
     Object thirdValue = third.execute((OResult) null, ctx);
     stream =
-        index.streamEntriesBetween(
+        index.rawStreamBetween(
             toBetweenIndexKey(definition, secondValue),
             true,
             toBetweenIndexKey(definition, thirdValue),
@@ -321,22 +326,22 @@ public class DeleteFromIndexStep extends AbstractExecutionStep {
     return rightValue;
   }
 
-  private Stream<ORawPair<Object, ORID>> createStream(
+  private Stream<ORawPair<byte[], ORID>> createStream(
       OBinaryCompareOperator operator,
       OIndexDefinition definition,
       Object value,
       OCommandContext ctx) {
     boolean orderAsc = this.orderAsc;
     if (operator instanceof OEqualsCompareOperator) {
-      return index.streamEntries(toIndexKey(definition, value), orderAsc);
+      return index.rawStream(toIndexKey(definition, value), orderAsc);
     } else if (operator instanceof OGeOperator) {
-      return index.streamEntriesMajor(value, true, orderAsc);
+      return index.rawStreamMajor(value, true, orderAsc);
     } else if (operator instanceof OGtOperator) {
-      return index.streamEntriesMajor(value, false, orderAsc);
+      return index.rawStreamMajor(value, false, orderAsc);
     } else if (operator instanceof OLeOperator) {
-      return index.streamEntriesMinor(value, true, orderAsc);
+      return index.rawStreamMinor(value, true, orderAsc);
     } else if (operator instanceof OLtOperator) {
-      return index.streamEntriesMinor(value, false, orderAsc);
+      return index.rawStreamMinor(value, false, orderAsc);
     } else {
       throw new OCommandExecutionException(
           "search for index for " + condition + " is not supported yet");

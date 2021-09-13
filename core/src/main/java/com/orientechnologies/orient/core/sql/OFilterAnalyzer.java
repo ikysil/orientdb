@@ -49,14 +49,7 @@ public class OFilterAnalyzer {
         iSchemaClass.getInvolvedIndexes(searchResultFields.fields());
 
     final List<OIndex> result = new ArrayList<OIndex>(involvedIndexes.size());
-
-    if (searchResultFields.lastField.isLong()) {
-      result.addAll(OChainedIndexProxy.createProxies(iSchemaClass, searchResultFields.lastField));
-    } else {
-      for (OIndex involvedIndex : involvedIndexes) {
-        result.add(involvedIndex);
-      }
-    }
+    result.addAll(involvedIndexes);
 
     return result;
   }

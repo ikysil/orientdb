@@ -209,42 +209,67 @@ public class OLuceneSpatialIndexEngineDelegator
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
+  public Stream<ORID> iterateBetween(
       Object rangeFrom,
       boolean fromInclusive,
       Object rangeTo,
       boolean toInclusive,
       boolean ascSortOrder,
       ValuesTransformer transformer) {
-    return delegate.iterateEntriesBetween(
+    return delegate.iterateBetween(
         rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder, transformer);
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
+  public Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(Object rangeFrom, boolean fromInclusive,
+                                                                 Object rangeTo, boolean toInclusive,
+                                                                 boolean ascSortOrder, ValuesTransformer transformer) {
+    return delegate.iterateBetweenRawEntries(rangeFrom, fromInclusive, rangeTo, toInclusive, ascSortOrder,
+            transformer);
+  }
+
+  @Override
+  public Stream<ORID> iterateMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    return delegate.iterateEntriesMajor(fromKey, isInclusive, ascSortOrder, transformer);
+    return delegate.iterateMajor(fromKey, isInclusive, ascSortOrder, transformer);
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
+  public Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(Object fromKey, boolean isInclusive, boolean ascSortOrder,
+                                                               ValuesTransformer transformer) {
+    return delegate.iterateMajorRawEntries(fromKey, isInclusive, ascSortOrder, transformer);
+  }
+
+  @Override
+  public Stream<ORID> iterateMinor(
       Object toKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer) {
-    return delegate.iterateEntriesMinor(toKey, isInclusive, ascSortOrder, transformer);
+    return delegate.iterateMinor(toKey, isInclusive, ascSortOrder, transformer);
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream(ValuesTransformer valuesTransformer) {
+  public Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(Object toKey, boolean isInclusive,
+                                                               boolean ascSortOrder, ValuesTransformer transformer) {
+    return delegate.iterateMinorRawEntries(toKey, isInclusive, ascSortOrder, transformer);
+  }
+
+  @Override
+  public Stream<ORID> stream(ValuesTransformer valuesTransformer) {
     return delegate.stream(valuesTransformer);
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream(ValuesTransformer valuesTransformer) {
+  public Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer) {
+    return delegate.rawStream(valuesTransformer);
+  }
+
+  @Override
+  public Stream<ORID> descStream(ValuesTransformer valuesTransformer) {
     return delegate.descStream(valuesTransformer);
   }
 
   @Override
-  public Stream<Object> keyStream() {
-    return delegate.keyStream();
+  public Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer) {
+    return delegate.rawDescStream(valuesTransformer);
   }
 
   @Override

@@ -74,7 +74,7 @@ public class OLuceneWithinOperator extends OQueryTargetOperator {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     iContext.setVariable("$luceneIndex", true);
     //noinspection resource

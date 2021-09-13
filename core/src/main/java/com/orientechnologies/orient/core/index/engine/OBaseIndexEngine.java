@@ -43,7 +43,7 @@ public interface OBaseIndexEngine {
 
   void close();
 
-  Stream<ORawPair<Object, ORID>> iterateEntriesBetween(
+  Stream<ORID> iterateBetween(
       Object rangeFrom,
       boolean fromInclusive,
       Object rangeTo,
@@ -51,20 +51,39 @@ public interface OBaseIndexEngine {
       boolean ascSortOrder,
       ValuesTransformer transformer);
 
-  Stream<ORawPair<Object, ORID>> iterateEntriesMajor(
+  Stream<ORawPair<byte[], ORID>> iterateBetweenRawEntries(
+      Object rangeFrom,
+      boolean fromInclusive,
+      Object rangeTo,
+      boolean toInclusive,
+      boolean ascSortOrder,
+      ValuesTransformer transformer);
+
+  Stream<ORID> iterateMajor(
       Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer);
 
-  Stream<ORawPair<Object, ORID>> iterateEntriesMinor(
+  Stream<ORawPair<byte[], ORID>> iterateMajorRawEntries(
+      Object fromKey, boolean isInclusive, boolean ascSortOrder, ValuesTransformer transformer);
+
+  Stream<ORID> iterateMinor(
       final Object toKey,
       final boolean isInclusive,
       boolean ascSortOrder,
       ValuesTransformer transformer);
 
-  Stream<ORawPair<Object, ORID>> stream(ValuesTransformer valuesTransformer);
+  Stream<ORawPair<byte[], ORID>> iterateMinorRawEntries(
+      final Object toKey,
+      final boolean isInclusive,
+      boolean ascSortOrder,
+      ValuesTransformer transformer);
 
-  Stream<ORawPair<Object, ORID>> descStream(ValuesTransformer valuesTransformer);
+  Stream<ORID> stream(ValuesTransformer valuesTransformer);
 
-  Stream<Object> keyStream();
+  Stream<ORawPair<byte[], ORID>> rawStream(ValuesTransformer valuesTransformer);
+
+  Stream<ORID> descStream(ValuesTransformer valuesTransformer);
+
+  Stream<ORawPair<byte[], ORID>> rawDescStream(ValuesTransformer valuesTransformer);
 
   long size(ValuesTransformer transformer);
 

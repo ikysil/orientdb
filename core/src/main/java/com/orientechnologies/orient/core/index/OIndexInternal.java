@@ -116,8 +116,6 @@ public interface OIndexInternal extends OIndex {
 
   void commit(OIndexAbstract.IndexTxSnapshot snapshots);
 
-  void postCommit(OIndexAbstract.IndexTxSnapshot snapshots);
-
   void setType(OType type);
 
   /**
@@ -145,13 +143,27 @@ public interface OIndexInternal extends OIndex {
   /** @return number of entries in the index. */
   long size();
 
+  /**
+   * Creates stream of keys from the passed in document. Stream could contain single key or several keys because
+   * we index not only single value but collection of values too, which belongs to single document.
+   *
+   * @param document Document is used to create a stream of keys.
+   * @return Stream of keys which would be stored into the index or empty value if it is impossible
+   * to create valid key for the index.
+   */
+  Optional<Stream<Object>> composeKeys(final ODocument document);
+
   Stream<ORID> getRids(final Object key);
 
-  Stream<ORawPair<Object, ORID>> stream();
+  Stream<ORID> stream();
 
-  Stream<ORawPair<Object, ORID>> descStream();
+  Stream<ORID> descStream();
 
-  Stream<Object> keyStream();
+  Stream<ORawPair<byte[], ORID>> rawStream();
+
+  Stream<ORawPair<byte[], ORID>> rawDescStream();
+
+  boolean removeRaw(byte[] rawKey, OIdentifiable rid);
 
   /**
    * Returns stream which presents subset of index data between passed in keys.
@@ -164,8 +176,11 @@ public interface OIndexInternal extends OIndex {
    *     descending order.
    * @return Cursor which presents subset of index data between passed in keys.
    */
-  Stream<ORawPair<Object, ORID>> streamEntriesBetween(
+  Stream<ORID> streamBetween(
       Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder);
+
+  Stream<ORawPair<byte[], ORID>> rawStreamBetween(
+          Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder);
 
   /**
    * Returns stream which presents data associated with passed in keys.
@@ -175,7 +190,9 @@ public interface OIndexInternal extends OIndex {
    *     ascending or descending order.
    * @return stream which presents data associated with passed in keys.
    */
-  Stream<ORawPair<Object, ORID>> streamEntries(Collection<?> keys, boolean ascSortOrder);
+  Stream<ORID> stream(Collection<?> keys, boolean ascSortOrder);
+
+  Stream<ORawPair<byte[], ORID>> rawStream(Collection<?> keys, boolean ascSortOrder);
 
   /**
    * Returns stream which presents subset of data which associated with key which is greater than
@@ -188,8 +205,12 @@ public interface OIndexInternal extends OIndex {
    * @return stream which presents subset of data which associated with key which is greater than
    *     passed in key.
    */
-  Stream<ORawPair<Object, ORID>> streamEntriesMajor(
+  Stream<ORID> streamMajor(
       Object fromKey, boolean fromInclusive, boolean ascOrder);
+
+  Stream<ORawPair<byte[],ORID>> rawStreamMajor(
+          Object fromKey, boolean fromInclusive, boolean ascOrder);
+
 
   /**
    * Returns stream which presents subset of data which associated with key which is less than
@@ -202,8 +223,11 @@ public interface OIndexInternal extends OIndex {
    * @return stream which presents subset of data which associated with key which is less than
    *     passed in key.
    */
-  Stream<ORawPair<Object, ORID>> streamEntriesMinor(
+  Stream<ORID> streamMinor(
       Object toKey, boolean toInclusive, boolean ascOrder);
+
+  Stream<ORawPair<byte[], ORID>> rawStreamMinor(
+          Object toKey, boolean toInclusive, boolean ascOrder);
 
   static OIdentifiable securityFilterOnRead(OIndex idx, OIdentifiable item) {
     if (idx.getDefinition() == null) {

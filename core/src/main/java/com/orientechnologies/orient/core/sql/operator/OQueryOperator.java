@@ -20,7 +20,6 @@
 package com.orientechnologies.orient.core.sql.operator;
 
 import com.orientechnologies.common.profiler.OProfiler;
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
@@ -172,7 +171,7 @@ public abstract class OQueryOperator {
    * @return Cursor instance if index can be used to evaluate result of execution of given operator
    *     and <code>null</code> otherwise.
    */
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, final List<Object> keyParams, boolean ascSortOrder) {
     return Stream.empty();
   }

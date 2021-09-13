@@ -32,10 +32,7 @@ import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.exception.OConfigurationException;
-import com.orientechnologies.orient.core.exception.OInvalidIndexEngineIdException;
-import com.orientechnologies.orient.core.exception.OManualIndexesAreProhibited;
-import com.orientechnologies.orient.core.exception.OTooBigIndexKeyException;
+import com.orientechnologies.orient.core.exception.*;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.engine.OBaseIndexEngine;
 import com.orientechnologies.orient.core.intent.OIntentMassiveInsert;
@@ -58,7 +55,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -362,6 +358,26 @@ public abstract class OIndexAbstract implements OIndexInternal {
   }
 
   @Override
+  public Optional<Stream<Object>> composeKeys(ODocument document) {
+    final OIndexDefinition indexDefinition = this.indexDefinition;
+    if (indexDefinition == null) {
+      return Optional.empty();
+    }
+
+    final Object key = indexDefinition.getDocumentValueToIndex(document);
+    if (key == null) {
+      return Optional.empty();
+    }
+
+    if (key instanceof Collection) {
+      //noinspection unchecked
+      return Optional.of(((Collection<Object>) key).stream());
+    }
+
+    return Optional.of(Stream.of(key));
+  }
+
+  @Override
   public OIndexMetadata loadMetadata(final ODocument config) {
     return loadMetadataInternal(config, type, algorithm, valueContainerAlgorithm);
   }
@@ -373,35 +389,6 @@ public abstract class OIndexAbstract implements OIndexInternal {
 
   @Override
   public void close() {}
-
-  /** @return number of entries in the index. */
-  @Deprecated
-  public long getSize() {
-    return size();
-  }
-
-  /** Counts the entries for the key. */
-  @Deprecated
-  public long count(Object iKey) {
-    try (Stream<ORawPair<Object, ORID>> stream =
-        streamEntriesBetween(iKey, true, iKey, true, true)) {
-      return stream.count();
-    }
-  }
-
-  /** @return Number of keys in index */
-  @Deprecated
-  public long getKeySize() {
-    try (Stream<Object> stream = keyStream()) {
-      return stream.distinct().count();
-    }
-  }
-
-  /** Flushes in-memory changes to disk. */
-  @Deprecated
-  public void flush() {
-    // do nothing
-  }
 
   @Deprecated
   public long getRebuildVersion() {
@@ -415,84 +402,6 @@ public abstract class OIndexAbstract implements OIndexInternal {
   @Deprecated
   public boolean isRebuilding() {
     return false;
-  }
-
-  @Deprecated
-  public Object getFirstKey() {
-    try (final Stream<Object> stream = keyStream()) {
-      final Iterator<Object> iterator = stream.iterator();
-      if (iterator.hasNext()) {
-        return iterator.next();
-      }
-
-      return null;
-    }
-  }
-
-  @Deprecated
-  public Object getLastKey() {
-    try (final Stream<ORawPair<Object, ORID>> stream = descStream()) {
-      final Iterator<ORawPair<Object, ORID>> iterator = stream.iterator();
-      if (iterator.hasNext()) {
-        return iterator.next().first;
-      }
-
-      return null;
-    }
-  }
-
-  @Deprecated
-  public OIndexCursor cursor() {
-    return new StreamWrapper(stream());
-  }
-
-  @Deprecated
-  @Override
-  public OIndexCursor descCursor() {
-    return new StreamWrapper(descStream());
-  }
-
-  @Deprecated
-  @Override
-  public OIndexKeyCursor keyCursor() {
-    return new OIndexKeyCursor() {
-      private final Iterator<Object> keyIterator = keyStream().iterator();
-
-      @Override
-      public Object next(int prefetchSize) {
-        if (keyIterator.hasNext()) {
-          return keyIterator.next();
-        }
-
-        return null;
-      }
-    };
-  }
-
-  @Deprecated
-  @Override
-  public OIndexCursor iterateEntries(Collection<?> keys, boolean ascSortOrder) {
-    return new StreamWrapper(streamEntries(keys, ascSortOrder));
-  }
-
-  @Deprecated
-  @Override
-  public OIndexCursor iterateEntriesBetween(
-      Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
-    return new StreamWrapper(
-        streamEntriesBetween(fromKey, fromInclusive, toKey, toInclusive, ascOrder));
-  }
-
-  @Deprecated
-  @Override
-  public OIndexCursor iterateEntriesMajor(Object fromKey, boolean fromInclusive, boolean ascOrder) {
-    return new StreamWrapper(streamEntriesMajor(fromKey, fromInclusive, ascOrder));
-  }
-
-  @Deprecated
-  @Override
-  public OIndexCursor iterateEntriesMinor(Object toKey, boolean toInclusive, boolean ascOrder) {
-    return new StreamWrapper(streamEntriesMajor(toKey, toInclusive, ascOrder));
   }
 
   /** {@inheritDoc} */
@@ -606,6 +515,10 @@ public abstract class OIndexAbstract implements OIndexInternal {
     return remove(key);
   }
 
+  public boolean removeRaw(final byte[] key, final OIdentifiable rid) {
+    return remove(key);
+  }
+
   public boolean remove(Object key) {
     key = getCollatingValue(key);
 
@@ -676,11 +589,12 @@ public abstract class OIndexAbstract implements OIndexInternal {
   }
 
   private void doDelete() {
+    final ODatabaseDocumentInternal database = getDatabase();
     while (true)
       try {
         //noinspection ObjectAllocationInLoop
-        try (final Stream<ORawPair<Object, ORID>> stream = stream()) {
-          stream.forEach((pair) -> remove(pair.first, pair.second));
+        try (final Stream<ORawPair<byte[], ORID>> stream = rawStream()) {
+          stream.forEach(entry -> removeRaw(entry.first, entry.second));
         }
 
         try (Stream<ORID> stream = getRids(null)) {
@@ -849,8 +763,6 @@ public abstract class OIndexAbstract implements OIndexInternal {
 
   public void preCommit(IndexTxSnapshot snapshots) {}
 
-  public void postCommit(IndexTxSnapshot snapshots) {}
-
   public ODocument getConfiguration() {
     return configuration.getDocument();
   }
@@ -880,21 +792,6 @@ public abstract class OIndexAbstract implements OIndexInternal {
       if (indexDefinition == null) return null;
 
       return indexDefinition.getTypes();
-    } finally {
-      releaseSharedLock();
-    }
-  }
-
-  @Override
-  public Stream<Object> keyStream() {
-    acquireSharedLock();
-    try {
-      while (true)
-        try {
-          return storage.getIndexKeyStream(indexId);
-        } catch (OInvalidIndexEngineIdException ignore) {
-          doReloadIndexEngine();
-        }
     } finally {
       releaseSharedLock();
     }
@@ -1203,40 +1100,6 @@ public abstract class OIndexAbstract implements OIndexInternal {
                   + "to see warning, please set global property `"
                   + OGlobalConfiguration.INDEX_ALLOW_MANUAL_INDEXES_WARNING.getKey()
                   + "` to `false`");
-    }
-  }
-
-  private static class StreamWrapper extends OIndexAbstractCursor {
-    private final Iterator<ORawPair<Object, ORID>> iterator;
-
-    private StreamWrapper(final Stream<ORawPair<Object, ORID>> stream) {
-      iterator = stream.iterator();
-    }
-
-    @Override
-    public Map.Entry<Object, OIdentifiable> nextEntry() {
-      if (iterator.hasNext()) {
-        final ORawPair<Object, ORID> pair = iterator.next();
-
-        return new Map.Entry<Object, OIdentifiable>() {
-          @Override
-          public Object getKey() {
-            return pair.first;
-          }
-
-          @Override
-          public OIdentifiable getValue() {
-            return pair.second;
-          }
-
-          @Override
-          public OIdentifiable setValue(OIdentifiable value) {
-            throw new UnsupportedOperationException();
-          }
-        };
-      }
-
-      return null;
     }
   }
 }

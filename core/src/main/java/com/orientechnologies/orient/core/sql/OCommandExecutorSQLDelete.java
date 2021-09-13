@@ -251,13 +251,12 @@ public class OCommandExecutorSQLDelete extends OCommandExecutorSQLAbstract
           return total;
         } else {
           // RETURNS ALL THE DELETED RECORDS
-          Iterator<ORawPair<Object, ORID>> cursor = index.stream().iterator();
+          Iterator<ORID> iterator = index.stream().iterator();
 
-          while (cursor.hasNext()) {
-            final ORawPair<Object, ORID> entry = cursor.next();
-            OIdentifiable rec = entry.second;
-            rec = rec.getRecord();
-            if (rec != null) allDeletedRecords.add((ORecord) rec);
+          while (iterator.hasNext()) {
+            final  ORID rid = iterator.next();
+            final ORecord rec = rid.getRecord();
+            if (rec != null) allDeletedRecords.add(rec);
           }
 
           index.clear();

@@ -41,7 +41,7 @@ public class OLuceneOverlapOperator extends OLuceneSpatialOperator {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     Object key;
     key = keyParams.get(0);

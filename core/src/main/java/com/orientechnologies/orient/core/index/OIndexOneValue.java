@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -62,20 +61,6 @@ public abstract class OIndexOneValue extends OIndexAbstract {
         version,
         storage,
         binaryFormatVersion);
-  }
-
-  @Deprecated
-  @Override
-  public Object get(Object key) {
-    final Iterator<ORID> iterator;
-    try (Stream<ORID> stream = getRids(key)) {
-      iterator = stream.iterator();
-      if (iterator.hasNext()) {
-        return iterator.next();
-      }
-    }
-
-    return null;
   }
 
   @Override
@@ -127,7 +112,7 @@ public abstract class OIndexOneValue extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntries(Collection<?> keys, boolean ascSortOrder) {
+  public Stream<ORID> stream(Collection<?> keys, boolean ascSortOrder) {
     final List<Object> sortedKeys = new ArrayList<>(keys);
     final Comparator<Object> comparator;
 
@@ -153,12 +138,10 @@ public abstract class OIndexOneValue extends OIndexAbstract {
                           if (rid == null) {
                             return Stream.empty();
                           }
-                          return Stream.of(new ORawPair<>(collatedKey, rid));
+                          return Stream.of(rid);
                         } else if (apiVersion == 1) {
                           //noinspection resource
-                          return storage
-                              .getIndexValues(indexId, collatedKey)
-                              .map((rid) -> new ORawPair<>(collatedKey, rid));
+                          return storage.getIndexValues(indexId, collatedKey);
                         } else {
                           throw new IllegalStateException(
                               "Invalid version of index API - " + apiVersion);
@@ -175,7 +158,54 @@ public abstract class OIndexOneValue extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesBetween(
+  public Stream<ORawPair<byte[], ORID>> rawStream(Collection<?> keys, boolean ascSortOrder) {
+    final List<Object> sortedKeys = new ArrayList<>(keys);
+    final Comparator<Object> comparator;
+
+    if (ascSortOrder) comparator = ODefaultComparator.INSTANCE;
+    else comparator = Collections.reverseOrder(ODefaultComparator.INSTANCE);
+
+    sortedKeys.sort(comparator);
+
+    //noinspection resource
+    return IndexStreamSecurityDecorator.decorateRawStream(
+            this,
+            sortedKeys.stream()
+                    .flatMap(
+                            (key) -> {
+                              final Object collatedKey = getCollatingValue(key);
+
+                              acquireSharedLock();
+                              try {
+                                while (true) {
+                                  try {
+                                    if (apiVersion == 0) {
+                                      final ORawPair<byte[], Object> pair =
+                                              storage.getRawKeyIndexValue(indexId, collatedKey);
+                                      if (pair == null) {
+                                        return Stream.empty();
+                                      }
+                                      return Stream.of(pair).map(pr -> new ORawPair<>(pr.first, (ORID) pr.second));
+                                    } else if (apiVersion == 1) {
+                                      //noinspection resource
+                                      return storage.getRawIndexValues(indexId, collatedKey);
+                                    } else {
+                                      throw new IllegalStateException(
+                                              "Invalid version of index API - " + apiVersion);
+                                    }
+                                  } catch (OInvalidIndexEngineIdException ignore) {
+                                    doReloadIndexEngine();
+                                  }
+                                }
+                              } finally {
+                                releaseSharedLock();
+                              }
+                            })
+                    .filter(Objects::nonNull));
+  }
+
+  @Override
+  public Stream<ORID> streamBetween(
       Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
     fromKey = getCollatingValue(fromKey);
     toKey = getCollatingValue(toKey);
@@ -197,8 +227,30 @@ public abstract class OIndexOneValue extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesMajor(
-      Object fromKey, boolean fromInclusive, boolean ascOrder) {
+  public Stream<ORawPair<byte[], ORID>> rawStreamBetween(
+      Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
+    fromKey = getCollatingValue(fromKey);
+    toKey = getCollatingValue(toKey);
+
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+                  this,
+                  storage.iterateRawIndexEntriesBetween(
+                          indexId, fromKey, fromInclusive, toKey, toInclusive, ascOrder, null));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORID> streamMajor(Object fromKey, boolean fromInclusive, boolean ascOrder) {
     fromKey = getCollatingValue(fromKey);
     acquireSharedLock();
     try {
@@ -216,8 +268,27 @@ public abstract class OIndexOneValue extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesMinor(
-      Object toKey, boolean toInclusive, boolean ascOrder) {
+  public Stream<ORawPair<byte[], ORID>> rawStreamMajor(
+      Object fromKey, boolean fromInclusive, boolean ascOrder) {
+    fromKey = getCollatingValue(fromKey);
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this,
+              storage.iterateRawIndexEntriesMajor(indexId, fromKey, fromInclusive, ascOrder, null));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORID> streamMinor(Object toKey, boolean toInclusive, boolean ascOrder) {
     toKey = getCollatingValue(toKey);
     acquireSharedLock();
     try {
@@ -230,6 +301,26 @@ public abstract class OIndexOneValue extends OIndexAbstract {
         }
       }
 
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawStreamMinor(
+      Object toKey, boolean toInclusive, boolean ascOrder) {
+    toKey = getCollatingValue(toKey);
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this,
+              storage.iterateRawIndexEntriesMinor(indexId, toKey, toInclusive, ascOrder, null));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
     } finally {
       releaseSharedLock();
     }
@@ -251,7 +342,7 @@ public abstract class OIndexOneValue extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream() {
+  public Stream<ORID> stream() {
     acquireSharedLock();
     try {
       while (true) {
@@ -268,13 +359,47 @@ public abstract class OIndexOneValue extends OIndexAbstract {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream() {
+  public Stream<ORawPair<byte[], ORID>> rawStream() {
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this, storage.getIndexRawStream(indexId, null));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORID> descStream() {
     acquireSharedLock();
     try {
       while (true) {
         try {
           return IndexStreamSecurityDecorator.decorateStream(
               this, storage.getIndexDescStream(indexId, null));
+        } catch (OInvalidIndexEngineIdException ignore) {
+          doReloadIndexEngine();
+        }
+      }
+    } finally {
+      releaseSharedLock();
+    }
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawDescStream() {
+    acquireSharedLock();
+    try {
+      while (true) {
+        try {
+          return IndexStreamSecurityDecorator.decorateRawStream(
+              this, storage.getIndexRawDescStream(indexId, null));
         } catch (OInvalidIndexEngineIdException ignore) {
           doReloadIndexEngine();
         }

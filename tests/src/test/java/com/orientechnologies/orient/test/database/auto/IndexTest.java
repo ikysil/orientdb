@@ -18,7 +18,6 @@ package com.orientechnologies.orient.test.database.auto;
 import static com.orientechnologies.DatabaseAbstractTest.getEnvironment;
 
 import com.orientechnologies.DatabaseAbstractTest;
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
@@ -1096,15 +1095,17 @@ public class IndexTest extends ObjectDBBaseTest {
 
     final OIndex index = getIndex("Profile.nick");
 
-    Iterator<ORawPair<Object, ORID>> streamIterator;
+    Iterator<ORID> streamIterator;
     Object key;
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       streamIterator = stream.iterator();
       Assert.assertTrue(streamIterator.hasNext());
 
-      ORawPair<Object, ORID> pair = streamIterator.next();
-      key = pair.first;
-      pair.second.getRecord().delete();
+      ORID rid = streamIterator.next();
+      final ODocument document = rid.getRecord();
+      //noinspection OptionalGetWithoutIsPresent
+      key = index.getInternal().composeKeys(document).get().iterator().next();
+      document.delete();
     }
 
     try (Stream<ORID> stream = index.getInternal().getRids(key)) {
@@ -1194,8 +1195,19 @@ public class IndexTest extends ObjectDBBaseTest {
       keys.add(key);
     }
 
-    try (Stream<ORawPair<Object, ORID>> stream = idx.getInternal().stream()) {
-      Assert.assertEquals(stream.map((pair) -> pair.first).distinct().count(), keys.size());
+    try (Stream<ORID> stream = idx.getInternal().stream()) {
+      Assert.assertEquals(
+          stream
+              .map(
+                  rid -> {
+                    final ODocument document = rid.getRecord();
+                    @SuppressWarnings("OptionalGetWithoutIsPresent")
+                    final Object key = idx.getInternal().composeKeys(document).get().iterator().next();
+                    return key;
+                  })
+              .distinct()
+              .count(),
+          keys.size());
     }
   }
 
@@ -1871,14 +1883,22 @@ public class IndexTest extends ObjectDBBaseTest {
 
     // we support first and last keys check only for embedded storage
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStreamAsc = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStreamAsc.iterator().next(), new OCompositeKey((byte) 1, rid1, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID rid = stream.iterator().next();
+        final ODocument doc = rid.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid1, 12L, 14L, 12));
       }
 
-      try (Stream<ORawPair<Object, ORID>> descStream = index.getInternal().descStream()) {
-        Assert.assertEquals(
-            descStream.iterator().next().first, new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
+      try (Stream<ORID> descStream = index.getInternal().descStream()) {
+        final ORID rid = descStream.iterator().next();
+        final ODocument doc = rid.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
       }
     }
 
@@ -1900,9 +1920,13 @@ public class IndexTest extends ObjectDBBaseTest {
             .getIndex(database, "MultikeyWithoutFieldIndex");
     Assert.assertEquals(index.getInternal().size(), 1);
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
       }
     }
 
@@ -1924,9 +1948,13 @@ public class IndexTest extends ObjectDBBaseTest {
 
     Assert.assertEquals(index.getInternal().size(), 1);
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStreamAsc = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStreamAsc.iterator().next(), new OCompositeKey((byte) 1, null, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, null, 12L, 14L, 12));
       }
     }
 
@@ -1946,9 +1974,14 @@ public class IndexTest extends ObjectDBBaseTest {
 
     Assert.assertEquals(index.getInternal().size(), 1);
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
       }
     }
 
@@ -1967,13 +2000,23 @@ public class IndexTest extends ObjectDBBaseTest {
     Assert.assertEquals(index.getInternal().size(), 2);
 
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
       }
-      try (Stream<ORawPair<Object, ORID>> descStream = index.getInternal().descStream()) {
-        Assert.assertEquals(
-            descStream.iterator().next().first, new OCompositeKey((byte) 1, rid4, 12L, 14L, 12));
+      try (Stream<ORID> descStream = index.getInternal().descStream()) {
+        final ORID r = descStream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid4, 12L, 14L, 12));
       }
     }
 
@@ -1991,9 +2034,14 @@ public class IndexTest extends ObjectDBBaseTest {
     Assert.assertEquals(index.getInternal().size(), 1);
 
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, null, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, null, 12L, 14L, 12));
       }
     }
   }
@@ -2057,13 +2105,23 @@ public class IndexTest extends ObjectDBBaseTest {
 
     // we support first and last keys check only for embedded storage
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, rid1, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid1, 12L, 14L, 12));
       }
-      try (Stream<ORawPair<Object, ORID>> descStream = index.getInternal().descStream()) {
-        Assert.assertEquals(
-            descStream.iterator().next().first, new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
+      try (Stream<ORID> descStream = index.getInternal().descStream()) {
+        final ORID r = descStream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get().iterator().next();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
       }
     }
 
@@ -2085,9 +2143,13 @@ public class IndexTest extends ObjectDBBaseTest {
             .getIndex(database, "MultikeyWithoutFieldIndexNoNullSupport");
     Assert.assertEquals(index.getInternal().size(), 1);
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get();
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid2, 12L, 14L, 12));
       }
     }
 
@@ -2125,9 +2187,14 @@ public class IndexTest extends ObjectDBBaseTest {
     Assert.assertEquals(index.getInternal().size(), 1);
 
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
       }
     }
 
@@ -2146,13 +2213,23 @@ public class IndexTest extends ObjectDBBaseTest {
     Assert.assertEquals(index.getInternal().size(), 2);
 
     if (!(database.getStorage() instanceof OStorageProxy)) {
-      try (Stream<Object> keyStream = index.getInternal().keyStream()) {
-        Assert.assertEquals(
-            keyStream.iterator().next(), new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
+      try (Stream<ORID> stream = index.getInternal().stream()) {
+        final ORID r = stream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid3, 12L, 14L, 12));
       }
-      try (Stream<ORawPair<Object, ORID>> descStream = index.getInternal().descStream()) {
-        Assert.assertEquals(
-            descStream.iterator().next().first, new OCompositeKey((byte) 1, rid4, 12L, 14L, 12));
+      try (Stream<ORID> descStream = index.getInternal().descStream()) {
+        final ORID r = descStream.iterator().next();
+        final ODocument doc = r.getRecord();
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        final Object key = index.getInternal().composeKeys(doc).get();
+
+        Assert.assertEquals(key, new OCompositeKey((byte) 1, rid4, 12L, 14L, 12));
       }
     }
 
@@ -2191,10 +2268,22 @@ public class IndexTest extends ObjectDBBaseTest {
     OIndex index =
         db.getMetadata().getIndexManagerInternal().getIndex(db, "NullValuesCountSBTreeUniqueIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       try (Stream<ORID> nullStream = index.getInternal().getRids(null)) {
         Assert.assertEquals(
-            stream.map((pair) -> pair.first).distinct().count() + nullStream.count(), 2);
+            stream
+                    .map(
+                        rid -> {
+                          final ODocument document = rid.getRecord();
+
+                          @SuppressWarnings("OptionalGetWithoutIsPresent")
+                          final Object key = index.getInternal().composeKeys(document).get();
+                          return key;
+                        })
+                    .distinct()
+                    .count()
+                + nullStream.count(),
+            2);
       }
     }
   }
@@ -2223,10 +2312,21 @@ public class IndexTest extends ObjectDBBaseTest {
             .getIndexManagerInternal()
             .getIndex(db, "NullValuesCountSBTreeNotUniqueOneIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       try (Stream<ORID> nullStream = index.getInternal().getRids(null)) {
         Assert.assertEquals(
-            stream.map((pair) -> pair.first).distinct().count() + nullStream.count(), 2);
+            stream
+                    .map(
+                        rid -> {
+                          final ODocument document = rid.getRecord();
+                          @SuppressWarnings("OptionalGetWithoutIsPresent")
+                          final Object key = index.getInternal().composeKeys(document).get();
+                          return key;
+                        })
+                    .distinct()
+                    .count()
+                + nullStream.count(),
+            2);
       }
     }
   }
@@ -2254,10 +2354,15 @@ public class IndexTest extends ObjectDBBaseTest {
         db.getMetadata()
             .getIndexManagerInternal()
             .getIndex(db, "NullValuesCountSBTreeNotUniqueTwoIndex");
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       try (Stream<ORID> nullStream = index.getInternal().getRids(null)) {
         Assert.assertEquals(
-            stream.map((pair) -> pair.first).distinct().count()
+            stream.map(rid -> {
+              final ODocument document = rid.getRecord();
+              @SuppressWarnings("OptionalGetWithoutIsPresent")
+              final Object key = index.getInternal().composeKeys(document).get();
+              return key;
+            }).distinct().count()
                 + nullStream.findAny().map(v -> 1).orElse(0),
             1);
       }
@@ -2286,10 +2391,15 @@ public class IndexTest extends ObjectDBBaseTest {
     OIndex index =
         db.getMetadata().getIndexManagerInternal().getIndex(db, "NullValuesCountHashUniqueIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       try (Stream<ORID> nullStream = index.getInternal().getRids(null)) {
         Assert.assertEquals(
-            stream.map((pair) -> pair.first).distinct().count() + nullStream.count(), 2);
+            stream.map(rid -> {
+              final ODocument document = rid.getRecord();
+              @SuppressWarnings("OptionalGetWithoutIsPresent")
+              final Object key = index.getInternal().composeKeys(document).get();
+              return key;
+            }).distinct().count() + nullStream.count(), 2);
       }
     }
   }
@@ -2318,10 +2428,15 @@ public class IndexTest extends ObjectDBBaseTest {
             .getIndexManagerInternal()
             .getIndex(db, "NullValuesCountHashNotUniqueOneIndex");
     Assert.assertEquals(index.getInternal().size(), 2);
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       try (Stream<ORID> nullStream = index.getInternal().getRids(null)) {
         Assert.assertEquals(
-            stream.map((pair) -> pair.first).distinct().count() + nullStream.count(), 2);
+            stream.map(rid -> {
+              final ODocument document = rid.getRecord();
+              @SuppressWarnings("OptionalGetWithoutIsPresent")
+              final Object key = index.getInternal().composeKeys(document).get();
+              return key;
+            }).distinct().count() + nullStream.count(), 2);
       }
     }
   }
@@ -2349,10 +2464,15 @@ public class IndexTest extends ObjectDBBaseTest {
         db.getMetadata()
             .getIndexManagerInternal()
             .getIndex(db, "NullValuesCountHashNotUniqueTwoIndex");
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       try (Stream<ORID> nullStream = index.getInternal().getRids(null)) {
         Assert.assertEquals(
-            stream.map(pair -> pair.first).distinct().count()
+            stream.map(rid -> {
+              final ODocument document = rid.getRecord();
+              @SuppressWarnings("OptionalGetWithoutIsPresent")
+              final Object key = index.getInternal().composeKeys(document).get();
+              return key;
+            }).distinct().count()
                 + nullStream.findAny().map(v -> 1).orElse(0),
             1);
       }

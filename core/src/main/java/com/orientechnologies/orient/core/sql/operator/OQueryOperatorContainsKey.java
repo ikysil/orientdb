@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.sql.operator;
 
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
@@ -72,11 +71,11 @@ public class OQueryOperatorContainsKey extends OQueryOperatorEqualityNotNulls {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     final OIndexDefinition indexDefinition = index.getDefinition();
 
-    Stream<ORawPair<Object, ORID>> stream;
+    Stream<ORID> stream;
     final OIndexInternal internalIndex = index.getInternal();
     if (!internalIndex.canBeUsedInEqualityOperators()) return null;
 
@@ -90,7 +89,7 @@ public class OQueryOperatorContainsKey extends OQueryOperatorEqualityNotNulls {
 
       if (key == null) return null;
 
-      stream = index.getInternal().getRids(key).map((rid) -> new ORawPair<>(key, rid));
+      stream = index.getInternal().getRids(key);
     } else {
       // in case of composite keys several items can be returned in case of we perform search
       // using part of composite key stored in index.
@@ -112,10 +111,10 @@ public class OQueryOperatorContainsKey extends OQueryOperatorEqualityNotNulls {
 
       if (internalIndex.hasRangeQuerySupport()) {
         final Object keyTwo = compositeIndexDefinition.createSingleValue(keyParams);
-        stream = index.getInternal().streamEntriesBetween(keyOne, true, keyTwo, true, ascSortOrder);
+        stream = index.getInternal().streamBetween(keyOne, true, keyTwo, true, ascSortOrder);
       } else {
         if (indexDefinition.getParamCount() == keyParams.size()) {
-          stream = index.getInternal().getRids(keyOne).map((rid) -> new ORawPair<>(keyOne, rid));
+          stream = index.getInternal().getRids(keyOne);
         } else {
           return null;
         }

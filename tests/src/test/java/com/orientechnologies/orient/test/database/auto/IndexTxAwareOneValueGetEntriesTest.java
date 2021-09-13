@@ -4,7 +4,6 @@ import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndex;
-import com.orientechnologies.orient.core.index.OIndexTxAwareOneValue;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -57,7 +56,6 @@ public class IndexTxAwareOneValueGetEntriesTest extends DocumentDBBaseTest {
 
     database.begin();
     final OIndex index = database.getMetadata().getIndexManagerInternal().getIndex(database, INDEX);
-    Assert.assertTrue(index instanceof OIndexTxAwareOneValue);
 
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 1).save();
     new ODocument(CLASS_NAME).field(PROPERTY_NAME, 2).save();

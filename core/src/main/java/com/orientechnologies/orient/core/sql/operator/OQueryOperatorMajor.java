@@ -76,11 +76,11 @@ public class OQueryOperatorMajor extends OQueryOperatorEqualityNotNulls {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     final OIndexDefinition indexDefinition = index.getDefinition();
 
-    Stream<ORawPair<Object, ORID>> stream;
+    Stream<ORID> stream;
     final OIndexInternal internalIndex = index.getInternal();
     if (!internalIndex.canBeUsedInEqualityOperators() || !internalIndex.hasRangeQuerySupport())
       return null;
@@ -93,7 +93,7 @@ public class OQueryOperatorMajor extends OQueryOperatorEqualityNotNulls {
 
       if (key == null) return null;
 
-      stream = index.getInternal().streamEntriesMajor(key, false, ascSortOrder);
+      stream = index.getInternal().streamMajor(key, false, ascSortOrder);
     } else {
       // if we have situation like "field1 = 1 AND field2 > 2"
       // then we fetch collection which left not included boundary is the smallest composite key in
@@ -114,7 +114,7 @@ public class OQueryOperatorMajor extends OQueryOperatorEqualityNotNulls {
 
       if (keyTwo == null) return null;
 
-      stream = index.getInternal().streamEntriesBetween(keyOne, false, keyTwo, true, ascSortOrder);
+      stream = index.getInternal().streamBetween(keyOne, false, keyTwo, true, ascSortOrder);
     }
 
     updateProfiler(iContext, index, keyParams, indexDefinition);

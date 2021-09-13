@@ -155,10 +155,10 @@ public class OWhereClause extends SimpleNode {
           return rids.count();
         }
       } else if (index.supportsOrderedIterations()) {
-        final Spliterator<ORawPair<Object, ORID>> spliterator;
+        final Spliterator<ORID> spliterator;
 
-        try (Stream<ORawPair<Object, ORID>> stream =
-            index.getInternal().streamEntriesBetween(key, true, key, true, true)) {
+        try (Stream<ORID> stream =
+            index.getInternal().streamBetween(key, true, key, true, true)) {
           spliterator = stream.spliterator();
           return spliterator.estimateSize();
         }

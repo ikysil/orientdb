@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.sql.operator;
 
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
@@ -75,12 +74,12 @@ public class OQueryOperatorMinorEquals extends OQueryOperatorEqualityNotNulls {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     final OIndexDefinition indexDefinition = index.getDefinition();
 
     final OIndexInternal internalIndex = index.getInternal();
-    Stream<ORawPair<Object, ORID>> stream;
+    Stream<ORID> stream;
     if (!internalIndex.canBeUsedInEqualityOperators() || !internalIndex.hasRangeQuerySupport())
       return null;
 
@@ -92,7 +91,7 @@ public class OQueryOperatorMinorEquals extends OQueryOperatorEqualityNotNulls {
 
       if (key == null) return null;
 
-      stream = index.getInternal().streamEntriesMinor(key, true, ascSortOrder);
+      stream = index.getInternal().streamMinor(key, true, ascSortOrder);
     } else {
       // if we have situation like "field1 = 1 AND field2 <= 2"
       // then we fetch collection which left included boundary is the smallest composite key in the
@@ -116,7 +115,7 @@ public class OQueryOperatorMinorEquals extends OQueryOperatorEqualityNotNulls {
         return null;
       }
 
-      stream = index.getInternal().streamEntriesBetween(keyOne, true, keyTwo, true, ascSortOrder);
+      stream = index.getInternal().streamBetween(keyOne, true, keyTwo, true, ascSortOrder);
     }
 
     updateProfiler(iContext, index, keyParams, indexDefinition);

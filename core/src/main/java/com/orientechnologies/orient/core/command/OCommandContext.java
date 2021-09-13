@@ -21,6 +21,8 @@ package com.orientechnologies.orient.core.command;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.db.ODatabase;
+import com.orientechnologies.orient.core.record.impl.ODocument;
+
 import java.util.Map;
 
 /**

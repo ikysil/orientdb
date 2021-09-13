@@ -1,6 +1,5 @@
 package com.orientechnologies.orient.core.sql.executor;
 
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseInternal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
@@ -13,13 +12,10 @@ import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+
+import java.util.*;
 import java.util.stream.Stream;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -73,10 +69,14 @@ public class OTruncateClassStatementExecutionTest {
 
     Assert.assertEquals(index.getInternal().size(), 6);
 
-    try (Stream<ORawPair<Object, ORID>> stream = index.getInternal().stream()) {
+    try (Stream<ORID> stream = index.getInternal().stream()) {
       stream.forEach(
-          (entry) -> {
-            Assert.assertTrue(set.contains((Integer) entry.first));
+          (rid) -> {
+            final Optional<Stream<Object>> keyContainer =
+                index.getInternal().composeKeys(rid.getRecord());
+            @SuppressWarnings("OptionalGetWithoutIsPresent")
+            final Object key = keyContainer.get().iterator().next();
+            Assert.assertTrue(set.contains((Integer) key));
           });
     }
 

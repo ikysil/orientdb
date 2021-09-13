@@ -4081,7 +4081,7 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     return engine.stream(valuesTransformer);
   }
 
-  public Stream<ORawPair<Object, ORID>> getIndexDescStream(
+  public Stream<ORID> getIndexDescStream(
       int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
       throws OInvalidIndexEngineIdException {
     indexId = extractInternalId(indexId);
@@ -4109,7 +4109,35 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     }
   }
 
-  private Stream<ORawPair<Object, ORID>> doGetIndexDescStream(
+  public Stream<ORawPair<byte[], ORID>> getIndexRawDescStream(
+      int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
+      throws OInvalidIndexEngineIdException {
+    indexId = extractInternalId(indexId);
+
+    try {
+      if (transaction.get() != null) {
+        return doGetRawIndexDescStream(indexId, valuesTransformer);
+      }
+
+      stateLock.acquireReadLock();
+      try {
+        checkIfThreadIsInterrupted();
+        checkOpenness();
+
+        return doGetRawIndexDescStream(indexId, valuesTransformer);
+      } finally {
+        stateLock.releaseReadLock();
+      }
+    } catch (final RuntimeException ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Error ee) {
+      throw logAndPrepareForRethrow(ee, false);
+    } catch (final Throwable ie) {
+      throw logAndPrepareForRethrow(ie, false);
+    }
+  }
+
+  private Stream<ORID> doGetIndexDescStream(
       final int indexId, final OBaseIndexEngine.ValuesTransformer valuesTransformer)
       throws OInvalidIndexEngineIdException {
     checkIndexId(indexId);
@@ -4129,42 +4157,6 @@ public abstract class OAbstractPaginatedStorage extends OStorageAbstract
     assert indexId == engine.getId();
 
     return engine.rawDescStream(valuesTransformer);
-  }
-
-  public Stream<Object> getIndexKeyStream(int indexId) throws OInvalidIndexEngineIdException {
-    indexId = extractInternalId(indexId);
-
-    try {
-      if (transaction.get() != null) {
-        return doGetIndexKeyStream(indexId);
-      }
-
-      stateLock.acquireReadLock();
-      try {
-        checkIfThreadIsInterrupted();
-        checkOpenness();
-
-        return doGetIndexKeyStream(indexId);
-      } finally {
-        stateLock.releaseReadLock();
-      }
-    } catch (final RuntimeException ee) {
-      throw logAndPrepareForRethrow(ee, false);
-    } catch (final Error ee) {
-      throw logAndPrepareForRethrow(ee, false);
-    } catch (final Throwable ie) {
-      throw logAndPrepareForRethrow(ie, false);
-    }
-  }
-
-  private Stream<Object> doGetIndexKeyStream(final int indexId)
-      throws OInvalidIndexEngineIdException {
-    checkIndexId(indexId);
-
-    final OBaseIndexEngine engine = indexEngines.get(indexId);
-    assert indexId == engine.getId();
-
-    return engine.keyStream();
   }
 
   public long getIndexSize(int indexId, final OBaseIndexEngine.ValuesTransformer transformer)

@@ -63,7 +63,7 @@ public class OQueryOperatorIn extends OQueryOperatorEqualityNotNulls {
 
   @SuppressWarnings("unchecked")
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
+  public Stream<ORID> executeIndexQuery(
       OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
     final OIndexDefinition indexDefinition = index.getDefinition();
 
@@ -117,7 +117,7 @@ public class OQueryOperatorIn extends OQueryOperatorEqualityNotNulls {
       }
       if (containsNotCompatibleKey) return null;
 
-      stream = index.getInternal().streamEntries(inKeys, ascSortOrder);
+      stream = index.getInternal().stream(inKeys, ascSortOrder);
     } else {
       final List<Object> partialKey = new ArrayList<Object>();
       partialKey.addAll(keyParams);
@@ -157,7 +157,7 @@ public class OQueryOperatorIn extends OQueryOperatorEqualityNotNulls {
       if (inKeys == null) return null;
 
       if (indexDefinition.getParamCount() == keyParams.size()) {
-        stream = index.getInternal().streamEntries(inKeys, ascSortOrder);
+        stream = index.getInternal().stream(inKeys, ascSortOrder);
       } else {
         return null;
       }

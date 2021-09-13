@@ -45,7 +45,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.search.IndexSearcher;
@@ -192,6 +191,11 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
       }
   }
 
+  @Override
+  public boolean removeRaw(byte[] key, OIdentifiable rid) {
+    throw new UnsupportedOperationException("Raw keys are not supported in Lucene index.");
+  }
+
   public OLuceneIndexNotUnique delete() {
     acquireExclusiveLock();
 
@@ -324,14 +328,6 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
             determineValueSerializer());
   }
 
-  @Deprecated
-  @Override
-  public Collection<OIdentifiable> get(final Object key) {
-    try (Stream<ORID> stream = getRids(key)) {
-      return stream.collect(Collectors.toList());
-    }
-  }
-
   @Override
   public Stream<ORID> getRids(Object key) {
     final OBasicTransaction transaction = getDatabase().getMicroOrRegularTransaction();
@@ -434,7 +430,7 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntries(Collection<?> keys, boolean ascSortOrder) {
+  public Stream<ORID> stream(Collection<?> keys, boolean ascSortOrder) {
 
     @SuppressWarnings("resource")
     String query =
@@ -445,12 +441,17 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
                 .map(OCompositeKey::getKeys)
                 .orElse(Collections.singletonList("q=*:*"))
                 .get(0);
-    return IndexStreamSecurityDecorator.decorateStream(
-        this, getRids(query).map((rid) -> new ORawPair<>(query, rid)));
+
+    return IndexStreamSecurityDecorator.decorateStream(this, getRids(query));
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesBetween(
+  public Stream<ORawPair<byte[], ORID>> rawStream(Collection<?> keys, boolean ascSortOrder) {
+    throw new UnsupportedOperationException("Iteration over Lucene index is not supported");
+  }
+
+  @Override
+  public Stream<ORID> streamBetween(
       Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
     while (true) {
       try {
@@ -465,8 +466,22 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesMajor(
-      Object fromKey, boolean fromInclusive, boolean ascOrder) {
+  public Stream<ORawPair<byte[], ORID>> rawStreamBetween(
+      Object fromKey, boolean fromInclusive, Object toKey, boolean toInclusive, boolean ascOrder) {
+    while (true) {
+      try {
+        return IndexStreamSecurityDecorator.decorateRawStream(
+            this,
+            storage.iterateRawIndexEntriesBetween(
+                indexId, fromKey, fromInclusive, toKey, toInclusive, ascOrder, null));
+      } catch (OInvalidIndexEngineIdException e) {
+        doReloadIndexEngine();
+      }
+    }
+  }
+
+  @Override
+  public Stream<ORID> streamMajor(Object fromKey, boolean fromInclusive, boolean ascOrder) {
     while (true) {
       try {
         return IndexStreamSecurityDecorator.decorateStream(
@@ -479,12 +494,38 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> streamEntriesMinor(
-      Object toKey, boolean toInclusive, boolean ascOrder) {
+  public Stream<ORawPair<byte[], ORID>> rawStreamMajor(
+      Object fromKey, boolean fromInclusive, boolean ascOrder) {
+    while (true) {
+      try {
+        return IndexStreamSecurityDecorator.decorateRawStream(
+            this,
+            storage.iterateRawIndexEntriesMajor(indexId, fromKey, fromInclusive, ascOrder, null));
+      } catch (OInvalidIndexEngineIdException e) {
+        doReloadIndexEngine();
+      }
+    }
+  }
+
+  @Override
+  public Stream<ORID> streamMinor(Object toKey, boolean toInclusive, boolean ascOrder) {
     while (true) {
       try {
         return IndexStreamSecurityDecorator.decorateStream(
             this, storage.iterateIndexEntriesMinor(indexId, toKey, toInclusive, ascOrder, null));
+      } catch (OInvalidIndexEngineIdException e) {
+        doReloadIndexEngine();
+      }
+    }
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawStreamMinor(
+      Object toKey, boolean toInclusive, boolean ascOrder) {
+    while (true) {
+      try {
+        return IndexStreamSecurityDecorator.decorateRawStream(
+            this, storage.iterateRawIndexEntriesMinor(indexId, toKey, toInclusive, ascOrder, null));
       } catch (OInvalidIndexEngineIdException e) {
         doReloadIndexEngine();
       }
@@ -497,7 +538,7 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream() {
+  public Stream<ORID> stream() {
     while (true) {
       try {
         return IndexStreamSecurityDecorator.decorateStream(
@@ -509,11 +550,35 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream() {
+  public Stream<ORawPair<byte[], ORID>> rawStream() {
+    while (true) {
+      try {
+        return IndexStreamSecurityDecorator.decorateRawStream(
+            this, storage.getIndexRawStream(indexId, null));
+      } catch (OInvalidIndexEngineIdException e) {
+        doReloadIndexEngine();
+      }
+    }
+  }
+
+  @Override
+  public Stream<ORID> descStream() {
     while (true) {
       try {
         return IndexStreamSecurityDecorator.decorateStream(
-            this, storage.getIndexStream(indexId, null));
+            this, storage.getIndexDescStream(indexId, null));
+      } catch (OInvalidIndexEngineIdException e) {
+        doReloadIndexEngine();
+      }
+    }
+  }
+
+  @Override
+  public Stream<ORawPair<byte[], ORID>> rawDescStream() {
+    while (true) {
+      try {
+        return IndexStreamSecurityDecorator.decorateRawStream(
+            this, storage.getIndexRawDescStream(indexId, null));
       } catch (OInvalidIndexEngineIdException e) {
         doReloadIndexEngine();
       }

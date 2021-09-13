@@ -24,7 +24,6 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.io.OFileUtils;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.serialization.types.OBinarySerializer;
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.lucene.analyzer.OLuceneAnalyzerFactory;
 import com.orientechnologies.lucene.builder.OLuceneIndexType;
 import com.orientechnologies.lucene.exception.OLuceneIndexException;
@@ -600,19 +599,15 @@ public abstract class OLuceneIndexEngineAbstract extends OSharedResourceAdaptive
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> descStream(ValuesTransformer valuesTransformer) {
+  public Stream<ORID> descStream(ValuesTransformer valuesTransformer) {
     throw new UnsupportedOperationException("Cannot iterate over a lucene index");
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> stream(ValuesTransformer valuesTransformer) {
+  public Stream<ORID> stream(ValuesTransformer valuesTransformer) {
     throw new UnsupportedOperationException("Cannot iterate over a lucene index");
   }
 
-  @Override
-  public Stream<Object> keyStream() {
-    throw new UnsupportedOperationException("Cannot iterate over a lucene index");
-  }
 
   public long size(final ValuesTransformer transformer) {
     return sizeInTx(null);
