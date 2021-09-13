@@ -27,7 +27,6 @@ import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndexKeyUpdater;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperation;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
 import java.io.IOException;
 import java.util.Map;
@@ -54,7 +53,6 @@ public interface OIndexEngine extends OBaseIndexEngine {
    * Puts the given value under the given key into this index engine. Validates the operation using
    * the provided validator.
    *
-   * @param atomicOperation
    * @param key the key to put the value under.
    * @param value the value to put.
    * @param validator the operation validator.
@@ -70,6 +68,7 @@ public interface OIndexEngine extends OBaseIndexEngine {
     return VERSION;
   }
 
+  @SuppressWarnings("rawtypes")
   void load(
       String indexName,
       OBinarySerializer valueSerializer,
@@ -83,6 +82,6 @@ public interface OIndexEngine extends OBaseIndexEngine {
 
   ORawPair<byte[], Object> getRawEntry(Object key);
 
-  void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> updater) throws IOException;
-
+  void updateRaw(OAtomicOperation atomicOperation, byte[] key, OIndexKeyUpdater<Object> updater)
+      throws IOException;
 }
