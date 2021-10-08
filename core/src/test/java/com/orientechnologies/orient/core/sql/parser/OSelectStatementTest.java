@@ -387,6 +387,11 @@ public class OSelectStatementTest {
   }
 
   @Test
+  public void testSelectFromLetVariable_9689() {
+    checkRightSyntax("select $c as one let $a = (select 1 as a), $b = first($a), $c = (select b as c from $b)");
+  }
+
+  @Test
   public void testEval() {
     checkRightSyntax(
         "  select  sum(weight) , f.name as name from (\n"

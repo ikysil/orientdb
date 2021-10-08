@@ -2072,6 +2072,60 @@ public class OSelectStatementExecutionTest extends BaseMemoryDatabase {
     resultSet.close();
   }
 
+
+  @Test
+  public void testSelectFromLetExpression_9689() {
+    OResultSet result = db.query(
+      "select $c as one let $a = (select 1 as a), $b = first($a), $c = (select a as c from $b)"
+    );
+    printExecutionPlan(result);
+    Assert.assertTrue(result.hasNext());
+    OResult item = result.next();
+    Assert.assertNotNull(item);
+    Object one = item.getProperty("one");
+    Assert.assertTrue(one instanceof List);
+    Assert.assertEquals(1, ((List) one).size());
+    Object x = ((List) one).get(0);
+    Assert.assertTrue(x instanceof OResult);
+    Assert.assertEquals(1, (Object) ((OResult) x).getProperty("c"));
+    result.close();
+  }
+
+  @Test
+  public void testSelectFromLetQuery_9689() {
+    OResultSet result = db.query(
+      "select $c as one let $a = (select 1 as a), $b = (select expand(first($a))), $c = (select a as c from $b)"
+    );
+    printExecutionPlan(result);
+    Assert.assertTrue(result.hasNext());
+    OResult item = result.next();
+    Assert.assertNotNull(item);
+    Object one = item.getProperty("one");
+    Assert.assertTrue(one instanceof List);
+    Assert.assertEquals(1, ((List) one).size());
+    Object x = ((List) one).get(0);
+    Assert.assertTrue(x instanceof OResult);
+    Assert.assertEquals(1, (Object) ((OResult) x).getProperty("c"));
+    result.close();
+  }
+
+  @Test
+  public void testMultiTargetLet_9164() {
+    OResultSet result =
+            db.query(
+                    "select intersect($a[0].left, $b[0].right) as r\n" +
+                            "let $a = (select [12, 34] as left), \n" +
+                            "    $b = (select [1, 5, 9, 12, 28, 34, 45] as right)");
+    printExecutionPlan(result);
+    Assert.assertTrue(result.hasNext());
+    OResult item = result.next();
+    Assert.assertNotNull(item);
+    Object currentProperty = item.getProperty("r");
+    Assert.assertTrue(currentProperty instanceof List);
+    Assert.assertArrayEquals(new Integer[]{34, 12}, ((List) currentProperty).toArray(new Integer[0]));
+    result.close();
+  }
+
   @Test
   public void testLetVariableSubqueryProjectionFetchFromClassTarget_9695() {
     String className = "testLetVariableSubqueryProjectionFetchFromClassTarget_9695";
