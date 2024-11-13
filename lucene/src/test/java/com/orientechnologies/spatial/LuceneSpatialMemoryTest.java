@@ -21,7 +21,6 @@ import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.spatial.collections.OSpatialCompositeKey;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,10 +51,12 @@ public class LuceneSpatialMemoryTest extends BaseLuceneTest {
     db.save(document);
 
     List<?> query =
-        db.query(
-            new OSQLSynchQuery<ODocument>(
+        db
+            .query(
                 "SELECT FROM Point WHERE [latitude, longitude] WITHIN"
-                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]"));
+                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]")
+            .stream()
+            .toList();
 
     Assert.assertEquals(query.size(), 1);
   }
@@ -79,10 +80,12 @@ public class LuceneSpatialMemoryTest extends BaseLuceneTest {
     db.save(document);
 
     List<?> query =
-        db.query(
-            new OSQLSynchQuery<ODocument>(
+        db
+            .query(
                 "SELECT FROM Point WHERE [latitude, longitude] WITHIN"
-                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]"));
+                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]")
+            .stream()
+            .toList();
 
     Assert.assertEquals(1, query.size());
 
@@ -121,10 +124,12 @@ public class LuceneSpatialMemoryTest extends BaseLuceneTest {
     db.rollback();
 
     query =
-        db.query(
-            new OSQLSynchQuery<ODocument>(
+        db
+            .query(
                 "SELECT FROM Point WHERE [latitude, longitude] WITHIN"
-                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]"));
+                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]")
+            .stream()
+            .toList();
 
     Assert.assertEquals(0, query.size());
   }
@@ -150,10 +155,12 @@ public class LuceneSpatialMemoryTest extends BaseLuceneTest {
     db.commit();
 
     List<?> query =
-        db.query(
-            new OSQLSynchQuery<ODocument>(
+        db
+            .query(
                 "SELECT FROM Point WHERE [latitude, longitude] WITHIN"
-                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]"));
+                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]")
+            .stream()
+            .toList();
 
     Assert.assertEquals(1, query.size());
 
@@ -196,10 +203,12 @@ public class LuceneSpatialMemoryTest extends BaseLuceneTest {
     db.delete(document);
 
     query =
-        db.query(
-            new OSQLSynchQuery<ODocument>(
+        db
+            .query(
                 "SELECT FROM Point WHERE [latitude, longitude] WITHIN"
-                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]"));
+                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]")
+            .stream()
+            .toList();
 
     Assert.assertEquals(0, query.size());
 
@@ -212,10 +221,12 @@ public class LuceneSpatialMemoryTest extends BaseLuceneTest {
     db.rollback();
 
     query =
-        db.query(
-            new OSQLSynchQuery<ODocument>(
+        db
+            .query(
                 "SELECT FROM Point WHERE [latitude, longitude] WITHIN"
-                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]"));
+                    + " [[42.26531323615103,-83.71986351411135],[42.29239784478525,-83.7662120858887]]")
+            .stream()
+            .toList();
 
     Assert.assertEquals(1, query.size());
   }

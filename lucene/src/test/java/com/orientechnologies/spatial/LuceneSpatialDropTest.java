@@ -7,8 +7,8 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import java.io.File;
 import java.util.List;
 import org.junit.After;
@@ -63,10 +63,8 @@ public class LuceneSpatialDropTest {
 
     db = dbPool.acquire();
     // @maggiolo00 Remove the next three lines and the test will not fail anymore
-    OSQLSynchQuery<ODocument> query =
-        new OSQLSynchQuery<ODocument>(
-            "select from test where [latitude,longitude] WITHIN [[50.0,8.0],[51.0,9.0]]");
-    List<ODocument> result = db.command(query).execute();
+    String query = "select from test where  [latitude,longitude] WITHIN [[50.0,8.0],[51.0,9.0]]";
+    List<OResult> result = db.command(query).stream().toList();
     Assert.assertEquals(insertcount, result.size());
     db.close();
     dbPool.close();

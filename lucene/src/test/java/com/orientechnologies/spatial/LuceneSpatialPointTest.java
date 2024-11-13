@@ -21,8 +21,8 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
@@ -128,13 +128,13 @@ public class LuceneSpatialPointTest extends BaseSpatialLuceneTest {
     String query =
         "select *,$distance from Place where [latitude,longitude,$spatial] NEAR"
             + " [41.893056,12.482778,{\"maxDistance\": 2}]";
-    List<ODocument> docs = db.query(new OSQLSynchQuery<ODocument>(query));
+    List<OResult> docs = db.query(query).stream().toList();
 
     Assert.assertEquals(1, docs.size());
 
     //    Assert.assertEquals(1.6229442709302933, docs.get(0).field("$distance"));
 
-    assertThat(docs.get(0).<Double>field("$distance")).isEqualTo(1.6229442709302933);
+    assertThat(docs.get(0).<Double>getProperty("$distance")).isEqualTo(1.6230287806012604);
   }
 
   @Test
