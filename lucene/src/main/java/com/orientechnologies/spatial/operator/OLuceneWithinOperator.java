@@ -69,6 +69,21 @@ public class OLuceneWithinOperator extends OQueryTargetOperator {
   }
 
   @Override
+  public boolean evaluate(Object iLeft, Object iRight, OCommandContext ctx) {
+    List<Number> left = (List<Number>) iLeft;
+
+    double lat = left.get(0).doubleValue();
+    double lon = left.get(1).doubleValue();
+
+    Shape shape = SpatialContext.GEO.makePoint(lon, lat);
+
+    Shape shape1 =
+        shapeFactory.makeShape(new OSpatialCompositeKey((List<?>) iRight), SpatialContext.GEO);
+
+    return shape.relate(shape1) == SpatialRelation.WITHIN;
+  }
+
+  @Override
   public OIndexReuseType getIndexReuseType(Object iLeft, Object iRight) {
     return OIndexReuseType.INDEX_OPERATOR;
   }

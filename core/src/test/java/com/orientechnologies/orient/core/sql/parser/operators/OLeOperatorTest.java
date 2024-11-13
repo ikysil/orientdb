@@ -29,29 +29,29 @@ public class OLeOperatorTest {
   @Test
   public void test() {
     OLeOperator op = new OLeOperator(-1);
-    Assert.assertTrue(op.execute(1, 1));
-    Assert.assertFalse(op.execute(1, 0));
-    Assert.assertTrue(op.execute(0, 1));
+    Assert.assertTrue(op.execute(1, 1, null));
+    Assert.assertFalse(op.execute(1, 0, null));
+    Assert.assertTrue(op.execute(0, 1, null));
 
-    Assert.assertTrue(op.execute("aaa", "zzz"));
-    Assert.assertFalse(op.execute("zzz", "aaa"));
+    Assert.assertTrue(op.execute("aaa", "zzz", null));
+    Assert.assertFalse(op.execute("zzz", "aaa", null));
 
-    Assert.assertTrue(op.execute(1, 1.1));
-    Assert.assertFalse(op.execute(1.1, 1));
+    Assert.assertTrue(op.execute(1, 1.1, null));
+    Assert.assertFalse(op.execute(1.1, 1, null));
 
-    Assert.assertTrue(op.execute(BigDecimal.ONE, 1));
-    Assert.assertTrue(op.execute(1, BigDecimal.ONE));
+    Assert.assertTrue(op.execute(BigDecimal.ONE, 1, null));
+    Assert.assertTrue(op.execute(1, BigDecimal.ONE, null));
 
-    Assert.assertFalse(op.execute(1.1, BigDecimal.ONE));
-    Assert.assertFalse(op.execute(2, BigDecimal.ONE));
+    Assert.assertFalse(op.execute(1.1, BigDecimal.ONE, null));
+    Assert.assertFalse(op.execute(2, BigDecimal.ONE, null));
 
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 0.999999));
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 0));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 0.999999, null));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 0, null));
 
-    Assert.assertTrue(op.execute(BigDecimal.ONE, 2));
-    Assert.assertTrue(op.execute(BigDecimal.ONE, 1.0001));
+    Assert.assertTrue(op.execute(BigDecimal.ONE, 2, null));
+    Assert.assertTrue(op.execute(BigDecimal.ONE, 1.0001, null));
     try {
-      Assert.assertFalse(op.execute(new Object(), new Object()));
+      Assert.assertFalse(op.execute(new Object(), new Object(), null));
       Assert.fail();
     } catch (Exception e) {
       Assert.assertTrue(e instanceof ClassCastException);

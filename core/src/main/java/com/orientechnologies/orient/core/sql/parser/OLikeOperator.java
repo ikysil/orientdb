@@ -3,6 +3,7 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.collection.OMultiValue;
+import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.query.OQueryHelper;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder.Operation;
 import java.util.Map;
@@ -17,7 +18,7 @@ public class OLikeOperator extends SimpleNode implements OBinaryCompareOperator 
   }
 
   @Override
-  public boolean execute(Object iLeft, Object iRight) {
+  public boolean execute(Object iLeft, Object iRight, OCommandContext ctx) {
     if (OMultiValue.isMultiValue(iLeft) || OMultiValue.isMultiValue(iRight)) return false;
 
     if (iLeft == null || iRight == null) {

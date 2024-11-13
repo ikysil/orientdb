@@ -31,22 +31,22 @@ public class OInOperatorTest {
   public void test() {
     OInOperator op = new OInOperator(-1);
 
-    Assert.assertFalse(op.execute(null, null));
-    Assert.assertFalse(op.execute(null, "foo"));
-    Assert.assertFalse(op.execute("foo", null));
-    Assert.assertFalse(op.execute("foo", "foo"));
+    Assert.assertFalse(op.execute(null, null, null));
+    Assert.assertFalse(op.execute(null, "foo", null));
+    Assert.assertFalse(op.execute("foo", null, null));
+    Assert.assertFalse(op.execute("foo", "foo", null));
 
     List<Object> list1 = new ArrayList<Object>();
-    Assert.assertFalse(op.execute("foo", list1));
-    Assert.assertFalse(op.execute(null, list1));
-    Assert.assertTrue(op.execute(list1, list1));
+    Assert.assertFalse(op.execute("foo", list1, null));
+    Assert.assertFalse(op.execute(null, list1, null));
+    Assert.assertTrue(op.execute(list1, list1, null));
 
     list1.add("a");
     list1.add(1);
 
-    Assert.assertFalse(op.execute("foo", list1));
-    Assert.assertTrue(op.execute("a", list1));
-    Assert.assertTrue(op.execute(1, list1));
+    Assert.assertFalse(op.execute("foo", list1, null));
+    Assert.assertTrue(op.execute("a", list1, null));
+    Assert.assertTrue(op.execute(1, list1, null));
 
     // TODO
   }

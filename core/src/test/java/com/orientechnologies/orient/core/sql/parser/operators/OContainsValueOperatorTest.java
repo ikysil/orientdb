@@ -31,20 +31,20 @@ public class OContainsValueOperatorTest {
   public void test() {
     OContainsValueOperator op = new OContainsValueOperator(-1);
 
-    Assert.assertFalse(op.execute(null, null));
-    Assert.assertFalse(op.execute(null, "foo"));
+    Assert.assertFalse(op.execute(null, null, null));
+    Assert.assertFalse(op.execute(null, "foo", null));
 
     Map<Object, Object> originMap = new HashMap<Object, Object>();
-    Assert.assertFalse(op.execute(originMap, "bar"));
-    Assert.assertFalse(op.execute(originMap, null));
+    Assert.assertFalse(op.execute(originMap, "bar", null));
+    Assert.assertFalse(op.execute(originMap, null, null));
 
     originMap.put("foo", "bar");
     originMap.put(1, "baz");
     originMap.put(2, 12);
 
-    Assert.assertTrue(op.execute(originMap, "bar"));
-    Assert.assertTrue(op.execute(originMap, "baz"));
-    Assert.assertTrue(op.execute(originMap, 12));
-    Assert.assertFalse(op.execute(originMap, "asdfafsd"));
+    Assert.assertTrue(op.execute(originMap, "bar", null));
+    Assert.assertTrue(op.execute(originMap, "baz", null));
+    Assert.assertTrue(op.execute(originMap, 12, null));
+    Assert.assertFalse(op.execute(originMap, "asdfafsd", null));
   }
 }

@@ -38,7 +38,8 @@ public class OBinaryCondition extends OBooleanExpression {
 
   @Override
   public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    return operator.execute(left.execute(currentRecord, ctx), right.execute(currentRecord, ctx));
+    return operator.execute(
+        left.execute(currentRecord, ctx), right.execute(currentRecord, ctx), ctx);
   }
 
   @Override
@@ -60,7 +61,7 @@ public class OBinaryCondition extends OBooleanExpression {
       leftVal = collate.transform(leftVal);
       rightVal = collate.transform(rightVal);
     }
-    return operator.execute(leftVal, rightVal);
+    return operator.execute(leftVal, rightVal, ctx);
   }
 
   private boolean evaluateAny(OResult currentRecord, OCommandContext ctx) {
@@ -70,7 +71,7 @@ public class OBinaryCondition extends OBooleanExpression {
 
       // TODO collate
 
-      if (operator.execute(leftVal, rightVal)) {
+      if (operator.execute(leftVal, rightVal, ctx)) {
         return true;
       }
     }
@@ -84,7 +85,7 @@ public class OBinaryCondition extends OBooleanExpression {
 
       // TODO collate
 
-      if (!operator.execute(leftVal, rightVal)) {
+      if (!operator.execute(leftVal, rightVal, ctx)) {
         return false;
       }
     }

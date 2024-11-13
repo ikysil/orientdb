@@ -4,6 +4,7 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
+import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder.Operation;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class OLtOperator extends SimpleNode implements OBinaryCompareOperator {
   }
 
   @Override
-  public boolean execute(Object iLeft, Object iRight) {
+  public boolean execute(Object iLeft, Object iRight, OCommandContext ctx) {
     if (iLeft == null || iRight == null) {
       return false;
     }

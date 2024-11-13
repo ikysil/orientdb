@@ -2,6 +2,7 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
+import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder.Operation;
 import java.util.Collection;
 import java.util.Iterator;
@@ -17,7 +18,7 @@ public class OInOperator extends SimpleNode implements OBinaryCompareOperator {
   }
 
   @Override
-  public boolean execute(Object left, Object right) {
+  public boolean execute(Object left, Object right, OCommandContext ctx) {
     if (left == null) {
       return false;
     }

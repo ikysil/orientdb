@@ -29,29 +29,29 @@ public class OGeOperatorTest {
   @Test
   public void test() {
     OGeOperator op = new OGeOperator(-1);
-    Assert.assertTrue(op.execute(1, 1));
-    Assert.assertTrue(op.execute(1, 0));
-    Assert.assertFalse(op.execute(0, 1));
+    Assert.assertTrue(op.execute(1, 1, null));
+    Assert.assertTrue(op.execute(1, 0, null));
+    Assert.assertFalse(op.execute(0, 1, null));
 
-    Assert.assertFalse(op.execute("aaa", "zzz"));
-    Assert.assertTrue(op.execute("zzz", "aaa"));
+    Assert.assertFalse(op.execute("aaa", "zzz", null));
+    Assert.assertTrue(op.execute("zzz", "aaa", null));
 
-    Assert.assertFalse(op.execute(1, 1.1));
-    Assert.assertTrue(op.execute(1.1, 1));
+    Assert.assertFalse(op.execute(1, 1.1, null));
+    Assert.assertTrue(op.execute(1.1, 1, null));
 
-    Assert.assertTrue(op.execute(BigDecimal.ONE, 1));
-    Assert.assertTrue(op.execute(1, BigDecimal.ONE));
+    Assert.assertTrue(op.execute(BigDecimal.ONE, 1, null));
+    Assert.assertTrue(op.execute(1, BigDecimal.ONE, null));
 
-    Assert.assertTrue(op.execute(1.1, BigDecimal.ONE));
-    Assert.assertTrue(op.execute(2, BigDecimal.ONE));
+    Assert.assertTrue(op.execute(1.1, BigDecimal.ONE, null));
+    Assert.assertTrue(op.execute(2, BigDecimal.ONE, null));
 
-    Assert.assertTrue(op.execute(BigDecimal.ONE, 0.999999));
-    Assert.assertTrue(op.execute(BigDecimal.ONE, 0));
+    Assert.assertTrue(op.execute(BigDecimal.ONE, 0.999999, null));
+    Assert.assertTrue(op.execute(BigDecimal.ONE, 0, null));
 
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 2));
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 1.0001));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 2, null));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 1.0001, null));
     try {
-      Assert.assertFalse(op.execute(new Object(), new Object()));
+      Assert.assertFalse(op.execute(new Object(), new Object(), null));
       Assert.fail();
     } catch (Exception e) {
       Assert.assertTrue(e instanceof ClassCastException);

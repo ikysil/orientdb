@@ -28,11 +28,11 @@ public class OLikeOperatorTest {
   @Test
   public void test() {
     OLikeOperator op = new OLikeOperator(-1);
-    Assert.assertTrue(op.execute("foobar", "%ooba%"));
-    Assert.assertTrue(op.execute("foobar", "%oo%"));
-    Assert.assertFalse(op.execute("foobar", "oo%"));
-    Assert.assertFalse(op.execute("foobar", "%oo"));
-    Assert.assertFalse(op.execute("foobar", "%fff%"));
-    Assert.assertTrue(op.execute("foobar", "foobar"));
+    Assert.assertTrue(op.execute("foobar", "%ooba%", null));
+    Assert.assertTrue(op.execute("foobar", "%oo%", null));
+    Assert.assertFalse(op.execute("foobar", "oo%", null));
+    Assert.assertFalse(op.execute("foobar", "%oo", null));
+    Assert.assertFalse(op.execute("foobar", "%fff%", null));
+    Assert.assertTrue(op.execute("foobar", "foobar", null));
   }
 }

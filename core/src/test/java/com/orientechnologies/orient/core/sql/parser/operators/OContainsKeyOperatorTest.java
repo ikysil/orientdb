@@ -32,18 +32,18 @@ public class OContainsKeyOperatorTest {
   public void test() {
     OContainsKeyOperator op = new OContainsKeyOperator(-1);
 
-    Assert.assertFalse(op.execute(null, null));
-    Assert.assertFalse(op.execute(null, "foo"));
+    Assert.assertFalse(op.execute(null, null, null));
+    Assert.assertFalse(op.execute(null, "foo", null));
 
     Map<Object, Object> originMap = new HashMap<Object, Object>();
-    Assert.assertFalse(op.execute(originMap, "foo"));
-    Assert.assertFalse(op.execute(originMap, null));
+    Assert.assertFalse(op.execute(originMap, "foo", null));
+    Assert.assertFalse(op.execute(originMap, null, null));
 
     originMap.put("foo", "bar");
     originMap.put(1, "baz");
 
-    Assert.assertTrue(op.execute(originMap, "foo"));
-    Assert.assertTrue(op.execute(originMap, 1));
-    Assert.assertFalse(op.execute(originMap, "fooz"));
+    Assert.assertTrue(op.execute(originMap, "foo", null));
+    Assert.assertTrue(op.execute(originMap, 1, null));
+    Assert.assertFalse(op.execute(originMap, "fooz", null));
   }
 }

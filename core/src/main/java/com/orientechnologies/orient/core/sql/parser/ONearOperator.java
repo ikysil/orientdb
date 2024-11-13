@@ -2,22 +2,47 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
+import com.orientechnologies.orient.core.command.OCommandContext;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder.Operation;
+import com.orientechnologies.orient.core.sql.operator.OQueryOperator;
+import com.orientechnologies.orient.core.sql.operator.OQueryOperatorFactory;
+import java.util.Iterator;
 import java.util.Map;
 
 public class ONearOperator extends SimpleNode implements OBinaryCompareOperator {
+  private OQueryOperator lowLevelOperator;
+
   public ONearOperator(int id) {
     super(id);
+    initOperator();
   }
 
   public ONearOperator(OrientSql p, int id) {
     super(p, id);
+    initOperator();
+  }
+
+  protected void initOperator() {
+    Iterator<OQueryOperatorFactory> factories = OSQLEngine.getOperatorFactories();
+    while (factories.hasNext()) {
+      OQueryOperatorFactory factory = factories.next();
+      for (OQueryOperator op : factory.getOperators()) {
+        if ("NEAR".equals(op.getKeyword())) {
+          lowLevelOperator = op;
+        }
+      }
+    }
   }
 
   @Override
-  public boolean execute(Object left, Object right) {
-    throw new UnsupportedOperationException(
-        toString() + " operator cannot be evaluated in this context");
+  public boolean execute(Object left, Object right, OCommandContext ctx) {
+    if (lowLevelOperator == null) {
+      throw new UnsupportedOperationException(
+          toString() + " operator cannot be evaluated in this context");
+    } else {
+      return lowLevelOperator.evaluate(left, right, ctx);
+    }
   }
 
   @Override

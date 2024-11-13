@@ -31,36 +31,36 @@ public class OEqualsCompareOperatorTest {
   public void test() {
     OEqualsCompareOperator op = new OEqualsCompareOperator(-1);
 
-    Assert.assertFalse(op.execute(null, 1));
-    Assert.assertFalse(op.execute(1, null));
-    Assert.assertFalse(op.execute(null, null));
+    Assert.assertFalse(op.execute(null, 1, null));
+    Assert.assertFalse(op.execute(1, null, null));
+    Assert.assertFalse(op.execute(null, null, null));
 
-    Assert.assertTrue(op.execute(1, 1));
-    Assert.assertFalse(op.execute(1, 0));
-    Assert.assertFalse(op.execute(0, 1));
+    Assert.assertTrue(op.execute(1, 1, null));
+    Assert.assertFalse(op.execute(1, 0, null));
+    Assert.assertFalse(op.execute(0, 1, null));
 
-    Assert.assertFalse(op.execute("aaa", "zzz"));
-    Assert.assertFalse(op.execute("zzz", "aaa"));
-    Assert.assertTrue(op.execute("aaa", "aaa"));
+    Assert.assertFalse(op.execute("aaa", "zzz", null));
+    Assert.assertFalse(op.execute("zzz", "aaa", null));
+    Assert.assertTrue(op.execute("aaa", "aaa", null));
 
-    Assert.assertFalse(op.execute(1, 1.1));
-    Assert.assertFalse(op.execute(1.1, 1));
+    Assert.assertFalse(op.execute(1, 1.1, null));
+    Assert.assertFalse(op.execute(1.1, 1, null));
 
-    Assert.assertTrue(op.execute(BigDecimal.ONE, 1));
-    Assert.assertTrue(op.execute(1, BigDecimal.ONE));
+    Assert.assertTrue(op.execute(BigDecimal.ONE, 1, null));
+    Assert.assertTrue(op.execute(1, BigDecimal.ONE, null));
 
-    Assert.assertFalse(op.execute(1.1, BigDecimal.ONE));
-    Assert.assertFalse(op.execute(2, BigDecimal.ONE));
+    Assert.assertFalse(op.execute(1.1, BigDecimal.ONE, null));
+    Assert.assertFalse(op.execute(2, BigDecimal.ONE, null));
 
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 0.999999));
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 0));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 0.999999, null));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 0, null));
 
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 2));
-    Assert.assertFalse(op.execute(BigDecimal.ONE, 1.0001));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 2, null));
+    Assert.assertFalse(op.execute(BigDecimal.ONE, 1.0001, null));
 
-    Assert.assertTrue(op.execute(new ORecordId(1, 10), new ORecordId((short) 1, 10)));
-    Assert.assertFalse(op.execute(new ORecordId(1, 10), new ORecordId((short) 1, 20)));
+    Assert.assertTrue(op.execute(new ORecordId(1, 10), new ORecordId((short) 1, 10), null));
+    Assert.assertFalse(op.execute(new ORecordId(1, 10), new ORecordId((short) 1, 20), null));
 
-    Assert.assertFalse(op.execute(new Object(), new Object()));
+    Assert.assertFalse(op.execute(new Object(), new Object(), null));
   }
 }

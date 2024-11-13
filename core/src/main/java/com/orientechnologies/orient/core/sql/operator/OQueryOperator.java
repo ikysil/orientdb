@@ -293,7 +293,7 @@ public abstract class OQueryOperator {
     return keyword;
   }
 
-  public boolean evaluate(Object iLeft, Object iRight) {
+  public boolean evaluate(Object iLeft, Object iRight, OCommandContext ctx) {
     throw new UnsupportedOperationException();
   }
 }

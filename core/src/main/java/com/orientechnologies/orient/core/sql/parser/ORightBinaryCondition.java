@@ -129,7 +129,7 @@ public class ORightBinaryCondition extends SimpleNode {
   private boolean matchesFilters(
       OIdentifiable iCurrentRecord, Object element, OCommandContext ctx) {
     if (operator != null) {
-      operator.execute(element, right.execute(iCurrentRecord, ctx));
+      operator.execute(element, right.execute(iCurrentRecord, ctx), ctx);
     } else if (inOperator != null) {
 
       Object rightVal = evaluateRight(iCurrentRecord, ctx);
@@ -147,7 +147,7 @@ public class ORightBinaryCondition extends SimpleNode {
 
   private boolean matchesFilters(OResult iCurrentRecord, Object element, OCommandContext ctx) {
     if (operator != null) {
-      return operator.execute(element, right.execute(iCurrentRecord, ctx));
+      return operator.execute(element, right.execute(iCurrentRecord, ctx), ctx);
     } else if (inOperator != null) {
 
       Object rightVal = evaluateRight(iCurrentRecord, ctx);

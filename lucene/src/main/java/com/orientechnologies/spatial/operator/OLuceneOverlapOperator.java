@@ -83,7 +83,7 @@ public class OLuceneOverlapOperator extends OLuceneSpatialOperator {
   }
 
   @Override
-  public boolean evaluate(Object iLeft, Object iRight) {
+  public boolean evaluate(Object iLeft, Object iRight, OCommandContext ctx) {
     Shape shape = factory.fromObject(iLeft);
 
     // TODO { 'shape' : { 'type' : 'LineString' , 'coordinates' : [[1,2],[4,6]]} }
