@@ -17,20 +17,22 @@
 package com.orientechnologies.orient.test.internal;
 
 import com.orientechnologies.common.exception.OException;
-import com.orientechnologies.orient.client.db.ODatabaseHelper;
+import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.ODatabaseSession;
+import com.orientechnologies.orient.core.db.OrientDB;
+import com.orientechnologies.orient.core.db.OrientDBConfig;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.exception.ORecordNotFoundException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
+import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
-import java.io.IOException;
+import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.server.OServer;
 import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.List;
@@ -42,12 +44,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-@Test
-public class FreezeMultiThreadingTestNonTX {
+public class FreezeMultiThreadingNonTXIT {
   private static final int TRANSACTIONAL_CREATOR_THREAD_COUNT = 2;
   private static final int TRANSACTIONAL_UPDATER_THREAD_COUNT = 2;
   private static final int TRANSACTIONAL_DELETER_THREAD_COUNT = 2;
@@ -79,12 +81,13 @@ public class FreezeMultiThreadingTestNonTX {
   private ConcurrentSkipListSet<Integer> deletedInTransaction =
       new ConcurrentSkipListSet<Integer>();
   private CountDownLatch countDownLatch = new CountDownLatch(1);
+  private OServer server;
+  private OrientDB remote;
 
   private class NonTransactionalAdder implements Callable<Void> {
     public Void call() throws Exception {
       Thread.currentThread().setName("Adder - " + Thread.currentThread().getId());
-      ODatabaseDocumentInternal database = new ODatabaseDocumentTx(URL);
-      database.open("admin", "admin");
+      ODatabaseSession database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
       try {
         countDownLatch.await();
 
@@ -93,7 +96,7 @@ public class FreezeMultiThreadingTestNonTX {
           Thread.sleep(200);
           ODocument document = new ODocument(STUDENT_CLASS_NAME);
           document.field("counter", value);
-          document.save();
+          database.save(document);
 
           if (value % 10 == 0)
             System.out.println(Thread.currentThread() + " : document " + value + " added");
@@ -119,8 +122,7 @@ public class FreezeMultiThreadingTestNonTX {
   private class TransactionalAdder implements Callable<Void> {
     public Void call() throws Exception {
       Thread.currentThread().setName("TransactionalAdder - " + Thread.currentThread().getId());
-      ODatabaseDocumentInternal database = new ODatabaseDocumentTx(URL);
-      database.open("admin", "admin");
+      ODatabaseSession database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
       try {
         countDownLatch.await();
 
@@ -131,7 +133,7 @@ public class FreezeMultiThreadingTestNonTX {
           database.begin();
           ODocument document = new ODocument(TRANSACTIONAL_WORD + STUDENT_CLASS_NAME);
           document.field("counter", value);
-          document.save();
+          database.save(document);
 
           database.commit();
           if (value % 10 == 0)
@@ -161,8 +163,7 @@ public class FreezeMultiThreadingTestNonTX {
 
     public Void call() throws Exception {
       Thread.currentThread().setName("Updater - " + Thread.currentThread().getId());
-      ODatabaseDocumentInternal database = new ODatabaseDocumentTx(URL);
-      database.open("admin", "admin");
+      ODatabaseSession database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
       try {
 
         countDownLatch.await();
@@ -172,7 +173,7 @@ public class FreezeMultiThreadingTestNonTX {
             continue;
           }
 
-          List<ODocument> execute = null;
+          List<OResult> execute = null;
           if (updateCounter % 10 == 0)
             System.out.println(
                 Thread.currentThread() + " : before search cycle(update)" + updateCounter);
@@ -181,9 +182,10 @@ public class FreezeMultiThreadingTestNonTX {
               execute =
                   database
                       .command(
-                          new OSQLSynchQuery<Object>(
-                              "select * from " + STUDENT_CLASS_NAME + " where counter = ?"))
-                      .execute(updateCounter);
+                          "select * from " + STUDENT_CLASS_NAME + " where counter = ?",
+                          updateCounter)
+                      .stream()
+                      .toList();
             } catch (ORecordNotFoundException onfe) {
               System.out.println("Record not found for doc " + updateCounter);
             } catch (OException e) {
@@ -207,10 +209,10 @@ public class FreezeMultiThreadingTestNonTX {
               System.out.println(
                   Thread.currentThread() + " : after search cycle(update) " + updateCounter);
 
-            ODocument document = execute.get(0);
-            document.field("counter2", document.<Object>field("counter"));
+            OElement document = execute.get(0).getElement().get();
+            document.setProperty("counter2", document.<Object>getProperty("counter"));
             try {
-              document.save();
+              database.save(document);
 
               if (updateCounter % 10 == 0)
                 System.out.println(
@@ -253,8 +255,7 @@ public class FreezeMultiThreadingTestNonTX {
 
     public Void call() throws Exception {
       Thread.currentThread().setName("TransactionalUpdater - " + Thread.currentThread().getId());
-      ODatabaseDocumentInternal database = new ODatabaseDocumentTx(URL);
-      database.open("admin", "admin");
+      ODatabaseSession database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
       try {
 
         countDownLatch.await();
@@ -263,7 +264,7 @@ public class FreezeMultiThreadingTestNonTX {
           if (updateCounter > transactionalCreateCounter.get()) {
             continue;
           }
-          List<ODocument> execute = null;
+          List<OResult> execute = null;
           if (updateCounter % 10 == 0)
             System.out.println(
                 Thread.currentThread() + " : before search cycle(update)" + updateCounter);
@@ -271,13 +272,14 @@ public class FreezeMultiThreadingTestNonTX {
             try {
               execute =
                   database
-                      .command(
-                          new OSQLSynchQuery<Object>(
-                              "select * from "
-                                  + TRANSACTIONAL_WORD
-                                  + STUDENT_CLASS_NAME
-                                  + " where counter = ?"))
-                      .execute(updateCounter);
+                      .query(
+                          "select * from "
+                              + TRANSACTIONAL_WORD
+                              + STUDENT_CLASS_NAME
+                              + " where counter = ?",
+                          updateCounter)
+                      .stream()
+                      .toList();
             } catch (ORecordNotFoundException onfe) {
               // ignore has been deleted
             } catch (OException e) {
@@ -304,10 +306,10 @@ public class FreezeMultiThreadingTestNonTX {
 
             database.begin();
 
-            ODocument document = execute.get(0);
-            document.field("counter2", document.<Object>field("counter"));
+            OElement document = execute.get(0).getElement().get();
+            document.setProperty("counter2", document.<Object>getProperty("counter"));
             try {
-              document.save();
+              database.save(document);
 
               database.commit();
               if (updateCounter % 10 == 0)
@@ -351,8 +353,7 @@ public class FreezeMultiThreadingTestNonTX {
     public Void call() throws Exception {
       Thread.currentThread().setName("Deleter - " + Thread.currentThread().getId());
 
-      ODatabaseDocumentInternal database = new ODatabaseDocumentTx(URL);
-      database.open("admin", "admin");
+      ODatabaseSession database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
       try {
 
         countDownLatch.await();
@@ -364,25 +365,24 @@ public class FreezeMultiThreadingTestNonTX {
             ;
           try {
 
-            List<ODocument> execute;
+            List<OResult> execute;
             if (number % 10 == 0)
               System.out.println(
                   Thread.currentThread() + " : before search cycle (delete) " + number);
             do {
               execute =
                   database
-                      .command(
-                          new OSQLSynchQuery<Object>(
-                              "select * from " + STUDENT_CLASS_NAME + " where counter2 = ?"))
-                      .execute(number);
+                      .query("select * from " + STUDENT_CLASS_NAME + " where counter2 = ?", number)
+                      .stream()
+                      .toList();
             } while (execute == null || execute.isEmpty());
 
             if (number % 10 == 0)
               System.out.println(
                   Thread.currentThread() + " : after search cycle (delete)" + number);
 
-            ODocument document = execute.get(0);
-            document.delete();
+            OElement document = execute.get(0).getElement().get();
+            database.delete(document);
 
             deleted.add(number);
 
@@ -416,8 +416,7 @@ public class FreezeMultiThreadingTestNonTX {
       Thread.currentThread()
           .setName("TransactionalDeleterDeleter - " + Thread.currentThread().getId());
 
-      ODatabaseDocumentInternal database = new ODatabaseDocumentTx(URL);
-      database.open("admin", "admin");
+      ODatabaseSession database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
       try {
 
         countDownLatch.await();
@@ -429,7 +428,7 @@ public class FreezeMultiThreadingTestNonTX {
             ;
           try {
 
-            List<ODocument> execute;
+            List<OResult> execute;
             if (number % 10 == 0)
               System.out.println(
                   Thread.currentThread() + " : before search cycle (delete) " + number);
@@ -437,12 +436,13 @@ public class FreezeMultiThreadingTestNonTX {
               execute =
                   database
                       .command(
-                          new OSQLSynchQuery<Object>(
-                              "select * from "
-                                  + TRANSACTIONAL_WORD
-                                  + STUDENT_CLASS_NAME
-                                  + " where counter2 = ?"))
-                      .execute(number);
+                          "select * from "
+                              + TRANSACTIONAL_WORD
+                              + STUDENT_CLASS_NAME
+                              + " where counter2 = ?",
+                          number)
+                      .stream()
+                      .toList();
             } while (execute == null || execute.isEmpty());
 
             if (number % 10 == 0)
@@ -451,8 +451,8 @@ public class FreezeMultiThreadingTestNonTX {
 
             database.begin();
 
-            ODocument document = execute.get(0);
-            document.delete();
+            OElement document = execute.get(0).getElement().get();
+            database.delete(document);
 
             database.commit();
 
@@ -486,20 +486,21 @@ public class FreezeMultiThreadingTestNonTX {
 
     public Void call() throws Exception {
       Thread.currentThread().setName("Locker - " + Thread.currentThread().getId());
-      ODatabaseDocument database = new ODatabaseDocumentTx(URL);
 
       try {
         countDownLatch.await();
         while (createCounter.get() < DOCUMENT_COUNT) {
-          ODatabaseHelper.freezeDatabase(database);
-          database.open("admin", "admin");
+          final OServerAdmin serverAdmin = new OServerAdmin(URL);
+          serverAdmin.connect("root", "root").freezeDatabase("plocal");
+          serverAdmin.close();
+          ODatabaseSession database =
+              remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
 
-          final List<ODocument> beforeNonTxDocuments =
-              database.query(new OSQLSynchQuery<Object>("select from " + STUDENT_CLASS_NAME));
-          final List<ODocument> beforeTxDocuments =
-              database.query(
-                  new OSQLSynchQuery<Object>(
-                      "select from " + TRANSACTIONAL_WORD + STUDENT_CLASS_NAME));
+          final List<OResult> beforeNonTxDocuments =
+              database.query("select from " + STUDENT_CLASS_NAME).stream().toList();
+          final List<OResult> beforeTxDocuments =
+              database.query("select from " + TRANSACTIONAL_WORD + STUDENT_CLASS_NAME).stream()
+                  .toList();
 
           database.close();
 
@@ -511,13 +512,12 @@ public class FreezeMultiThreadingTestNonTX {
           try {
             Thread.sleep(10000);
           } finally {
-            database.open("admin", "admin");
-            final List<ODocument> afterNonTxDocuments =
-                database.query(new OSQLSynchQuery<Object>("select from " + STUDENT_CLASS_NAME));
-            final List<ODocument> afterTxDocuments =
-                database.query(
-                    new OSQLSynchQuery<Object>(
-                        "select from " + TRANSACTIONAL_WORD + STUDENT_CLASS_NAME));
+            database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
+            final List<OResult> afterNonTxDocuments =
+                database.query("select from " + STUDENT_CLASS_NAME).stream().toList();
+            final List<OResult> afterTxDocuments =
+                database.query("select from " + TRANSACTIONAL_WORD + STUDENT_CLASS_NAME).stream()
+                    .toList();
             assertDocumentAreEquals(beforeNonTxDocuments, afterNonTxDocuments);
             assertDocumentAreEquals(beforeTxDocuments, afterTxDocuments);
 
@@ -527,7 +527,8 @@ public class FreezeMultiThreadingTestNonTX {
                     + afterNonTxDocuments.size()
                     + " Tx : "
                     + afterTxDocuments.size());
-            ODatabaseHelper.releaseDatabase(database);
+            serverAdmin.connect("root", "root").releaseDatabase("plocal");
+            serverAdmin.close();
           }
           Thread.sleep(10000);
         }
@@ -546,30 +547,25 @@ public class FreezeMultiThreadingTestNonTX {
     }
   }
 
-  @BeforeMethod
+  @Before
   public void setUp() throws Exception {
     OGlobalConfiguration.CLIENT_DB_RELEASE_WAIT_TIMEOUT.setValue(1000);
     // OGlobalConfiguration.CLIENT_CHANNEL_MAX_POOL.setValue(50);
 
+    server = OServer.startFromClasspathConfig("orientdb-server-config.xml");
+    remote = new OrientDB("remote:localhost", "root", "root", OrientDBConfig.defaultConfig());
     System.out.println("Create db");
     // SETUP DB
-    try {
-      ODatabaseDocument db = new ODatabaseDocumentTx(URL);
 
-      System.out.println("Recreating database");
-      if (ODatabaseHelper.existsDatabase(db, "plocal")) {
-        db.setProperty("security", Boolean.FALSE);
-        ODatabaseHelper.dropDatabase(db, URL, "plocal");
-      }
-      ODatabaseHelper.createDatabase(db, URL);
-      db.close();
-    } catch (IOException ex) {
-      System.out.println("Exception: " + ex);
-      throw ex;
+    System.out.println("Recreating database");
+    if (remote.exists("FreezeMultiThreadingTestNonTX")) {
+      remote.drop("FreezeMultiThreadingTestNonTX");
     }
+    remote.execute(
+        "create database FreezeMultiThreadingTestNonTX plocal users(admin identified by 'admin'"
+            + " role admin)");
 
-    ODatabaseDocument database = new ODatabaseDocumentTx(URL);
-    database.open("admin", "admin");
+    ODatabaseSession database = remote.open("FreezeMultiThreadingTestNonTX", "admin", "admin");
 
     OClass student = database.getMetadata().getSchema().createClass(STUDENT_CLASS_NAME);
 
@@ -592,6 +588,13 @@ public class FreezeMultiThreadingTestNonTX {
 
     System.out.println("*in before***********CLOSE************************************");
     database.close();
+  }
+
+  @After
+  public void teardown() {
+    remote.drop("FreezeMultiThreadingTestNonTX");
+    remote.close();
+    server.shutdown();
   }
 
   @Test
@@ -638,18 +641,22 @@ public class FreezeMultiThreadingTestNonTX {
     System.out.println("finish");
   }
 
-  private void assertDocumentAreEquals(List<ODocument> firstDocs, List<ODocument> secondDocs) {
+  private void assertDocumentAreEquals(List<OResult> firstDocs, List<OResult> secondDocs) {
     if (firstDocs.size() != secondDocs.size()) Assert.fail();
 
     outer:
-    for (final ODocument firstDoc : firstDocs) {
-      for (final ODocument secondDoc : secondDocs) {
+    for (final OResult firstDoc : firstDocs) {
+      for (final OResult secondDoc : secondDocs) {
         if (firstDoc.equals(secondDoc)) {
           final ODatabaseDocumentInternal databaseRecord =
               ODatabaseRecordThreadLocal.instance().get();
           Assert.assertTrue(
               ODocumentHelper.hasSameContentOf(
-                  firstDoc, databaseRecord, secondDoc, databaseRecord, null));
+                  (ODocument) firstDoc.getElement().get(),
+                  databaseRecord,
+                  (ODocument) secondDoc.getElement().get(),
+                  databaseRecord,
+                  null));
           continue outer;
         }
       }
