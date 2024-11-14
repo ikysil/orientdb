@@ -386,27 +386,33 @@ public class SQLSelectProjectionsTest extends DocumentDBBaseTest {
           .command("create edge B from " + id4.getIdentity() + " to " + id.getIdentity())
           .close();
 
-      List<ODocument> res =
-          database.query(
-              new OSQLSynchQuery<Object>(
-                  "select a,b,in_B.out.exclude('out_B') from "
+      List<OResult> res =
+          database
+              .query(
+                  "select a,b,in_B.out:{*,!out_B}  as in_B from "
                       + id2.getIdentity()
-                      + " fetchplan in_B.out:1"));
+                      + " fetchplan in_B.out:1")
+              .stream()
+              .toList();
 
-      Assert.assertNotNull(res.get(0).field("a"));
-      Assert.assertNotNull(res.get(0).field("b"));
-      Assert.assertNull((((List<ODocument>) res.get(0).field("in_B")).get(0).field("out_B")));
+      Assert.assertNotNull(res.get(0).getProperty("a"));
+      Assert.assertNotNull(res.get(0).getProperty("b"));
+      Assert.assertNull(
+          (((List<OResult>) res.get(0).getProperty("in_B")).get(0).getProperty("out_B")));
 
       res =
-          database.query(
-              new OSQLSynchQuery<Object>(
-                  "SELECT out.exclude('in_B') FROM ( SELECT EXPAND(in_B) FROM "
+          database
+              .query(
+                  "SELECT out:{*,!in_B} as out FROM ( SELECT EXPAND(in_B) FROM "
                       + id2.getIdentity()
-                      + " ) FETCHPLAN out:0 "));
+                      + " ) FETCHPLAN out:0 ")
+              .stream()
+              .toList();
 
-      Assert.assertNotNull(res.get(0).field("out"));
-      Assert.assertNotNull(((ODocument) res.get(0).field("out")).field("a"));
-      Assert.assertNull(((ODocument) res.get(0).field("out")).field("in_B"));
+      Assert.assertNotNull(res.get(0).getProperty("out"));
+      OResult out = res.get(0).getProperty("out");
+      Assert.assertNotNull(out.getProperty("a"));
+      Assert.assertNull(out.getProperty("in_B"));
     } finally {
       database.command("drop class A unsafe ").close();
       database.command("drop class B unsafe ").close();
@@ -432,17 +438,20 @@ public class SQLSelectProjectionsTest extends DocumentDBBaseTest {
           .command("create edge C from " + id2.getIdentity() + " to " + id3.getIdentity())
           .close();
 
-      List<ODocument> res =
-          database.query(
-              new OSQLSynchQuery<Object>(
-                  "select out.exclude('in_B') from (select expand(in_C) from "
+      List<OResult> res =
+          database
+              .query(
+                  "select out:{*,!in_B} as out from (select expand(in_C) from "
                       + id3.getIdentity()
-                      + " )"));
+                      + " )")
+              .stream()
+              .toList();
       Assert.assertEquals(res.size(), 1);
-      ODocument ele = res.get(0);
-      Assert.assertNotNull(ele.field("out"));
-      Assert.assertEquals(((ODocument) ele.field("out")).field("a"), "a2");
-      Assert.assertNull(((ODocument) ele.field("out")).field("in_B"));
+      OResult ele = res.get(0);
+      Assert.assertNotNull(ele.getProperty("out"));
+      OResult out = res.get(0).getProperty("out");
+      Assert.assertEquals(out.getProperty("a"), "a2");
+      Assert.assertNull(out.getProperty("in_B"));
 
     } finally {
       database.command("drop class A unsafe ").close();

@@ -35,7 +35,6 @@ import com.orientechnologies.orient.core.record.impl.OBlob;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ORecordBytes;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.core.tx.OTransaction.TXTYPE;
 import com.orientechnologies.orient.object.db.OObjectDatabaseTx;
 import com.orientechnologies.orient.test.domain.base.Agenda;
@@ -2151,7 +2150,7 @@ public class CRUDObjectPhysicalTest extends ObjectDBBaseTest {
             .getBytes();
     oRecordBytes =
         new ORecordBytes((ODatabaseDocumentInternal) database.getUnderlying(), thumbnailImageBytes);
-    oRecordBytes.save();
+    database.getUnderlying().save(oRecordBytes);
     p.setByteArray(oRecordBytes);
     p = database.save(p);
     Assert.assertTrue(p.getByteArray() instanceof OBlob);
@@ -2470,15 +2469,13 @@ public class CRUDObjectPhysicalTest extends ObjectDBBaseTest {
     try {
       database.getMetadata().getSchema().reload();
 
-      final OSQLSynchQuery<Profile> query =
-          new OSQLSynchQuery<Profile>(
-              "select from Profile where name = :name and surname = :surname%");
+      final String query = "select from Profile where name = :name and surname = :surname%";
 
       HashMap<String, String> params = new HashMap<String, String>();
       params.put("name", "Barack");
       params.put("surname", "Obama");
 
-      List<Profile> result = database.command(query).execute(params);
+      List<Profile> result = database.objectCommand(query, params);
       Assert.fail();
     } catch (OCommandSQLParsingException e) {
       Assert.assertTrue(true);

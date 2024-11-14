@@ -37,7 +37,6 @@ import com.orientechnologies.orient.core.record.impl.OBlob;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ORecordBytes;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.core.tx.OTransaction.TXTYPE;
 import com.orientechnologies.orient.test.domain.base.Agenda;
 import com.orientechnologies.orient.test.domain.base.EmbeddedChild;
@@ -2489,15 +2488,13 @@ public class CRUDObjectPhysicalTestSchemaFull extends ObjectDBBaseTest {
     try {
       database.getMetadata().getSchema().reload();
 
-      final OSQLSynchQuery<Profile> query =
-          new OSQLSynchQuery<Profile>(
-              "select from Profile where name = :name and surname = :surname%");
+      final String query = "select from Profile where name = :name and surname = :surname%";
 
       HashMap<String, String> params = new HashMap<String, String>();
       params.put("name", "Barack");
       params.put("surname", "Obama");
 
-      List<Profile> result = database.command(query).execute(params);
+      List<Profile> result = database.objectCommand(query, params);
       Assert.fail();
 
     } catch (OCommandSQLParsingException e) {

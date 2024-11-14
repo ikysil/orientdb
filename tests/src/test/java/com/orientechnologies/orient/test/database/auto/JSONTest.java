@@ -493,7 +493,7 @@ public class JSONTest extends DocumentDBBaseTest {
       database.close();
       String jsonLoaded = doc.toJSON();
       Assert.assertEquals(jsonFull, jsonLoaded);
-      database.open("admin", "admin");
+      reopendb("admin", "admin");
       doc = database.load(rid);
       doc.setLazyLoad(false);
       doc.load("*:1");
