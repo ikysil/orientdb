@@ -5,6 +5,7 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import java.util.Optional;
@@ -32,8 +33,9 @@ public class FilterByClassStep extends AbstractExecutionStep {
   }
 
   private OResult filterMap(OResult result, OCommandContext ctx) {
-    if (result.isElement()) {
-      Optional<OClass> clazz = result.getElement().get().getSchemaType();
+    Optional<OElement> element = result.getElement();
+    if (element.isPresent()) {
+      Optional<OClass> clazz = element.get().getSchemaType();
       if (clazz.isPresent() && clazz.get().isSubClassOf(className)) {
         return result;
       }
