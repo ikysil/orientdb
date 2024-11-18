@@ -333,7 +333,9 @@ public class OResultInternal implements OResult, Comparable<OResultInternal> {
   @Override
   public Optional<ORID> getIdentity() {
     if (element != null) {
-      return Optional.ofNullable(element.getIdentity());
+      if (element.getIdentity().isValid()) {
+        return Optional.ofNullable(element.getIdentity());
+      }
     }
     return Optional.empty();
   }

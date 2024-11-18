@@ -983,7 +983,7 @@ public class SQLSelectTest extends AbstractSelectTest {
 
     while (resultset.hasNext()) {
       OResult d = resultset.next();
-      Assert.assertFalse(d.getIdentity().get().isPersistent());
+      Assert.assertFalse(d.getIdentity().map((x) -> x.isPersistent()).orElse(false));
       Assert.assertFalse(d.getElement().get().getSchemaType().isPresent());
     }
   }
