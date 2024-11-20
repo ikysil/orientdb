@@ -215,7 +215,8 @@ public class SQLSelectTest extends AbstractSelectTest {
     Assert.assertEquals(resultset.get(0).getIdentity(), doc.getIdentity());
 
     resultset =
-        executeQuery("select from Profile where tags[0-1]  CONTAINSALL ['smart','nice']", database);
+        executeQuery(
+            "select from Profile where tags[0...1]  CONTAINSALL ['smart','nice']", database);
 
     Assert.assertEquals(resultset.size(), 1);
     Assert.assertEquals(resultset.get(0).getIdentity(), doc.getIdentity());
@@ -247,7 +248,8 @@ public class SQLSelectTest extends AbstractSelectTest {
     Assert.assertEquals(resultset.get(0).getIdentity(), doc.getIdentity());
 
     resultset =
-        executeQuery("select from Profile where tags[0-1] CONTAINSALL ['smart','nice']", database);
+        executeQuery(
+            "select from Profile where tags[0...1] CONTAINSALL ['smart','nice']", database);
 
     Assert.assertEquals(resultset.size(), 1);
     Assert.assertEquals(resultset.get(0).getIdentity(), doc.getIdentity());
@@ -270,8 +272,9 @@ public class SQLSelectTest extends AbstractSelectTest {
         executeQuery(
             "select coll[name='Jay'] as value from Profile where coll is not null", database);
     Assert.assertEquals(resultset.size(), 1);
-    Assert.assertTrue(resultset.get(0).field("value") instanceof ODocument);
-    Assert.assertEquals(((ODocument) resultset.get(0).field("value")).field("name"), "Jay");
+    Assert.assertTrue(resultset.get(0).field("value") instanceof List);
+    List<ODocument> list = (List<ODocument>) resultset.get(0).field("value");
+    Assert.assertEquals(list.get(0).field("name"), "Jay");
 
     database.delete(doc);
   }
@@ -291,8 +294,9 @@ public class SQLSelectTest extends AbstractSelectTest {
         executeQuery(
             "select coll[name='Jay'] as value from Profile where coll is not null", database);
     Assert.assertEquals(resultset.size(), 1);
-    Assert.assertTrue(resultset.get(0).field("value") instanceof ODocument);
-    Assert.assertEquals(((ODocument) resultset.get(0).field("value")).field("name"), "Jay");
+    Assert.assertTrue(resultset.get(0).field("value") instanceof List);
+    List<ODocument> list = (List<ODocument>) resultset.get(0).field("value");
+    Assert.assertEquals(list.get(0).field("name"), "Jay");
 
     database.delete(doc);
   }
@@ -324,14 +328,14 @@ public class SQLSelectTest extends AbstractSelectTest {
 
     resultset =
         executeQuery(
-            "select from Profile where customReferences[second]['name'] like 'Ja%'", database);
+            "select from Profile where customReferences['second'].name like 'Ja%'", database);
     Assert.assertEquals(resultset.size(), 1);
     Assert.assertEquals(resultset.get(0).getIdentity(), doc.getIdentity());
 
     resultset =
         executeQuery(
-            "select customReferences['second', 'first'] from Profile where customReferences.size()"
-                + " = 2",
+            "select customReferences['second', 'first'] as customReferences from Profile where"
+                + " customReferences.size() = 2",
             database);
     Assert.assertEquals(resultset.size(), 1);
 
@@ -351,15 +355,15 @@ public class SQLSelectTest extends AbstractSelectTest {
 
     resultset =
         executeQuery(
-            "select customReferences[second]['name'] from Profile where"
-                + " customReferences[second]['name'] is not null",
+            "select customReferences['second'].name from Profile where"
+                + " customReferences['second'].name is not null",
             database);
     Assert.assertEquals(resultset.size(), 1);
 
     resultset =
         executeQuery(
-            "select customReferences[second]['name'] as value from Profile where"
-                + " customReferences[second]['name'] is not null",
+            "select customReferences['second'].name as value from Profile where"
+                + " customReferences['second'].name is not null",
             database);
     Assert.assertEquals(resultset.size(), 1);
 
@@ -526,7 +530,7 @@ public class SQLSelectTest extends AbstractSelectTest {
     database.save(record);
 
     List<ODocument> result =
-        executeQuery("select * from cluster:animal where rates in [100,200]", database);
+        executeQuery("select * from Animal where rates in [100,200]", database);
 
     boolean found = false;
     for (int i = 0; i < result.size() && !found; ++i) {
@@ -545,7 +549,7 @@ public class SQLSelectTest extends AbstractSelectTest {
     }
     Assert.assertTrue(found);
 
-    result = executeQuery("select * from cluster:animal where rates in [200,10333]", database);
+    result = executeQuery("select * from Animal where rates in [200,10333]", database);
 
     found = false;
     for (int i = 0; i < result.size() && !found; ++i) {
@@ -564,10 +568,10 @@ public class SQLSelectTest extends AbstractSelectTest {
     }
     Assert.assertTrue(found);
 
-    result = executeQuery("select * from cluster:animal where rates contains 500", database);
+    result = executeQuery("select * from Animal where rates contains 500", database);
     Assert.assertEquals(result.size(), 0);
 
-    result = executeQuery("select * from cluster:animal where rates contains 100", database);
+    result = executeQuery("select * from Animal where rates contains 100", database);
     Assert.assertEquals(result.size(), 1);
 
     database.delete(record);
@@ -640,11 +644,11 @@ public class SQLSelectTest extends AbstractSelectTest {
     Assert.assertTrue(result.size() != 0);
 
     String lastName = null;
-    boolean isNullSegment = true; // NULL VALUES AT THE BEGINNING!
+    boolean isDataSegment = true; // NULL VALUES AT THE END!
     for (ODocument d : result) {
       final String fieldValue = d.field("name");
-      if (fieldValue != null) isNullSegment = false;
-      else Assert.assertTrue(isNullSegment);
+      if (fieldValue != null) Assert.assertTrue(isDataSegment);
+      else isDataSegment = false;
 
       if (lastName != null && fieldValue != null)
         Assert.assertTrue(fieldValue.compareTo(lastName) >= 0);
@@ -1148,7 +1152,7 @@ public class SQLSelectTest extends AbstractSelectTest {
   public void testSquareBracketsOnCondition() {
     List<ODocument> result =
         executeQuery(
-            "select from Account where addresses[@class='Address'][city.country.name] ="
+            "select from Account where addresses[@class='Address'].city.country.name ="
                 + " 'Washington'",
             database);
     Assert.assertFalse(result.isEmpty());

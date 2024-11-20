@@ -19,7 +19,6 @@ import com.orientechnologies.orient.core.db.object.ODatabaseObject;
 import com.orientechnologies.orient.core.hook.ORecordHookAbstract;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.object.db.OObjectDatabaseTx;
 import com.orientechnologies.orient.test.domain.whiz.Profile;
 import java.io.IOException;
@@ -102,9 +101,7 @@ public class HookTxTest extends ORecordHookAbstract {
   public void testHookCallsRead() {
     // TEST HOOKS ON READ
     database.begin();
-    List<Profile> result =
-        database.query(
-            new OSQLSynchQuery<Profile>("select * from Profile where nick = 'HookTxTest'"));
+    List<Profile> result = database.objectQuery("select * from Profile where nick = 'HookTxTest'");
     expectedHookState += RECORD_BEFORE_READ + RECORD_AFTER_READ;
 
     Assert.assertFalse(result.size() == 0);

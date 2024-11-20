@@ -1,9 +1,8 @@
 package com.orientechnologies.orient.core.sql.select;
 
 import com.orientechnologies.BaseMemoryDatabase;
-import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -24,32 +23,32 @@ public class TestSqlEmbeddedResult extends BaseMemoryDatabase {
     // doc
     db.save(doc);
 
-    List<ODocument> res =
-        db.query(
-            new OSQLSynchQuery<Object>(
+    List<OResult> res =
+        db
+            .query(
                 "select $Pics[0] as el FROM Test LET $Pics = (select expand( rel.include('format'))"
-                    + " from $current)"));
+                    + " from $current)")
+            .stream()
+            .toList();
     Assert.assertEquals(res.size(), 1);
-    ODocument ele = res.get(0);
-    Assert.assertNotNull(ele.field("el"));
-
-    byte[] bt = ele.toStream();
-    ODocument read = new ODocument(bt);
-    Assert.assertNotNull(read.field("el"));
-    Assert.assertEquals(read.fieldType("el"), OType.EMBEDDED);
+    OResult ele = res.get(0);
+    Assert.assertNotNull(ele.getProperty("el"));
+    Assert.assertTrue(ele.getProperty("el") instanceof OResult);
+    Assert.assertTrue(((OResult) ele.getProperty("el")).getIdentity().isEmpty());
 
     res =
-        db.query(
-            new OSQLSynchQuery<Object>(
+        db
+            .query(
                 "select $Pics as el FROM Test LET $Pics = (select expand( rel.include('format'))"
-                    + " from $current)"));
+                    + " from $current)")
+            .stream()
+            .toList();
 
     Assert.assertEquals(res.size(), 1);
     ele = res.get(0);
-    Assert.assertNotNull(ele.field("el"));
-    bt = ele.toStream();
-    read = new ODocument(bt);
-    Assert.assertNotNull(read.field("el"));
-    Assert.assertEquals(read.fieldType("el"), OType.EMBEDDEDLIST);
+    Assert.assertNotNull(ele.getProperty("el"));
+    Assert.assertTrue(ele.getProperty("el") instanceof List<?>);
+    Assert.assertTrue(((List) ele.getProperty("el")).get(0) instanceof OResult);
+    Assert.assertTrue(((List<OResult>) ele.getProperty("el")).get(0).getIdentity().isEmpty());
   }
 }

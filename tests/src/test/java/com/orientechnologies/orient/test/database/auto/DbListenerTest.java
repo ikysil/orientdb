@@ -23,7 +23,6 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.hook.ODocumentHookAbstract;
 import com.orientechnologies.orient.core.hook.ORecordHook;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.core.tx.OTransaction.TXTYPE;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -314,29 +313,6 @@ public class DbListenerTest extends DocumentDBBaseTest {
 
     Assert.assertEquals(cl.getChanges().size(), 1);
 
-    dropdb();
-    createDatabase();
-  }
-
-  @Test
-  public void testEmbeddedDbListenersCommands() throws IOException {
-
-    if (database.getURL().startsWith("remote:")) return;
-
-    if (existsdb()) dropdb();
-    createDatabase();
-
-    final AtomicInteger recordedChanges = new AtomicInteger();
-
-    reopendb("admin", "admin");
-
-    database.registerListener(new DbListener());
-
-    String iText = "select from OUser";
-    Object execute = database.command(new OSQLSynchQuery<Object>(iText)).execute();
-
-    Assert.assertEquals(execute, commandResult);
-    Assert.assertEquals(iText, command);
     dropdb();
     createDatabase();
   }

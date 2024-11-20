@@ -19,7 +19,6 @@ import com.orientechnologies.orient.core.hook.ORecordHook;
 import com.orientechnologies.orient.core.hook.ORecordHookAbstract;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.test.domain.whiz.Profile;
 import java.io.IOException;
 import java.util.List;
@@ -80,9 +79,7 @@ public class HookTest extends ObjectDBBaseTest {
   @Test(dependsOnMethods = "testHookCreate")
   public void testHookRead() {
     // TEST HOOKS ON READ
-    List<Profile> result =
-        database.query(
-            new OSQLSynchQuery<Profile>("select * from Profile where nick = 'HookTest'"));
+    List<Profile> result = database.objectQuery("select * from Profile where nick = 'HookTest'");
     Assert.assertEquals(result.size(), 1);
 
     for (int i = 0; i < result.size(); ++i) {
