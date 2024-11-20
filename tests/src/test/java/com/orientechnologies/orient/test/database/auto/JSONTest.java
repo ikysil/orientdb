@@ -29,7 +29,6 @@ import com.orientechnologies.orient.core.serialization.serializer.record.string.
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerSchemaAware2CSV;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.object.db.OObjectDatabaseTx;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -458,21 +457,21 @@ public class JSONTest extends DocumentDBBaseTest {
             .collect(Collectors.toList());
 
     for (ODocument doc : result) {
-      doc.reload("*:0");
+      database.reload(doc, "*:0", true);
       String jsonFull = doc.toJSON();
       ORID rid = doc.getIdentity();
       database.close();
       reopendb("admin", "admin");
       doc = database.load(rid);
       doc.setLazyLoad(false);
-      doc.reload("*:0");
+      database.reload(doc, "*:0", true);
       database.close();
       String jsonLoaded = doc.toJSON();
       Assert.assertEquals(jsonLoaded, jsonFull);
       reopendb("admin", "admin");
       doc = database.load(rid);
       doc.setLazyLoad(false);
-      doc.load("*:0");
+      database.load(doc, "*:0");
       database.close();
       jsonLoaded = doc.toJSON();
 
@@ -482,21 +481,21 @@ public class JSONTest extends DocumentDBBaseTest {
     if (database.isClosed()) reopendb("admin", "admin");
 
     for (ODocument doc : result) {
-      doc.reload("*:1");
+      database.reload(doc, "*:1", true);
       String jsonFull = doc.toJSON();
       ORID rid = doc.getIdentity();
       database.close();
       reopendb("admin", "admin");
       doc = database.load(rid);
       doc.setLazyLoad(false);
-      doc.reload("*:1");
+      database.reload(doc, "*:1", true);
       database.close();
       String jsonLoaded = doc.toJSON();
       Assert.assertEquals(jsonFull, jsonLoaded);
       reopendb("admin", "admin");
       doc = database.load(rid);
       doc.setLazyLoad(false);
-      doc.load("*:1");
+      database.load(doc, "*:1");
       database.close();
       jsonLoaded = doc.toJSON();
 
@@ -510,7 +509,7 @@ public class JSONTest extends DocumentDBBaseTest {
         new ODocument()
             .fromJSON(
                 "{name:{\"%Field\":[\"value1\",\"value2\"],\"%Field2\":{},\"%Field3\":\"value3\"}}");
-    doc.save(database.getClusterNameById(database.getDefaultClusterId()));
+    database.save(doc, database.getClusterNameById(database.getDefaultClusterId()));
 
     final ODocument loadedDoc = database.load(doc.getIdentity());
     Assert.assertEquals(doc, loadedDoc);
@@ -521,7 +520,7 @@ public class JSONTest extends DocumentDBBaseTest {
     doc.fromJSON(
         "{\"@type\": \"d\",\"@class\": \"Track\",\"type\": \"LineString\",\"coordinates\": [ [ 100,"
             + "  0 ],  [ 101, 1 ] ]}");
-    doc.save();
+    database.save(doc);
     final ODocument loadedDoc = database.load(doc.getIdentity());
     Assert.assertTrue(doc.hasSameContentOf(loadedDoc));
   }
@@ -531,7 +530,7 @@ public class JSONTest extends DocumentDBBaseTest {
     doc.fromJSON(
         "{\"@type\": \"d\",\"@class\": \"Track\",\"type\": \"LineString\",\"coordinates\": [ ["
             + " 32874387347347,  0 ],  [ -23736753287327, 1 ] ]}");
-    doc.save();
+    database.save(doc);
     final ODocument loadedDoc = database.load(doc.getIdentity());
     Assert.assertTrue(doc.hasSameContentOf(loadedDoc));
   }
@@ -542,7 +541,7 @@ public class JSONTest extends DocumentDBBaseTest {
         new ODocument()
             .fromJSON(
                 "{Field:{\"Key1\":[\"Value1\",\"Value2\"],\"Key2\":{\"%%dummy%%\":null},\"Key3\":\"Value3\"}}");
-    doc.save(database.getClusterNameById(database.getDefaultClusterId()));
+    database.save(doc, database.getClusterNameById(database.getDefaultClusterId()));
 
     final ODocument loadedDoc = database.load(doc.getIdentity());
     Assert.assertEquals(doc, loadedDoc);
@@ -983,13 +982,13 @@ public class JSONTest extends DocumentDBBaseTest {
   public void testNestedLinkCreation() {
     ODocument jaimeDoc = new ODocument("NestedLinkCreation");
     jaimeDoc.field("name", "jaime");
-    jaimeDoc.save();
+    database.save(jaimeDoc);
 
     // The link between jaime and cersei is saved properly - the #2263 test case
     ODocument cerseiDoc = new ODocument("NestedLinkCreation");
     cerseiDoc.fromJSON(
         "{\"@type\":\"d\",\"name\":\"cersei\",\"valonqar\":" + jaimeDoc.toJSON() + "}");
-    cerseiDoc.save();
+    database.save(cerseiDoc);
 
     // The link between jamie and tyrion is not saved properly
     ODocument tyrionDoc = new ODocument("NestedLinkCreation");
@@ -998,7 +997,7 @@ public class JSONTest extends DocumentDBBaseTest {
             + " \"relationship\":\"brother\",\"contact\":"
             + jaimeDoc.toJSON()
             + "}}");
-    tyrionDoc.save();
+    database.save(tyrionDoc);
 
     final Map<ORID, ODocument> contentMap = new HashMap<ORID, ODocument>();
 
@@ -1043,9 +1042,10 @@ public class JSONTest extends DocumentDBBaseTest {
       Assert.assertTrue(content.hasSameContentOf(o));
 
       List<ORID> traverse = traverseMap.remove(o.getIdentity());
-      for (OIdentifiable id :
-          new OSQLSynchQuery<ODocument>("traverse * from " + o.getIdentity().toString())) {
-        Assert.assertTrue(traverse.remove(id.getIdentity()));
+      OResultSet results = database.query("traverse * from " + o.getIdentity().toString());
+      while (results.hasNext()) {
+        OResult result = results.next();
+        Assert.assertTrue(traverse.remove(result.getIdentity().get()));
       }
 
       Assert.assertTrue(traverse.isEmpty());
@@ -1057,7 +1057,7 @@ public class JSONTest extends DocumentDBBaseTest {
   public void testNestedLinkCreationFieldTypes() {
     ODocument jaimeDoc = new ODocument("NestedLinkCreationFieldTypes");
     jaimeDoc.field("name", "jaime");
-    jaimeDoc.save();
+    database.save(jaimeDoc);
 
     // The link between jaime and cersei is saved properly - the #2263 test case
     ODocument cerseiDoc = new ODocument("NestedLinkCreationFieldTypes");
@@ -1065,7 +1065,7 @@ public class JSONTest extends DocumentDBBaseTest {
         "{\"@type\":\"d\",\"@fieldTypes\":\"valonqar=x\",\"name\":\"cersei\",\"valonqar\":"
             + jaimeDoc.getIdentity()
             + "}");
-    cerseiDoc.save();
+    database.save(cerseiDoc);
 
     // The link between jamie and tyrion is not saved properly
     ODocument tyrionDoc = new ODocument("NestedLinkCreationFieldTypes");
@@ -1074,7 +1074,7 @@ public class JSONTest extends DocumentDBBaseTest {
             + " \"@fieldTypes\":\"contact=x\",\"relationship\":\"brother\",\"contact\":"
             + jaimeDoc.getIdentity()
             + "}}");
-    tyrionDoc.save();
+    database.save(tyrionDoc);
 
     final Map<ORID, ODocument> contentMap = new HashMap<ORID, ODocument>();
 
@@ -1119,9 +1119,10 @@ public class JSONTest extends DocumentDBBaseTest {
       Assert.assertTrue(content.hasSameContentOf(o));
 
       List<ORID> traverse = traverseMap.remove(o.getIdentity());
-      for (OIdentifiable id :
-          new OSQLSynchQuery<ODocument>("traverse * from " + o.getIdentity().toString())) {
-        Assert.assertTrue(traverse.remove(id.getIdentity()));
+      OResultSet results = database.query("traverse * from " + o.getIdentity().toString());
+      while (results.hasNext()) {
+        OResult result = results.next();
+        Assert.assertTrue(traverse.remove(result.getIdentity().get()));
       }
       Assert.assertTrue(traverse.isEmpty());
     }
@@ -1131,11 +1132,11 @@ public class JSONTest extends DocumentDBBaseTest {
   public void testInnerDocCreation() {
     ODocument adamDoc = new ODocument("InnerDocCreation");
     adamDoc.fromJSON("{\"name\":\"adam\"}");
-    adamDoc.save();
+    database.save(adamDoc);
 
     ODocument eveDoc = new ODocument("InnerDocCreation");
     eveDoc.fromJSON("{\"@type\":\"d\",\"name\":\"eve\",\"friends\":[" + adamDoc.toJSON() + "]}");
-    eveDoc.save();
+    database.save(eveDoc);
 
     Map<ORID, ODocument> contentMap = new HashMap<ORID, ODocument>();
     ODocument adam = new ODocument("InnerDocCreation");
@@ -1183,14 +1184,14 @@ public class JSONTest extends DocumentDBBaseTest {
   public void testInnerDocCreationFieldTypes() {
     ODocument adamDoc = new ODocument("InnerDocCreationFieldTypes");
     adamDoc.fromJSON("{\"name\":\"adam\"}");
-    adamDoc.save();
+    database.save(adamDoc);
 
     ODocument eveDoc = new ODocument("InnerDocCreationFieldTypes");
     eveDoc.fromJSON(
         "{\"@type\":\"d\", \"@fieldTypes\" : \"friends=z\", \"name\":\"eve\",\"friends\":["
             + adamDoc.getIdentity()
             + "]}");
-    eveDoc.save();
+    database.save(eveDoc);
 
     Map<ORID, ODocument> contentMap = new HashMap<ORID, ODocument>();
     ODocument adam = new ODocument("InnerDocCreationFieldTypes");
@@ -1249,12 +1250,12 @@ public class JSONTest extends DocumentDBBaseTest {
     database.begin();
     final ODocument eveDoc = new ODocument(classNameDocOne);
     eveDoc.field("name", "eve");
-    eveDoc.save();
+    database.save(eveDoc);
 
     final ODocument nestedWithTypeD = new ODocument(classNameDocTwo);
     nestedWithTypeD.fromJSON(
         "{\"@type\":\"d\",\"event_name\":\"world cup 2014\",\"admin\":[" + eveDoc.toJSON() + "]}");
-    nestedWithTypeD.save();
+    database.save(nestedWithTypeD);
     database.commit();
     Assert.assertEquals(database.countClass(classNameDocOne), 1);
 
@@ -1278,12 +1279,12 @@ public class JSONTest extends DocumentDBBaseTest {
 
     ODocument adamDoc = new ODocument("JSONTxDocOne");
     adamDoc.field("name", "adam");
-    adamDoc.save();
+    database.save(adamDoc);
 
     database.begin();
     ODocument eveDoc = new ODocument("JSONTxDocOne");
     eveDoc.field("name", "eve");
-    eveDoc.save();
+    database.save(eveDoc);
 
     final ODocument nestedWithTypeD = new ODocument("JSONTxDocTwo");
     nestedWithTypeD.fromJSON(
@@ -1292,7 +1293,7 @@ public class JSONTest extends DocumentDBBaseTest {
             + ","
             + adamDoc.toJSON()
             + "]}");
-    nestedWithTypeD.save();
+    database.save(nestedWithTypeD);
 
     database.commit();
 

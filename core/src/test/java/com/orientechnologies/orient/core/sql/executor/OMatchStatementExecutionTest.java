@@ -1540,7 +1540,7 @@ public class OMatchStatementExecutionTest extends BaseMemoryDatabase {
 
     ODocument doc = db.newInstance("testBigEntryPoint2");
     doc.field("b", "b");
-    doc.save();
+    db.save(doc);
 
     List<ODocument> qResult =
         collect(

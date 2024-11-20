@@ -15,11 +15,9 @@
  */
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.orient.core.command.script.OCommandScript;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.storage.cache.local.OWOWCache;
 import com.orientechnologies.orient.core.storage.cluster.OClusterPositionMap;
 import com.orientechnologies.orient.core.storage.cluster.OPaginatedCluster;
@@ -95,17 +93,16 @@ public class SQLCommandsTest extends DocumentDBBaseTest {
   public void testSQLScript() {
     String cmd = "";
     cmd += "select from ouser limit 1;begin;";
-    cmd += "let a = create vertex set script = true\n";
+    cmd += "let a = create vertex set script = true;";
     cmd += "let b = select from v limit 1;";
     cmd += "create edge from $a to $b;";
     cmd += "commit;";
     cmd += "return $a;";
 
-    Object result = database.command(new OCommandScript("sql", cmd)).execute();
+    OResultSet result = database.execute("sql", cmd);
 
-    Assert.assertTrue(result instanceof OIdentifiable);
-    Assert.assertTrue(((OIdentifiable) result).getRecord() instanceof ODocument);
-    Assert.assertTrue((Boolean) ((ODocument) ((OIdentifiable) result).getRecord()).field("script"));
+    Assert.assertTrue(result.hasNext());
+    Assert.assertTrue(result.next().getProperty("script"));
   }
 
   public void testClusterRename() {

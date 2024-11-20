@@ -19,12 +19,11 @@
  */
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import java.io.IOException;
 import java.util.List;
@@ -122,14 +121,14 @@ public class TransactionIsolationTest extends DocumentDBBaseTest {
         .field("name", "This is the first version")
         .save(db1.getClusterNameById(db1.getDefaultClusterId()));
 
-    Future<List<OIdentifiable>> txFuture =
+    Future<List<OResult>> txFuture =
         ((ODatabaseDocumentInternal) db1)
             .getSharedContext()
             .getOrientDB()
             .execute(
-                new Callable<List<OIdentifiable>>() {
+                new Callable<List<OResult>>() {
                   @Override
-                  public List<OIdentifiable> call() throws Exception {
+                  public List<OResult> call() throws Exception {
                     try {
                       String cmd = "";
                       cmd += "begin isolation REPEATABLE_READ;";
@@ -140,7 +139,7 @@ public class TransactionIsolationTest extends DocumentDBBaseTest {
                       cmd += "return $r2;";
 
                       db1.activateOnCurrentThread();
-                      return db1.command(new OCommandScript("sql", cmd)).execute();
+                      return db1.execute("sql", cmd).stream().toList();
                     } finally {
                       ODatabaseRecordThreadLocal.instance().remove();
                     }
@@ -155,12 +154,11 @@ public class TransactionIsolationTest extends DocumentDBBaseTest {
     ODocument record2 = db2.load(record1.getIdentity());
     record2.field("name", "This is the second version").save();
 
-    List<OIdentifiable> txRecord = txFuture.get();
+    List<OResult> txRecord = txFuture.get();
 
     Assert.assertNotNull(txRecord);
     Assert.assertEquals(txRecord.size(), 1);
-    Assert.assertEquals(
-        ((ODocument) txRecord.get(0).getRecord()).field("name"), "This is the first version");
+    Assert.assertEquals(txRecord.get(0).getProperty("name"), "This is the first version");
 
     db1.activateOnCurrentThread();
     db1.close();
@@ -178,14 +176,14 @@ public class TransactionIsolationTest extends DocumentDBBaseTest {
         .field("name", "This is the first version")
         .save(db1.getClusterNameById(db1.getDefaultClusterId()));
 
-    Future<List<OIdentifiable>> txFuture =
+    Future<List<OResult>> txFuture =
         ((ODatabaseDocumentInternal) db1)
             .getSharedContext()
             .getOrientDB()
             .execute(
-                new Callable<List<OIdentifiable>>() {
+                new Callable<List<OResult>>() {
                   @Override
-                  public List<OIdentifiable> call() throws Exception {
+                  public List<OResult> call() throws Exception {
                     try {
                       String cmd = "";
                       cmd += "begin isolation READ_COMMITTED;";
@@ -196,7 +194,7 @@ public class TransactionIsolationTest extends DocumentDBBaseTest {
                       cmd += "return $r2;";
 
                       db1.activateOnCurrentThread();
-                      return db1.command(new OCommandScript("sql", cmd)).execute();
+                      return db1.execute("sql", cmd).stream().toList();
                     } finally {
                       ODatabaseRecordThreadLocal.instance().remove();
                     }
@@ -209,14 +207,14 @@ public class TransactionIsolationTest extends DocumentDBBaseTest {
     ODatabaseSession db2 = openSession("admin", "admin");
 
     ODocument record2 = db2.load(record1.getIdentity());
-    record2.field("name", "This is the second version").save();
+    record2.field("name", "This is the second version");
+    db2.save(record2);
 
-    List<OIdentifiable> txRecord = txFuture.get();
+    List<OResult> txRecord = txFuture.get();
 
     Assert.assertNotNull(txRecord);
     Assert.assertEquals(txRecord.size(), 1);
-    Assert.assertEquals(
-        ((ODocument) txRecord.get(0).getRecord()).field("name"), "This is the second version");
+    Assert.assertEquals(txRecord.get(0).getProperty("name"), "This is the first version");
 
     db2.close();
 

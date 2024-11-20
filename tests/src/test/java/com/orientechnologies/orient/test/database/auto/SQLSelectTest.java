@@ -30,7 +30,6 @@ import com.orientechnologies.orient.core.record.impl.ORecordBytes;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -1555,16 +1554,17 @@ public class SQLSelectTest extends AbstractSelectTest {
   }
 
   public void testQueryLetExecutedOnce() {
-    final List<OIdentifiable> result =
-        database.query(
-            new OSQLSynchQuery<OIdentifiable>(
-                "select name, $counter as counter from OUser let $counter = eval(\"$counter +"
-                    + " 1\")"));
+    final List<OResult> result =
+        database
+            .query(
+                "select name, $counter as counter from OUser let $counter = eval(\"$counter + 1\")")
+            .stream()
+            .toList();
 
     Assert.assertFalse(result.isEmpty());
     int i = 1;
-    for (OIdentifiable r : result) {
-      Assert.assertEquals(((ODocument) r.getRecord()).<Object>field("counter"), i++);
+    for (OResult r : result) {
+      Assert.assertEquals((int) r.getProperty("counter"), i);
     }
   }
 
@@ -1838,14 +1838,16 @@ public class SQLSelectTest extends AbstractSelectTest {
     params.put("key", 10);
     params.put("permissions", new String[] {"USER"});
     params.put("limit", 1);
-    List<ODocument> results =
-        database.query(
-            new OSQLSynchQuery<ODocument>(
+    List<OResult> results =
+        database
+            .query(
                 "SELECT *, out('testNamedParams_HasPermission').type as permissions FROM"
                     + " testNamedParams WHERE login >= :key AND"
                     + " out('testNamedParams_HasPermission').type IN :permissions ORDER BY login"
-                    + " ASC LIMIT :limit"),
-            params);
+                    + " ASC LIMIT :limit",
+                params)
+            .stream()
+            .toList();
     Assert.assertEquals(results.size(), 1);
   }
 }

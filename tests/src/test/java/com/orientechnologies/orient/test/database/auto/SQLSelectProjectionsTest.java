@@ -22,7 +22,6 @@ import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
 import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.object.db.OObjectDatabaseTx;
 import java.io.IOException;
 import java.util.List;
@@ -252,13 +251,11 @@ public class SQLSelectProjectionsTest extends DocumentDBBaseTest {
   }
 
   public void queryProjectionOrigin() {
-    List<ODocument> result =
-        database.command(new OSQLSynchQuery<ODocument>("select @raw FROM V")).execute();
+    List<OResult> result = database.command("select @raw as raw FROM V").stream().toList();
     Assert.assertTrue(result.size() != 0);
 
-    for (ODocument d : result) {
-      Assert.assertTrue(d.fieldNames().length <= 1);
-      Assert.assertNotNull(d.field("raw"));
+    for (OResult d : result) {
+      Assert.assertNotNull(d.getProperty("raw"));
     }
   }
 

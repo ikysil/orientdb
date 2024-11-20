@@ -15,9 +15,7 @@
  */
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.List;
@@ -36,27 +34,24 @@ public class SQLBatchTest extends DocumentDBBaseTest {
 
   /** Issue #4349 (https://github.com/orientechnologies/orientdb/issues/4349) */
   public void createEdgeFailIfNoSourceOrTargetVertices() {
-    try {
-      executeBatch(
-          "BEGIN\n"
-              + "LET credential = INSERT INTO V SET email = '123', password = '123'\n"
-              + "LET order = SELECT FROM V WHERE cannotFindThisAttribute = true\n"
-              + "LET edge = CREATE EDGE E FROM $credential TO $order set crazyName = 'yes'\n"
-              + "COMMIT\n"
-              + "RETURN $credential");
+    executeBatch(
+        "BEGIN;"
+            + "LET $credential = CREATE VERTEX V SET email = '123', password = '123';"
+            + "LET $order = SELECT FROM V WHERE cannotFindThisAttribute = true;"
+            + "LET $edge = CREATE EDGE E FROM $credential TO $order set crazyName = 'yes';"
+            + "IF ($edge.size() == 0) {"
+            + "  ROLLBACK;"
+            + "} "
+            + "IF ($edge.size() > 0) {"
+            + "  COMMIT;"
+            + "} "
+            + "RETURN $credential ");
 
-      Assert.fail("Tx has been committed while a rollback was expected");
-    } catch (OCommandExecutionException e) {
+    OResultSet result = database.query("select from V where email = '123'");
+    Assert.assertTrue(!result.hasNext());
 
-      OResultSet result = database.query("select from V where email = '123'");
-      Assert.assertTrue(!result.hasNext());
-
-      result = database.query("select from E where crazyName = 'yes'");
-      Assert.assertTrue(!result.hasNext());
-
-    } catch (Exception e) {
-      Assert.fail("Error but not what was expected");
-    }
+    result = database.query("select from E where crazyName = 'yes'");
+    Assert.assertTrue(!result.hasNext());
   }
 
   public void testInlineArray() {
@@ -81,10 +76,10 @@ public class SQLBatchTest extends DocumentDBBaseTest {
             + ";"
             + "CREATE VERTEX "
             + className2
-            + " SET foos=[$a,$b,$c];"
-            + "COMMIT";
+            + " SET foos=[$a[0],$b[0],$c[0]];"
+            + "COMMIT;";
 
-    database.command(new OCommandScript(script)).execute();
+    database.execute("sql", script).close();
 
     List<OResult> result = database.query("select from " + className2).stream().toList();
     Assert.assertEquals(result.size(), 1);
@@ -115,13 +110,13 @@ public class SQLBatchTest extends DocumentDBBaseTest {
             + "LET c = CREATE VERTEX "
             + className1
             + ";"
-            + "LET foos = [$a,$b,$c];"
+            + "LET foos = [$a[0],$b[0],$c[0]];"
             + "CREATE VERTEX "
             + className2
             + " SET foos= $foos;"
-            + "COMMIT";
+            + "COMMIT;";
 
-    database.command(new OCommandScript(script)).execute();
+    database.execute("sql", script).close();
 
     List<OResult> result = database.query("select from " + className2).stream().toList();
     Assert.assertEquals(result.size(), 1);
@@ -132,7 +127,7 @@ public class SQLBatchTest extends DocumentDBBaseTest {
     Assert.assertTrue(foos.get(2) instanceof OIdentifiable);
   }
 
-  private Object executeBatch(final String batch) {
-    return database.command(new OCommandScript("sql", batch)).execute();
+  private void executeBatch(final String batch) {
+    database.execute("sql", batch).close();
   }
 }
