@@ -112,6 +112,14 @@ public class ORecordAttribute extends SimpleNode {
               () -> {
                 return iCurrentRecord.getProperty(name);
               });
+    } else if (name.equalsIgnoreCase("@raw")) {
+      return iCurrentRecord
+          .getRecord()
+          .map(r -> r.toStream())
+          .orElseGet(
+              () -> {
+                return iCurrentRecord.getProperty(name);
+              });
     }
     return null;
   }
