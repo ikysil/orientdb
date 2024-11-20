@@ -4,6 +4,7 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.HashSet;
@@ -49,13 +50,17 @@ public class OTraverseProjectionItem extends SimpleNode {
     return false;
   }
 
-  private Object handleStar(OResult iCurrentRecord, OCommandContext ctx) {
+  private Set<Object> handleStar(OResult iCurrentRecord, OCommandContext ctx) {
     Set<Object> result = new HashSet<>();
     for (String prop : iCurrentRecord.getPropertyNames()) {
       Object val = iCurrentRecord.getProperty(prop);
-      if (isOResult(val) || isValidIdentifiable(val)) {
+      if (isPersistentOResult(val) || isValidIdentifiable(val)) {
         result.add(val);
 
+      } else if (val instanceof OResult) {
+        result.addAll(handleStar((OResult) val, ctx));
+      } else if (val instanceof OElement) {
+        handleDocument(result, (OElement) val);
       } else {
         if (val instanceof Iterable) {
           val = ((Iterable) val).iterator();
@@ -63,7 +68,7 @@ public class OTraverseProjectionItem extends SimpleNode {
         if (val instanceof Iterator) {
           while (((Iterator) val).hasNext()) {
             Object sub = ((Iterator) val).next();
-            if (isOResult(sub) || isValidIdentifiable(sub)) {
+            if (isPersistentOResult(sub) || isValidIdentifiable(sub)) {
               result.add(sub);
             }
           }
@@ -77,6 +82,33 @@ public class OTraverseProjectionItem extends SimpleNode {
     return result;
   }
 
+  private void handleDocument(Set<Object> result, OElement record) {
+    for (String prop : record.getPropertyNames()) {
+      Object val = record.getProperty(prop);
+      if (isPersistentOResult(val) || isValidIdentifiable(val)) {
+        result.add(val);
+      } else if (val instanceof OElement) {
+        handleDocument(result, (OElement) val);
+      } else {
+        if (val instanceof Iterable) {
+          val = ((Iterable) val).iterator();
+        }
+        if (val instanceof Iterator) {
+          while (((Iterator) val).hasNext()) {
+            Object sub = ((Iterator) val).next();
+            if (isPersistentOResult(sub) || isValidIdentifiable(sub)) {
+              result.add(sub);
+            }
+          }
+        } else if (val instanceof OResultSet) {
+          while (((OResultSet) val).hasNext()) {
+            result.add(((OResultSet) val).next());
+          }
+        }
+      }
+    }
+  }
+
   private boolean isValidIdentifiable(Object val) {
     if (!(val instanceof OIdentifiable)) {
       return false;
@@ -84,8 +116,11 @@ public class OTraverseProjectionItem extends SimpleNode {
     return ((OIdentifiable) val).getIdentity().isPersistent();
   }
 
-  private boolean isOResult(Object val) {
-    return val instanceof OResult;
+  private boolean isPersistentOResult(Object val) {
+    if (val instanceof OResult) {
+      return ((OResult) val).getIdentity().map((x) -> x.getIdentity().isPersistent()).orElse(false);
+    }
+    return false;
   }
 
   public void toString(Map<Object, Object> params, StringBuilder builder) {
