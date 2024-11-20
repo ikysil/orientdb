@@ -116,12 +116,19 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
               OInternalExecutionPlan sub = statement.createExecutionPlan(scriptContext);
               plan.chain(sub, false, scriptContext);
             }
+            lastRetryBlock = new ArrayList<>();
           }
         }
       }
 
       if (stm instanceof OLetStatement) {
         scriptContext.declareScriptVariable(((OLetStatement) stm).getName().getStringValue());
+      }
+    }
+    if (!lastRetryBlock.isEmpty()) {
+      for (OStatement statement : lastRetryBlock) {
+        OInternalExecutionPlan sub = statement.createExecutionPlan(scriptContext);
+        plan.chain(sub, false, scriptContext);
       }
     }
     return new OLocalResultSet(plan, scriptContext);
