@@ -5,22 +5,23 @@ import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OReturnStatement;
+import com.orientechnologies.orient.core.sql.parser.OStatement;
 
 /**
  * @author Luigi Dell'Aquila (l.dellaquila-(at)-orientdb.com)
  *     <p>This step represents the execution plan of an instruciton instide a batch script
  */
 public class ScriptLineStep extends AbstractExecutionStep {
-  protected final OInternalExecutionPlan plan;
+  protected final OStatement statement;
 
-  public ScriptLineStep(
-      OInternalExecutionPlan nextPlan, OCommandContext ctx, boolean profilingEnabled) {
+  public ScriptLineStep(OStatement statement, OCommandContext ctx, boolean profilingEnabled) {
     super(ctx, profilingEnabled);
-    this.plan = nextPlan;
+    this.statement = statement;
   }
 
   @Override
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
+    OInternalExecutionPlan plan = statement.createExecutionPlan(ctx);
     if (plan instanceof OInsertExecutionPlan) {
       ((OInsertExecutionPlan) plan).executeInternal(ctx);
     } else if (plan instanceof ODeleteExecutionPlan) {
@@ -36,6 +37,7 @@ public class ScriptLineStep extends AbstractExecutionStep {
   }
 
   public boolean containsReturn() {
+    OInternalExecutionPlan plan = statement.createExecutionPlan(ctx);
     if (plan instanceof OScriptExecutionPlan) {
       return ((OScriptExecutionPlan) plan).containsReturn();
     }
@@ -59,6 +61,7 @@ public class ScriptLineStep extends AbstractExecutionStep {
   }
 
   public OExecutionStepInternal executeUntilReturn(OCommandContext ctx) {
+    OInternalExecutionPlan plan = statement.createExecutionPlan(ctx);
     if (plan instanceof OScriptExecutionPlan) {
       return ((OScriptExecutionPlan) plan).executeUntilReturn(ctx);
     }
@@ -75,9 +78,9 @@ public class ScriptLineStep extends AbstractExecutionStep {
 
   @Override
   public String prettyPrint(int depth, int indent) {
-    if (plan == null) {
+    if (statement == null) {
       return "Script Line";
     }
-    return plan.prettyPrint(depth, indent);
+    return statement.getOriginalStatement();
   }
 }

@@ -8,7 +8,6 @@ import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
-import com.orientechnologies.orient.core.sql.executor.OInternalExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.executor.ORetryExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OScriptExecutionPlan;
@@ -84,8 +83,7 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
       }
 
       if (nestedTxLevel <= 0) {
-        OInternalExecutionPlan sub = stm.createExecutionPlan(scriptContext);
-        plan.chain(sub, false, scriptContext);
+        plan.chain(stm, false, scriptContext);
       } else {
         lastRetryBlock.add(stm);
       }
@@ -113,8 +111,7 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
             lastRetryBlock = new ArrayList<>();
           } else {
             for (OStatement statement : lastRetryBlock) {
-              OInternalExecutionPlan sub = statement.createExecutionPlan(scriptContext);
-              plan.chain(sub, false, scriptContext);
+              plan.chain(statement, false, scriptContext);
             }
             lastRetryBlock = new ArrayList<>();
           }
@@ -127,8 +124,7 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
     }
     if (!lastRetryBlock.isEmpty()) {
       for (OStatement statement : lastRetryBlock) {
-        OInternalExecutionPlan sub = statement.createExecutionPlan(scriptContext);
-        plan.chain(sub, false, scriptContext);
+        plan.chain(statement, false, scriptContext);
       }
     }
     return new OLocalResultSet(plan, scriptContext);
