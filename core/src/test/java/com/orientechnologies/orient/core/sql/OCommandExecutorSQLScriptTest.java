@@ -2,17 +2,18 @@ package com.orientechnologies.orient.core.sql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.orientechnologies.BaseMemoryDatabase;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.orientechnologies.BaseMemoryDatabase;
+import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultSet;
 
 public class OCommandExecutorSQLScriptTest extends BaseMemoryDatabase {
 
@@ -130,11 +131,11 @@ public class OCommandExecutorSQLScriptTest extends BaseMemoryDatabase {
     StringBuilder script = new StringBuilder();
     script.append("CREATE CLASS TestCounter;");
     script.append("INSERT INTO TestCounter set weight = 3;\n");
-    script.append("LET counter = SELECT count(*) FROM TestCounter;\n");
-    script.append("UPDATE TestCounter INCREMENT weight = $counter[0].count RETURN AfTER @this;\n");
-    List<ODocument> qResult = db.command(new OCommandScript("sql", script.toString())).execute();
+    script.append("LET $counter = SELECT count(*) as count FROM TestCounter;\n");
+    script.append("UPDATE TestCounter set weight += $counter[0].count RETURN AfTER @this;\n");
+    List<OResult> qResult = db.execute("sql", script.toString()).stream().toList();
 
-    assertThat(qResult.get(0).<Long>field("weight")).isEqualTo(4L);
+    assertThat(qResult.get(0).<Long>getProperty("weight")).isEqualTo(4L);
   }
 
   @Test
