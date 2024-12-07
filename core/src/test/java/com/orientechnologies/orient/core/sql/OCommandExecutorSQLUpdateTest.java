@@ -26,7 +26,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.orientechnologies.BaseMemoryDatabase;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -342,8 +341,8 @@ public class OCommandExecutorSQLUpdateTest extends BaseMemoryDatabase {
 
     StringBuilder script = new StringBuilder();
     script.append("let $a = select from B;\n");
-    script.append("update $a.a set name = 'baz';\n");
-    db.command(new OCommandScript(script.toString())).execute();
+    script.append("update $a[0].a set name = 'baz';\n");
+    db.execute("sql", script.toString());
 
     try (OResultSet result = db.query("select from A")) {
       assertEquals(result.next().getProperty("name"), "baz");

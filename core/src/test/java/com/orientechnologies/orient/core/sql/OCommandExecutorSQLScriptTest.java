@@ -2,18 +2,16 @@ package com.orientechnologies.orient.core.sql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import com.orientechnologies.BaseMemoryDatabase;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class OCommandExecutorSQLScriptTest extends BaseMemoryDatabase {
 
