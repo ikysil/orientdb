@@ -19,8 +19,6 @@
 package com.orientechnologies.orient.etl.transformer;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.script.OCommandExecutorScript;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -31,7 +29,7 @@ import java.util.Map;
 public class OETLCodeTransformer extends OETLAbstractTransformer {
   private final Map<Object, Object> params = new HashMap<Object, Object>();
   private String language = "javascript";
-  private OCommandExecutorScript cmd;
+  private String code = null;
 
   @Override
   public ODocument getConfiguration() {
@@ -53,8 +51,7 @@ public class OETLCodeTransformer extends OETLAbstractTransformer {
     String code;
     if (iConfiguration.containsField("code")) code = iConfiguration.field("code");
     else throw new IllegalArgumentException("'code' parameter is mandatory in Code Transformer");
-
-    cmd = new OCommandExecutorScript().parse(new OCommandScript(language, code));
+    this.code = code;
   }
 
   @Override
@@ -70,14 +67,14 @@ public class OETLCodeTransformer extends OETLAbstractTransformer {
     if (input instanceof OIdentifiable) params.put("record", ((OIdentifiable) input).getRecord());
 
     try {
-      Object result = cmd.executeInContext(context, params);
+      Object result = context.getDatabase().execute(language, code, params);
 
-      debug("executed code=%s, result=%s", cmd, result);
+      debug("executed code=%s, result=%s", code, result);
       return result;
 
     } catch (Exception e) {
 
-      error("exception=%s - input=%s - command=%s ", e.getMessage(), input, cmd);
+      error("exception=%s - input=%s - command=%s ", e.getMessage(), input, code);
 
       throw e;
     }

@@ -19,8 +19,6 @@
 package com.orientechnologies.orient.etl.block;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.script.OCommandExecutorScript;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +27,6 @@ import java.util.Map;
 public class OETLCodeBlock extends OETLAbstractBlock {
   protected String language = "javascript";
   protected String code;
-  protected OCommandExecutorScript cmd;
   protected Map<Object, Object> params = new HashMap<Object, Object>();
 
   @Override
@@ -48,8 +45,6 @@ public class OETLCodeBlock extends OETLAbstractBlock {
 
     if (iConfiguration.containsField("code")) code = iConfiguration.field("code");
     else throw new IllegalArgumentException("'code' parameter is mandatory in Code Transformer");
-
-    cmd = new OCommandExecutorScript().parse(new OCommandScript(language, code));
   }
 
   @Override
@@ -59,6 +54,6 @@ public class OETLCodeBlock extends OETLAbstractBlock {
 
   @Override
   public Object executeBlock() {
-    return cmd.executeInContext(context, params);
+    return context.getDatabase().execute(language, code, (Map) params);
   }
 }

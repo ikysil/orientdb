@@ -19,7 +19,6 @@
 package com.orientechnologies.orient.etl.listener;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -28,7 +27,6 @@ import java.util.Map;
 
 public class OETLScriptImporterListener implements OETLImporterListener {
   private final Map<String, String> events;
-  private Map<String, OCommandScript> scripts = new HashMap<String, OCommandScript>();
 
   public OETLScriptImporterListener() {
     events = new HashMap<String, String>();
@@ -78,23 +76,14 @@ public class OETLScriptImporterListener implements OETLImporterListener {
       final ODatabaseDocument db, final String iEventName, final OCommandContext iContext) {
     if (events == null) return null;
 
-    OCommandScript script = scripts.get(iEventName);
+    final String code = events.get(iEventName);
 
-    if (script == null) {
-      final String code = events.get(iEventName);
-      if (code != null) {
-        // CACHE IT
-        script = new OCommandScript(code).setLanguage("Javascript");
-        scripts.put(iEventName, script);
-      }
-    }
-
-    if (script != null) {
+    if (code != null) {
       final Map<String, Object> pars = new HashMap<String, Object>();
       pars.put("task", iContext);
       pars.put("importer", this);
 
-      return db.command(script).execute(pars);
+      return db.execute("javascript", code, pars);
     }
     return null;
   }

@@ -42,8 +42,6 @@ import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.OSignalHandler;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
-import com.orientechnologies.orient.core.command.script.OCommandExecutorScript;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.config.OStorageEntryConfiguration;
@@ -1340,10 +1338,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        final OCommandExecutorScript cmd = new OCommandExecutorScript();
-        cmd.parse(new OCommandScript("Javascript", iText));
-
-        currentResult = cmd.execute(null);
+        currentResult = getCurrentDatabase().execute("javascript", iText);
         break;
       } catch (ORetryQueryException e) {
         continue;
