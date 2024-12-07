@@ -82,7 +82,6 @@ public class OScriptExecutionPlan implements OInternalExecutionPlan {
   }
 
   public void chain(ORetryExecutionPlan retryStep, boolean profilingEnabled, OCommandContext ctx) {
-    OExecutionStepInternal lastStep = steps.size() == 0 ? null : steps.get(steps.size() - 1);
     OExecutionStepInternal nextStep =
         new OExecutionStepInternal() {
 
@@ -140,13 +139,13 @@ public class OScriptExecutionPlan implements OInternalExecutionPlan {
     return false;
   }
 
-  public boolean containsReturn() {
+  public boolean containsReturn(OCommandContext ctx) {
     for (OExecutionStepInternal step : steps) {
       if (step instanceof ReturnStep) {
         return true;
       }
       if (step instanceof ScriptLineStep) {
-        return ((ScriptLineStep) step).containsReturn();
+        return ((ScriptLineStep) step).containsReturn(ctx);
       }
     }
 
@@ -167,7 +166,7 @@ public class OScriptExecutionPlan implements OInternalExecutionPlan {
     for (int i = 0; i < steps.size() - 1; i++) {
       OExecutionStepInternal step = steps.get(i);
       if (step instanceof ScriptLineStep)
-        if (((ScriptLineStep) step).containsReturn()) {
+        if (((ScriptLineStep) step).containsReturn(ctx)) {
           OExecutionStepInternal returnStep = ((ScriptLineStep) step).executeUntilReturn(ctx);
           if (returnStep != null) {
             lastStep = returnStep;
@@ -196,7 +195,7 @@ public class OScriptExecutionPlan implements OInternalExecutionPlan {
     for (int i = 0; i < steps.size(); i++) {
       OExecutionStepInternal step = steps.get(i);
       if (step instanceof ScriptLineStep) {
-        if (((ScriptLineStep) step).containsReturn()) {
+        if (((ScriptLineStep) step).containsReturn(ctx)) {
           OExecutionStepInternal returnStep = ((ScriptLineStep) step).executeUntilReturn(ctx);
           if (returnStep != null) {
             return returnStep;

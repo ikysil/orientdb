@@ -13,15 +13,22 @@ import com.orientechnologies.orient.core.sql.parser.OStatement;
  */
 public class ScriptLineStep extends AbstractExecutionStep {
   protected final OStatement statement;
+  private OInternalExecutionPlan plan;
 
   public ScriptLineStep(OStatement statement, OCommandContext ctx, boolean profilingEnabled) {
     super(ctx, profilingEnabled);
     this.statement = statement;
   }
 
+  private void initPlan(OCommandContext ctx) {
+    if (plan == null) {
+      plan = statement.createExecutionPlan(ctx);
+    }
+  }
+
   @Override
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
-    OInternalExecutionPlan plan = statement.createExecutionPlan(ctx);
+    initPlan(ctx);
     if (plan instanceof OInsertExecutionPlan) {
       ((OInsertExecutionPlan) plan).executeInternal(ctx);
     } else if (plan instanceof ODeleteExecutionPlan) {
@@ -36,10 +43,10 @@ public class ScriptLineStep extends AbstractExecutionStep {
     return plan.start(ctx);
   }
 
-  public boolean containsReturn() {
-    OInternalExecutionPlan plan = statement.createExecutionPlan(ctx);
+  public boolean containsReturn(OCommandContext ctx) {
+    initPlan(ctx);
     if (plan instanceof OScriptExecutionPlan) {
-      return ((OScriptExecutionPlan) plan).containsReturn();
+      return ((OScriptExecutionPlan) plan).containsReturn(ctx);
     }
     if (plan instanceof OSingleOpExecutionPlan) {
       if (((OSingleOpExecutionPlan) plan).statement instanceof OReturnStatement) {
@@ -61,7 +68,7 @@ public class ScriptLineStep extends AbstractExecutionStep {
   }
 
   public OExecutionStepInternal executeUntilReturn(OCommandContext ctx) {
-    OInternalExecutionPlan plan = statement.createExecutionPlan(ctx);
+    initPlan(ctx);
     if (plan instanceof OScriptExecutionPlan) {
       return ((OScriptExecutionPlan) plan).executeUntilReturn(ctx);
     }
