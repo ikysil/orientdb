@@ -3,6 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.OElement;
@@ -26,7 +27,12 @@ public class FetchFromVariableStep extends AbstractExecutionStep {
   @Override
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
     getPrev().ifPresent(x -> x.start(ctx).close(ctx));
-    Object src = ctx.getVariable(variableName.toString());
+    String name = variableName.getIdentifier().getStringValue();
+    Object value = ctx.getVariable(name);
+    if (variableName.getModifier() != null) {
+      value = variableName.getModifier().execute((OIdentifiable) null, value, ctx);
+    }
+    final Object src = value;
     OExecutionStream source;
     if (src instanceof OExecutionStream) {
       source = (OExecutionStream) src;
