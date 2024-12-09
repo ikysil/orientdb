@@ -23,7 +23,7 @@ public class MatchEdgeTraverser {
   public MatchEdgeTraverser(OResult lastUpstreamRecord, EdgeTraversal edge) {
     this.sourceRecord = lastUpstreamRecord;
     this.edge = edge;
-    this.item = edge.edge.item;
+    this.item = edge.edge.getItem();
   }
 
   public MatchEdgeTraverser(OResult lastUpstreamRecord, OMatchPathItem item) {
@@ -53,12 +53,13 @@ public class MatchEdgeTraverser {
       result.setProperty(prop, sourceRecord.getProperty(prop));
     }
     result.setProperty(endPointAlias, toResult(nextElement));
-    if (edge.edge.item.getFilter().getDepthAlias() != null) {
-      result.setProperty(edge.edge.item.getFilter().getDepthAlias(), nextR.getMetadata("$depth"));
-    }
-    if (edge.edge.item.getFilter().getPathAlias() != null) {
+    if (edge.edge.getItem().getFilter().getDepthAlias() != null) {
       result.setProperty(
-          edge.edge.item.getFilter().getPathAlias(), nextR.getMetadata("$matchPath"));
+          edge.edge.getItem().getFilter().getDepthAlias(), nextR.getMetadata("$depth"));
+    }
+    if (edge.edge.getItem().getFilter().getPathAlias() != null) {
+      result.setProperty(
+          edge.edge.getItem().getFilter().getPathAlias(), nextR.getMetadata("$matchPath"));
     }
     return result;
   }
@@ -78,14 +79,14 @@ public class MatchEdgeTraverser {
   }
 
   protected String getStartingPointAlias() {
-    return this.edge.edge.out.alias;
+    return this.edge.edge.getOut().getAlias();
   }
 
   protected String getEndpointAlias() {
     if (this.item != null) {
       return this.item.getFilter().getAlias();
     }
-    return this.edge.edge.in.alias;
+    return this.edge.edge.getIn().getAlias();
   }
 
   protected void init(OCommandContext ctx) {

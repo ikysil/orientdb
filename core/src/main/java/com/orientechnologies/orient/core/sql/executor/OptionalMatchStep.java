@@ -26,9 +26,9 @@ public class OptionalMatchStep extends MatchStep {
     }
     result.append(spaces);
     result.append("  ");
-    result.append("{" + edge.edge.out.alias + "}");
-    result.append(edge.edge.item.getMethod());
-    result.append("{" + edge.edge.in.alias + "}");
+    result.append("{" + edge.edge.getOut().getAlias() + "}");
+    result.append(edge.edge.getItem().getMethod());
+    result.append("{" + edge.edge.getIn().getAlias() + "}");
     return result.toString();
   }
 }

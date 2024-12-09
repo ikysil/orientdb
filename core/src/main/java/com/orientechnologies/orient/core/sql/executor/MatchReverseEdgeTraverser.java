@@ -15,8 +15,8 @@ public class MatchReverseEdgeTraverser extends MatchEdgeTraverser {
 
   public MatchReverseEdgeTraverser(OResult lastUpstreamRecord, EdgeTraversal edge) {
     super(lastUpstreamRecord, edge);
-    this.startingPointAlias = edge.edge.in.alias;
-    this.endPointAlias = edge.edge.out.alias;
+    this.startingPointAlias = edge.edge.getIn().getAlias();
+    this.endPointAlias = edge.edge.getOut().getAlias();
   }
 
   protected String targetClassName(OMatchPathItem item, OCommandContext iCommandContext) {

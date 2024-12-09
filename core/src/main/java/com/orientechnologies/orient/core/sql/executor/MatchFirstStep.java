@@ -73,6 +73,6 @@ public class MatchFirstStep extends AbstractExecutionStep {
   }
 
   private String getAlias() {
-    return this.node.alias;
+    return this.node.getAlias();
   }
 }

@@ -21,7 +21,6 @@ public class Pattern {
     PatternNode originNode = getOrCreateNode(expression.origin);
 
     for (OMatchPathItem item : expression.items) {
-      String nextAlias = item.filter.getAlias();
       PatternNode nextNode = getOrCreateNode(item.filter);
 
       numOfEdges += originNode.addEdge(item, nextNode);
@@ -30,14 +29,14 @@ public class Pattern {
   }
 
   private PatternNode getOrCreateNode(OMatchFilter origin) {
-    PatternNode originNode = get(origin.getAlias());
+    String alias = origin.getAlias();
+    PatternNode originNode = get(alias);
     if (originNode == null) {
-      originNode = new PatternNode();
-      originNode.alias = origin.getAlias();
-      aliasToNode.put(originNode.alias, originNode);
+      originNode = new PatternNode(alias);
+      aliasToNode.put(originNode.getAlias(), originNode);
     }
     if (origin.isOptional()) {
-      originNode.optional = true;
+      originNode.setOptional(true);
     }
     return originNode;
   }
@@ -53,12 +52,12 @@ public class Pattern {
   public void validate() {
     for (PatternNode node : this.aliasToNode.values()) {
       if (node.isOptionalNode()) {
-        if (node.out.size() > 0) {
+        if (node.getOut().size() > 0) {
           throw new OCommandSQLParsingException(
               "In current MATCH version, optional nodes are allowed only on right terminal nodes,"
                   + " eg. {} --> {optional:true} is allowed, {optional:true} <-- {} is not. ");
         }
-        if (node.in.size() == 0) {
+        if (node.getIn().size() == 0) {
           throw new OCommandSQLParsingException(
               "In current MATCH version, optional nodes must have at least one incoming pattern"
                   + " edge");
@@ -95,11 +94,11 @@ public class Pattern {
         if (reverseMap.containsKey(currentNode)) {
           pattern.aliasToNode.put(reverseMap.get(currentNode), currentNode);
           reverseMap.remove(currentNode);
-          for (PatternEdge x : currentNode.out) {
-            toVisit.add(x.in);
+          for (PatternEdge x : currentNode.getOut()) {
+            toVisit.add(x.getIn());
           }
-          for (PatternEdge x : currentNode.in) {
-            toVisit.add(x.out);
+          for (PatternEdge x : currentNode.getIn()) {
+            toVisit.add(x.getOut());
           }
         }
       }
@@ -111,10 +110,10 @@ public class Pattern {
   private void recalculateNumOfEdges() {
     Map<PatternEdge, PatternEdge> edges = new IdentityHashMap<>();
     for (PatternNode node : this.aliasToNode.values()) {
-      for (PatternEdge edge : node.out) {
+      for (PatternEdge edge : node.getOut()) {
         edges.put(edge, edge);
       }
-      for (PatternEdge edge : node.in) {
+      for (PatternEdge edge : node.getIn()) {
         edges.put(edge, edge);
       }
     }

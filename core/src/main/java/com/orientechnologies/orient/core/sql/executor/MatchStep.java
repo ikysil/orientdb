@@ -31,9 +31,9 @@ public class MatchStep extends AbstractExecutionStep {
   }
 
   protected MatchEdgeTraverser createTraverser(OResult lastUpstreamRecord) {
-    if (edge.edge.item instanceof OMultiMatchPathItem) {
+    if (edge.edge.getItem() instanceof OMultiMatchPathItem) {
       return new MatchMultiEdgeTraverser(lastUpstreamRecord, edge);
-    } else if (edge.edge.item instanceof OFieldMatchPathItem) {
+    } else if (edge.edge.getItem() instanceof OFieldMatchPathItem) {
       return new MatchFieldTraverser(lastUpstreamRecord, edge);
     } else if (edge.out) {
       return new MatchEdgeTraverser(lastUpstreamRecord, edge);
@@ -55,14 +55,14 @@ public class MatchStep extends AbstractExecutionStep {
     }
     result.append(spaces);
     result.append("  ");
-    result.append("{" + edge.edge.out.alias + "}");
-    if (edge.edge.item instanceof OFieldMatchPathItem) {
+    result.append("{" + edge.edge.getOut().getAlias() + "}");
+    if (edge.edge.getItem() instanceof OFieldMatchPathItem) {
       result.append(".");
-      result.append(((OFieldMatchPathItem) edge.edge.item).getField());
+      result.append(((OFieldMatchPathItem) edge.edge.getItem()).getField());
     } else {
-      result.append(edge.edge.item.getMethod());
+      result.append(edge.edge.getItem().getMethod());
     }
-    result.append("{" + edge.edge.in.alias + "}");
+    result.append("{" + edge.edge.getIn().getAlias() + "}");
     return result.toString();
   }
 }

@@ -460,23 +460,23 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
     // into them.
     visitedNodes.add(startNode);
     for (Set<String> dependencies : remainingDependencies.values()) {
-      dependencies.remove(startNode.alias);
+      dependencies.remove(startNode.getAlias());
     }
 
     Map<PatternEdge, Boolean> edges = new LinkedHashMap<PatternEdge, Boolean>();
-    for (PatternEdge outEdge : startNode.out) {
+    for (PatternEdge outEdge : startNode.getOut()) {
       edges.put(outEdge, true);
     }
-    for (PatternEdge inEdge : startNode.in) {
+    for (PatternEdge inEdge : startNode.getIn()) {
       edges.put(inEdge, false);
     }
 
     for (Map.Entry<PatternEdge, Boolean> edgeData : edges.entrySet()) {
       PatternEdge edge = edgeData.getKey();
       boolean isOutbound = edgeData.getValue();
-      PatternNode neighboringNode = isOutbound ? edge.in : edge.out;
+      PatternNode neighboringNode = isOutbound ? edge.getIn() : edge.getOut();
 
-      if (!remainingDependencies.get(neighboringNode.alias).isEmpty()) {
+      if (!remainingDependencies.get(neighboringNode.getAlias()).isEmpty()) {
         // Unsatisfied dependencies, ignore this neighboring node.
         continue;
       }
@@ -504,7 +504,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
           // not allowed
           // to flip their directionality, so we leave them as-is.
           boolean traversalDirection;
-          if (startNode.optional || edge.item.isBidirectional()) {
+          if (startNode.isOptional() || edge.getItem().isBidirectional()) {
             traversalDirection = !isOutbound;
           } else {
             traversalDirection = isOutbound;
@@ -513,7 +513,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
           visitedEdges.add(edge);
           resultingSchedule.add(new EdgeTraversal(edge, traversalDirection));
         }
-      } else if (!startNode.optional) {
+      } else if (!startNode.isOptional()) {
         // If the neighboring node wasn't visited, we don't expand the optional node into it, hence
         // the above check.
         // Instead, we'll allow the neighboring node to add the edge we failed to visit, via the
@@ -547,7 +547,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
     for (PatternNode node : pattern.aliasToNode.values()) {
       Set<String> currentDependencies = new HashSet<String>();
 
-      OWhereClause filter = aliasFilters.get(node.alias);
+      OWhereClause filter = aliasFilters.get(node.getAlias());
       if (filter != null && filter.baseExpression != null) {
         List<String> involvedAliases = filter.baseExpression.getMatchPatternInvolvedAliases();
         if (involvedAliases != null) {
@@ -555,7 +555,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
         }
       }
 
-      result.put(node.alias, currentDependencies);
+      result.put(node.getAlias(), currentDependencies);
     }
 
     return result;
@@ -689,9 +689,10 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
     String smallestAlias = null;
     // and choose the most convenient starting point (the most convenient traversal direction)
     if (firstEdge != null) {
-      smallestAlias = firstEdge.out ? firstEdge.edge.out.alias : firstEdge.edge.in.alias;
+      smallestAlias =
+          firstEdge.out ? firstEdge.edge.getOut().getAlias() : firstEdge.edge.getIn().getAlias();
     } else {
-      smallestAlias = pattern.aliasToNode.values().iterator().next().alias;
+      smallestAlias = pattern.aliasToNode.values().iterator().next().getAlias();
     }
     executionPlan.rootAlias = smallestAlias;
     Iterable<OIdentifiable> allCandidates = matchContext.candidates.get(smallestAlias);
@@ -783,18 +784,18 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
           pattern, matchContext, aliasClasses, aliasFilters, iCommandContext, request);
     }
     EdgeTraversal currentEdge = executionPlan.sortedEdges.get(matchContext.currentEdgeNumber);
-    PatternNode rootNode = currentEdge.out ? currentEdge.edge.out : currentEdge.edge.in;
+    PatternNode rootNode = currentEdge.out ? currentEdge.edge.getOut() : currentEdge.edge.getIn();
 
     if (currentEdge.out) {
       PatternEdge outEdge = currentEdge.edge;
 
       if (!matchContext.matchedEdges.containsKey(outEdge)) {
 
-        OIdentifiable startingPoint = matchContext.matched.get(outEdge.out.alias);
+        OIdentifiable startingPoint = matchContext.matched.get(outEdge.getOut().getAlias());
         if (startingPoint == null) {
           // restart from candidates (disjoint patterns? optional? just could not proceed from last
           // node?)
-          Iterable rightCandidates = matchContext.candidates.get(outEdge.out.alias);
+          Iterable rightCandidates = matchContext.candidates.get(outEdge.getOut().getAlias());
           if (rightCandidates != null) {
             if (!processContextFromCandidates(
                 pattern,
@@ -805,7 +806,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
                 iCommandContext,
                 request,
                 rightCandidates,
-                outEdge.out.alias,
+                outEdge.getOut().getAlias(),
                 matchContext.currentEdgeNumber)) {
               return false;
             }
@@ -815,11 +816,11 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
         Object rightValues =
             outEdge.executeTraversal(matchContext, iCommandContext, startingPoint, 0);
 
-        if (outEdge.in.isOptionalNode()
+        if (outEdge.getIn().isOptionalNode()
             && (isEmptyResult(rightValues)
-                || !contains(rightValues, matchContext.matched.get(outEdge.in.alias)))) {
-          MatchContext childContext = matchContext.copy(outEdge.in.alias, null);
-          childContext.matched.put(outEdge.in.alias, null);
+                || !contains(rightValues, matchContext.matched.get(outEdge.getIn().getAlias())))) {
+          MatchContext childContext = matchContext.copy(outEdge.getIn().getAlias(), null);
+          childContext.matched.put(outEdge.getIn().getAlias(), null);
           childContext.currentEdgeNumber =
               matchContext.currentEdgeNumber + 1; // TODO testOptional 3 match passa con +1
           childContext.matchedEdges.put(outEdge, true);
@@ -838,7 +839,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
         if (!(rightValues instanceof Iterable)) {
           rightValues = Collections.singleton(rightValues);
         }
-        String rightClassName = aliasClasses.get(outEdge.in.alias);
+        String rightClassName = aliasClasses.get(outEdge.getIn().getAlias());
         OClass rightClass = getDatabase().getMetadata().getSchema().getClass(rightClassName);
         for (OIdentifiable rightValue : (Iterable<OIdentifiable>) rightValues) {
           if (rightValue == null) {
@@ -849,16 +850,16 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
             continue;
           }
           Iterable<OIdentifiable> prevMatchedRightValues =
-              matchContext.candidates.get(outEdge.in.alias);
+              matchContext.candidates.get(outEdge.getIn().getAlias());
 
-          if (matchContext.matched.containsKey(outEdge.in.alias)) {
+          if (matchContext.matched.containsKey(outEdge.getIn().getAlias())) {
             if (matchContext
                 .matched
-                .get(outEdge.in.alias)
+                .get(outEdge.getIn().getAlias())
                 .getIdentity()
                 .equals(rightValue.getIdentity())) {
               MatchContext childContext =
-                  matchContext.copy(outEdge.in.alias, rightValue.getIdentity());
+                  matchContext.copy(outEdge.getIn().getAlias(), rightValue.getIdentity());
               childContext.currentEdgeNumber = matchContext.currentEdgeNumber + 1;
               childContext.matchedEdges.put(outEdge, true);
               if (!processContext(
@@ -879,7 +880,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
             // values
             for (OIdentifiable id : prevMatchedRightValues) {
               if (id.getIdentity().equals(rightValue.getIdentity())) {
-                MatchContext childContext = matchContext.copy(outEdge.in.alias, id);
+                MatchContext childContext = matchContext.copy(outEdge.getIn().getAlias(), id);
                 childContext.currentEdgeNumber = matchContext.currentEdgeNumber + 1;
                 childContext.matchedEdges.put(outEdge, true);
                 if (!processContext(
@@ -896,7 +897,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
             }
           } else { // searching for neighbors
             MatchContext childContext =
-                matchContext.copy(outEdge.in.alias, rightValue.getIdentity());
+                matchContext.copy(outEdge.getIn().getAlias(), rightValue.getIdentity());
             childContext.currentEdgeNumber = matchContext.currentEdgeNumber + 1;
             childContext.matchedEdges.put(outEdge, true);
             if (!processContext(
@@ -915,18 +916,21 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
     } else {
       PatternEdge inEdge = currentEdge.edge;
       if (!matchContext.matchedEdges.containsKey(inEdge)) {
-        if (!inEdge.item.isBidirectional()) {
+        if (!inEdge.getItem().isBidirectional()) {
           throw new RuntimeException("Invalid pattern to match!");
         }
         if (!matchContext.matchedEdges.containsKey(inEdge)) {
           Object leftValues =
-              inEdge.item.method.executeReverse(
-                  matchContext.matched.get(inEdge.in.alias), iCommandContext);
-          if (inEdge.out.isOptionalNode()
+              inEdge
+                  .getItem()
+                  .method
+                  .executeReverse(
+                      matchContext.matched.get(inEdge.getIn().getAlias()), iCommandContext);
+          if (inEdge.getOut().isOptionalNode()
               && (isEmptyResult(leftValues)
-                  || !contains(leftValues, matchContext.matched.get(inEdge.out.alias)))) {
-            MatchContext childContext = matchContext.copy(inEdge.out.alias, null);
-            childContext.matched.put(inEdge.out.alias, null);
+                  || !contains(leftValues, matchContext.matched.get(inEdge.getOut().getAlias())))) {
+            MatchContext childContext = matchContext.copy(inEdge.getOut().getAlias(), null);
+            childContext.matched.put(inEdge.getOut().getAlias(), null);
             childContext.currentEdgeNumber = matchContext.currentEdgeNumber + 1;
             childContext.matchedEdges.put(inEdge, true);
             if (!processContext(
@@ -944,7 +948,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
             leftValues = Collections.singleton(leftValues);
           }
 
-          String leftClassName = aliasClasses.get(inEdge.out.alias);
+          String leftClassName = aliasClasses.get(inEdge.getOut().getAlias());
           OClass leftClass = getDatabase().getMetadata().getSchema().getClass(leftClassName);
 
           for (OIdentifiable leftValue : (Iterable<OIdentifiable>) leftValues) {
@@ -956,16 +960,16 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
               continue;
             }
             Iterable<OIdentifiable> prevMatchedRightValues =
-                matchContext.candidates.get(inEdge.out.alias);
+                matchContext.candidates.get(inEdge.getOut().getAlias());
 
-            if (matchContext.matched.containsKey(inEdge.out.alias)) {
+            if (matchContext.matched.containsKey(inEdge.getOut().getAlias())) {
               if (matchContext
                   .matched
-                  .get(inEdge.out.alias)
+                  .get(inEdge.getOut().getAlias())
                   .getIdentity()
                   .equals(leftValue.getIdentity())) {
                 MatchContext childContext =
-                    matchContext.copy(inEdge.out.alias, leftValue.getIdentity());
+                    matchContext.copy(inEdge.getOut().getAlias(), leftValue.getIdentity());
                 childContext.currentEdgeNumber = matchContext.currentEdgeNumber + 1;
                 childContext.matchedEdges.put(inEdge, true);
                 if (!processContext(
@@ -986,7 +990,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
               // values
               for (OIdentifiable id : prevMatchedRightValues) {
                 if (id.getIdentity().equals(leftValue.getIdentity())) {
-                  MatchContext childContext = matchContext.copy(inEdge.out.alias, id);
+                  MatchContext childContext = matchContext.copy(inEdge.getOut().getAlias(), id);
                   childContext.currentEdgeNumber = matchContext.currentEdgeNumber + 1;
                   childContext.matchedEdges.put(inEdge, true);
 
@@ -1003,13 +1007,13 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
                 }
               }
             } else { // searching for neighbors
-              OWhereClause where = aliasFilters.get(inEdge.out.alias);
-              String className = aliasClasses.get(inEdge.out.alias);
+              OWhereClause where = aliasFilters.get(inEdge.getOut().getAlias());
+              String className = aliasClasses.get(inEdge.getOut().getAlias());
               OClass oClass = getDatabase().getMetadata().getSchema().getClass(className);
               if ((oClass == null || matchesClass(leftValue, oClass))
                   && (where == null || where.matchesFilters(leftValue, iCommandContext))) {
                 MatchContext childContext =
-                    matchContext.copy(inEdge.out.alias, leftValue.getIdentity());
+                    matchContext.copy(inEdge.getOut().getAlias(), leftValue.getIdentity());
                 childContext.currentEdgeNumber = matchContext.currentEdgeNumber + 1;
                 childContext.matchedEdges.put(inEdge, true);
                 if (!processContext(

@@ -250,12 +250,9 @@ public class OMatchExecutionPlanner {
           throw new OCommandExecutionException(
               "This kind of NOT expression is not supported (yet): " + item.toString());
         }
-        PatternEdge edge = new PatternEdge();
-        edge.item = item;
-        edge.out = new PatternNode();
-        edge.out.alias = lastFilter.getAlias();
-        edge.in = new PatternNode();
-        edge.in.alias = item.getFilter().getAlias();
+        PatternNode in = new PatternNode(item.getFilter().getAlias());
+        PatternNode out = new PatternNode(lastFilter.getAlias());
+        PatternEdge edge = new PatternEdge(item, in, out);
         EdgeTraversal traversal = new EdgeTraversal(edge, true);
         MatchStep step = new MatchStep(context, traversal, enableProfiling);
         steps.add(step);
@@ -301,27 +298,27 @@ public class OMatchExecutionPlanner {
     boolean first = true;
     if (sortedEdges.size() > 0) {
       for (EdgeTraversal edge : sortedEdges) {
-        if (edge.edge.out.alias != null) {
-          edge.setLeftClass(aliasClasses.get(edge.edge.out.alias));
-          edge.setLeftCluster(aliasClusters.get(edge.edge.out.alias));
-          edge.setLeftRid(aliasRids.get(edge.edge.out.alias));
-          edge.setLeftClass(aliasClasses.get(edge.edge.out.alias));
-          edge.setLeftFilter(aliasFilters.get(edge.edge.out.alias));
+        if (edge.edge.getOut().getAlias() != null) {
+          edge.setLeftClass(aliasClasses.get(edge.edge.getOut().getAlias()));
+          edge.setLeftCluster(aliasClusters.get(edge.edge.getOut().getAlias()));
+          edge.setLeftRid(aliasRids.get(edge.edge.getOut().getAlias()));
+          edge.setLeftClass(aliasClasses.get(edge.edge.getOut().getAlias()));
+          edge.setLeftFilter(aliasFilters.get(edge.edge.getOut().getAlias()));
         }
         addStepsFor(plan, edge, context, first, profilingEnabled);
         first = false;
       }
     } else {
       PatternNode node = pattern.getAliasToNode().values().iterator().next();
-      if (prefetchedAliases.contains(node.alias)) {
+      if (prefetchedAliases.contains(node.getAlias())) {
         // from prefetch
         plan.chain(new MatchFirstStep(context, node, profilingEnabled));
       } else {
         // from actual execution plan
-        String clazz = aliasClasses.get(node.alias);
-        String cluster = aliasClusters.get(node.alias);
-        ORid rid = aliasRids.get(node.alias);
-        OWhereClause filter = aliasFilters.get(node.alias);
+        String clazz = aliasClasses.get(node.getAlias());
+        String cluster = aliasClusters.get(node.getAlias());
+        ORid rid = aliasRids.get(node.getAlias());
+        OWhereClause filter = aliasFilters.get(node.getAlias());
         OSelectStatement select = createSelectStatement(clazz, cluster, rid, filter);
         plan.chain(
             new MatchFirstStep(
@@ -455,15 +452,15 @@ public class OMatchExecutionPlanner {
     // into them.
     visitedNodes.add(startNode);
     for (Set<String> dependencies : remainingDependencies.values()) {
-      dependencies.remove(startNode.alias);
+      dependencies.remove(startNode.getAlias());
     }
 
     Map<PatternEdge, Boolean> edges = new LinkedHashMap<PatternEdge, Boolean>();
-    for (PatternEdge outEdge : startNode.out) {
+    for (PatternEdge outEdge : startNode.getOut()) {
       edges.put(outEdge, true);
     }
-    for (PatternEdge inEdge : startNode.in) {
-      if (inEdge.item.isBidirectional()) {
+    for (PatternEdge inEdge : startNode.getIn()) {
+      if (inEdge.getItem().isBidirectional()) {
         edges.put(inEdge, false);
       }
     }
@@ -471,9 +468,9 @@ public class OMatchExecutionPlanner {
     for (Map.Entry<PatternEdge, Boolean> edgeData : edges.entrySet()) {
       PatternEdge edge = edgeData.getKey();
       boolean isOutbound = edgeData.getValue();
-      PatternNode neighboringNode = isOutbound ? edge.in : edge.out;
+      PatternNode neighboringNode = isOutbound ? edge.getIn() : edge.getOut();
 
-      if (!remainingDependencies.get(neighboringNode.alias).isEmpty()) {
+      if (!remainingDependencies.get(neighboringNode.getAlias()).isEmpty()) {
         // Unsatisfied dependencies, ignore this neighboring node.
         continue;
       }
@@ -501,7 +498,7 @@ public class OMatchExecutionPlanner {
           // not allowed
           // to flip their directionality, so we leave them as-is.
           boolean traversalDirection;
-          if (startNode.optional || edge.item.isBidirectional()) {
+          if (startNode.isOptional() || edge.getItem().isBidirectional()) {
             traversalDirection = !isOutbound;
           } else {
             traversalDirection = isOutbound;
@@ -510,7 +507,7 @@ public class OMatchExecutionPlanner {
           visitedEdges.add(edge);
           resultingSchedule.add(new EdgeTraversal(edge, traversalDirection));
         }
-      } else if (!startNode.optional || isOptionalChain(startNode, edge, neighboringNode)) {
+      } else if (!startNode.isOptional() || isOptionalChain(startNode, edge, neighboringNode)) {
         // If the neighboring node wasn't visited, we don't expand the optional node into it, hence
         // the above check.
         // Instead, we'll allow the neighboring node to add the edge we failed to visit, via the
@@ -548,10 +545,10 @@ public class OMatchExecutionPlanner {
 
     visitedEdges.add(edge);
 
-    if (neighboringNode.out != null) {
-      for (PatternEdge patternEdge : neighboringNode.out) {
+    if (neighboringNode.getOut() != null) {
+      for (PatternEdge patternEdge : neighboringNode.getOut()) {
         if (!visitedEdges.contains(patternEdge)
-            && !isOptionalChain(neighboringNode, patternEdge, patternEdge.in, visitedEdges)) {
+            && !isOptionalChain(neighboringNode, patternEdge, patternEdge.getIn(), visitedEdges)) {
           return false;
         }
       }
@@ -572,7 +569,7 @@ public class OMatchExecutionPlanner {
     for (PatternNode node : pattern.aliasToNode.values()) {
       Set<String> currentDependencies = new HashSet<String>();
 
-      OWhereClause filter = aliasFilters.get(node.alias);
+      OWhereClause filter = aliasFilters.get(node.getAlias());
       if (filter != null && filter.getBaseExpression() != null) {
         List<String> involvedAliases = filter.getBaseExpression().getMatchPatternInvolvedAliases();
         if (involvedAliases != null) {
@@ -580,7 +577,7 @@ public class OMatchExecutionPlanner {
         }
       }
 
-      result.put(node.alias, currentDependencies);
+      result.put(node.getAlias(), currentDependencies);
     }
 
     return result;
@@ -601,11 +598,11 @@ public class OMatchExecutionPlanner {
       boolean first,
       boolean profilingEnabled) {
     if (first) {
-      PatternNode patternNode = edge.out ? edge.edge.out : edge.edge.in;
-      String clazz = this.aliasClasses.get(patternNode.alias);
-      String cluster = this.aliasClusters.get(patternNode.alias);
-      ORid rid = this.aliasRids.get(patternNode.alias);
-      OWhereClause where = aliasFilters.get(patternNode.alias);
+      PatternNode patternNode = edge.out ? edge.edge.getOut() : edge.edge.getIn();
+      String clazz = this.aliasClasses.get(patternNode.getAlias());
+      String cluster = this.aliasClusters.get(patternNode.getAlias());
+      ORid rid = this.aliasRids.get(patternNode.getAlias());
+      OWhereClause where = aliasFilters.get(patternNode.getAlias());
       OSelectStatement select = new OSelectStatement(-1);
       select.setTarget(new OFromClause(-1));
       select.getTarget().setItem(new OFromItem(-1));
@@ -626,7 +623,7 @@ public class OMatchExecutionPlanner {
               select.createExecutionPlan(subContxt, profilingEnabled),
               profilingEnabled));
     }
-    if (edge.edge.in.isOptionalNode()) {
+    if (edge.edge.getIn().isOptionalNode()) {
       foundOptional = true;
       plan.chain(new OptionalMatchStep(context, edge, profilingEnabled));
     } else {
