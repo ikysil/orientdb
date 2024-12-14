@@ -16,7 +16,6 @@ import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -1634,8 +1633,8 @@ public class OMatchStatementExecutionTest extends BaseMemoryDatabase {
     // This is a test to ensure that the query scheduler resolves dependencies correctly,
     // even if they are unusual or contrived.
     List result =
-        db.query(
-            new OSQLSynchQuery(
+        db
+            .query(
                 "MATCH {\n"
                     + "    class: testDependencyOrdering1_Foo,\n"
                     + "    as: foo\n"
@@ -1651,7 +1650,9 @@ public class OMatchStatementExecutionTest extends BaseMemoryDatabase {
                     + "}.out('testDependencyOrdering1_Bar_Baz') {\n"
                     + "    where: ($matched.far IS NOT null),\n"
                     + "    as: baz\n"
-                    + "} RETURN $matches"));
+                    + "} RETURN $matches")
+            .stream()
+            .toList();
     assertEquals(1, result.size());
   }
 
