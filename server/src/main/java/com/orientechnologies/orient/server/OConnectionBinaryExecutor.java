@@ -55,8 +55,6 @@ import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.parser.OLocalResultSetLifecycleDecorator;
-import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.core.storage.OPhysicalPosition;
 import com.orientechnologies.orient.core.storage.ORecordMetadata;
 import com.orientechnologies.orient.core.storage.cluster.OOfflineClusterException;
@@ -76,7 +74,6 @@ import com.orientechnologies.orient.server.distributed.ODistributedServerManager
 import com.orientechnologies.orient.server.distributed.ORemoteServerController;
 import com.orientechnologies.orient.server.network.protocol.binary.HandshakeInfo;
 import com.orientechnologies.orient.server.network.protocol.binary.OAbstractCommandResultListener;
-import com.orientechnologies.orient.server.network.protocol.binary.OAsyncCommandResultListener;
 import com.orientechnologies.orient.server.network.protocol.binary.OLiveCommandResultListener;
 import com.orientechnologies.orient.server.network.protocol.binary.ONetworkProtocolBinary;
 import com.orientechnologies.orient.server.network.protocol.binary.OSyncCommandResultListener;
@@ -575,21 +572,10 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
       connection.getDatabase().swapTx(new OTransactionNoTx(connection.getDatabase(), null));
 
       final boolean live = request.isLive();
-      final boolean asynch = request.isAsynch();
 
       OCommandRequestText command = request.getQuery();
 
       final Map<Object, Object> params = command.getParameters();
-
-      if (asynch && command instanceof OSQLSynchQuery) {
-        // CONVERT IT IN ASYNCHRONOUS QUERY
-        final OSQLAsynchQuery asynchQuery = new OSQLAsynchQuery(command.getText());
-        asynchQuery.setFetchPlan(command.getFetchPlan());
-        asynchQuery.setLimit(command.getLimit());
-        asynchQuery.setTimeout(command.getTimeoutTime(), command.getTimeoutStrategy());
-        asynchQuery.setUseCache(((OSQLSynchQuery) command).isUseCache());
-        command = asynchQuery;
-      }
 
       connection.getData().commandDetail = command.getText();
 
@@ -603,9 +589,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
         liveListener = new OLiveCommandResultListener(server, connection, cmdResultListener);
         listener = new OSyncCommandResultListener(null);
         command.setResultListener(liveListener);
-      } else if (asynch) {
-        listener = new OAsyncCommandResultListener(connection, cmdResultListener);
-        command.setResultListener(listener);
       } else {
         listener = new OSyncCommandResultListener(null);
       }
@@ -624,34 +607,26 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
       command.setCacheableResult(true);
 
       // ASSIGNED THE PARSED FETCHPLAN
-      final OCommandRequestText commandRequest = connection.getDatabase().command(command);
-      listener.setFetchPlan(commandRequest.getFetchPlan());
+      listener.setFetchPlan(command.getFetchPlan());
       OCommandResponse response;
-      if (asynch) {
-        // In case of async it execute the request during the write of the response
-        response =
-            new OCommandResponse(
-                null, listener, false, asynch, connection.getDatabase(), command, params);
-      } else {
-        // SYNCHRONOUS
-        final Object result;
-        if (params == null) result = commandRequest.execute();
-        else result = commandRequest.execute(params);
+      // SYNCHRONOUS
+      final Object result;
+      ODatabaseDocumentInternal db = connection.getDatabase();
+      // TODO: handle query/command/execute
+      result =
+          db.executeLikeLegacy(
+              command.getText(),
+              params,
+              command.getLimit(),
+              command.getFetchPlan(),
+              command.getTimeoutTime());
 
-        // FETCHPLAN HAS TO BE ASSIGNED AGAIN, because it can be changed by SQL statement
-        listener.setFetchPlan(commandRequest.getFetchPlan());
-        boolean isRecordResultSet = true;
-        isRecordResultSet = command.isRecordResultSet();
-        response =
-            new OCommandResponse(
-                result,
-                listener,
-                isRecordResultSet,
-                asynch,
-                connection.getDatabase(),
-                command,
-                params);
-      }
+      // FETCHPLAN HAS TO BE ASSIGNED AGAIN, because it can be changed by SQL statement
+      listener.setFetchPlan(command.getFetchPlan());
+      boolean isRecordResultSet = true;
+      isRecordResultSet = command.isRecordResultSet();
+      response =
+          new OCommandResponse(result, listener, isRecordResultSet, connection.getDatabase());
       return response;
     } finally {
       connection.getDatabase().swapTx(oldTx);

@@ -26,7 +26,6 @@ import com.orientechnologies.orient.client.remote.OBinaryResponse;
 import com.orientechnologies.orient.client.remote.OFetchPlanResults;
 import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
 import com.orientechnologies.orient.client.remote.SimpleValueFetchPlanCommandListener;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.command.OCommandResultListener;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
@@ -44,42 +43,33 @@ import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinaryProt
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataInput;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataOutput;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public final class OCommandResponse implements OBinaryResponse {
   private static final OLogger logger = OLogManager.instance().logger(OCommandResponse.class);
-  private final boolean asynch;
   private final OCommandResultListener listener;
   private final ODatabaseDocumentInternal database;
   private boolean live;
   private Object result;
   private boolean isRecordResultSet;
-  private OCommandRequestText command;
-  private Map<Object, Object> params;
 
   public OCommandResponse(
       Object result,
       SimpleValueFetchPlanCommandListener listener,
       boolean isRecordResultSet,
-      boolean async,
-      ODatabaseDocumentInternal database,
-      OCommandRequestText command,
-      Map<Object, Object> params) {
+      ODatabaseDocumentInternal database) {
     this.result = result;
     this.listener = listener;
     this.isRecordResultSet = isRecordResultSet;
-    this.asynch = async;
     this.database = database;
-    this.command = command;
-    this.params = params;
   }
 
   public OCommandResponse(
-      boolean asynch,
-      OCommandResultListener listener,
-      ODatabaseDocumentInternal database,
-      boolean live) {
-    this.asynch = asynch;
+      OCommandResultListener listener, ODatabaseDocumentInternal database, boolean live) {
     this.listener = listener;
     this.database = database;
     this.live = live;
@@ -87,32 +77,25 @@ public final class OCommandResponse implements OBinaryResponse {
 
   public void write(OChannelDataOutput channel, int protocolVersion, ORecordSerializer serializer)
       throws IOException {
-    if (asynch) {
-      if (params == null) result = database.command(command).execute();
-      else result = database.command(command).execute(params);
 
-      // FETCHPLAN HAS TO BE ASSIGNED AGAIN, because it can be changed by SQL statement
-      channel.writeByte((byte) 0); // NO MORE RECORDS
-    } else {
-      serializeValue(
-          channel,
-          (SimpleValueFetchPlanCommandListener) listener,
-          result,
-          false,
-          isRecordResultSet,
-          protocolVersion,
-          serializer);
-      if (listener instanceof OFetchPlanResults) {
-        // SEND FETCHED RECORDS TO LOAD IN CLIENT CACHE
-        for (ORecord rec : ((OFetchPlanResults) listener).getFetchedRecordsToSend()) {
-          channel.writeByte((byte) 2); // CLIENT CACHE RECORD. IT
-          // ISN'T PART OF THE
-          // RESULT SET
-          OMessageHelper.writeIdentifiable(channel, rec, serializer);
-        }
-
-        channel.writeByte((byte) 0); // NO MORE RECORDS
+    serializeValue(
+        channel,
+        (SimpleValueFetchPlanCommandListener) listener,
+        result,
+        false,
+        isRecordResultSet,
+        protocolVersion,
+        serializer);
+    if (listener instanceof OFetchPlanResults) {
+      // SEND FETCHED RECORDS TO LOAD IN CLIENT CACHE
+      for (ORecord rec : ((OFetchPlanResults) listener).getFetchedRecordsToSend()) {
+        channel.writeByte((byte) 2); // CLIENT CACHE RECORD. IT
+        // ISN'T PART OF THE
+        // RESULT SET
+        OMessageHelper.writeIdentifiable(channel, rec, serializer);
       }
+
+      channel.writeByte((byte) 0); // NO MORE RECORDS
     }
   }
 
@@ -221,81 +204,19 @@ public final class OCommandResponse implements OBinaryResponse {
 
   @Override
   public void read(OChannelDataInput network, OStorageRemoteSession session) throws IOException {
-    ORecordSerializer serializer = ORecordSerializerNetworkV37Client.INSTANCE;
     try {
       // Collection of prefetched temporary record (nested projection record), to refer for avoid
       // garbage collection.
       List<ORecord> temporaryResults = new ArrayList<ORecord>();
 
-      boolean addNextRecord = true;
-      if (asynch) {
-        byte status;
-
-        // ASYNCH: READ ONE RECORD AT TIME
-        while ((status = network.readByte()) > 0) {
-          final ORecord record = (ORecord) OMessageHelper.readIdentifiable(network, serializer);
-          if (record == null) continue;
-
-          switch (status) {
-            case 1:
-              // PUT AS PART OF THE RESULT SET. INVOKE THE LISTENER
-              if (addNextRecord) {
-                addNextRecord = listener.result(record);
-                database.getLocalCache().updateRecord(record);
-              }
-              break;
-
-            case 2:
-              if (record.getIdentity().getClusterId() == -2) temporaryResults.add(record);
-              // PUT IN THE CLIENT LOCAL CACHE
-              database.getLocalCache().updateRecord(record);
-          }
-        }
-      } else {
-        result = readSynchResult(network, database, temporaryResults);
-        if (live) {
-          final ODocument doc = ((List<ODocument>) result).get(0);
-          final Integer token = doc.field("token");
-          final Boolean unsubscribe = doc.field("unsubscribe");
-          if (token != null) {
-            //
-            //            OStorageRemote storage = (OStorageRemote) database.getStorage();
-            //            if (Boolean.TRUE.equals(unsubscribe)) {
-            //              if (storage.asynchEventListener != null)
-            //                storage.asynchEventListener.unregisterLiveListener(token);
-            //            } else {
-            //              final OLiveResultListener listener = (OLiveResultListener)
-            // this.listener;
-            //              final ODatabaseDocument dbCopy = database.copy();
-            //              ORemoteConnectionPool pool =
-            // storage.connectionManager.getPool(((OChannelBinaryAsynchClient)
-            // network).getServerURL());
-            //              storage.asynchEventListener.registerLiveListener(pool, token, new
-            // OLiveResultListener() {
-            //
-            //                @Override
-            //                public void onUnsubscribe(int iLiveToken) {
-            //                  listener.onUnsubscribe(iLiveToken);
-            //                  dbCopy.close();
-            //                }
-            //
-            //                @Override
-            //                public void onLiveResult(int iLiveToken, ORecordOperation iOp) throws
-            // OException {
-            //                  dbCopy.activateOnCurrentThread();
-            //                  listener.onLiveResult(iLiveToken, iOp);
-            //                }
-            //
-            //                @Override
-            //                public void onError(int iLiveToken) {
-            //                  listener.onError(iLiveToken);
-            //                  dbCopy.close();
-            //                }
-            //              });
-            //            }
-          } else {
-            throw new OStorageException("Cannot execute live query, returned null token");
-          }
+      result = readSynchResult(network, database, temporaryResults);
+      if (live) {
+        final ODocument doc = ((List<ODocument>) result).get(0);
+        final Integer token = doc.field("token");
+        final Boolean unsubscribe = doc.field("unsubscribe");
+        if (token != null) {
+        } else {
+          throw new OStorageException("Cannot execute live query, returned null token");
         }
       }
       if (!temporaryResults.isEmpty()) {

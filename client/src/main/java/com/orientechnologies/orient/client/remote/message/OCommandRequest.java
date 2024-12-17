@@ -94,7 +94,7 @@ public final class OCommandRequest implements OBinaryRequest<OCommandResponse> {
 
   @Override
   public OCommandResponse createResponse() {
-    return new OCommandResponse(asynch, this.query.getResultListener(), database, live);
+    return new OCommandResponse(this.query.getResultListener(), database, live);
   }
 
   @Override

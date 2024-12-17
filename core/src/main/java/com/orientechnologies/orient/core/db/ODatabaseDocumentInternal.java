@@ -34,6 +34,7 @@ import com.orientechnologies.orient.core.metadata.sequence.OSequenceAction;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.OVertex;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.binary.OBinarySerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
@@ -48,6 +49,7 @@ import com.orientechnologies.orient.core.tx.OTransactionAbstract;
 import com.orientechnologies.orient.core.tx.OTransactionData;
 import com.orientechnologies.orient.core.tx.OTransactionInternal;
 import com.orientechnologies.orient.core.tx.OTransactionOptimistic;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -312,6 +314,11 @@ public interface ODatabaseDocumentInternal extends ODatabaseSession, ODatabaseIn
   void internalCommitPreallocate(OTransactionOptimistic oTransactionOptimistic);
 
   default void remoteRollback(OTransactionOptimistic oTransactionOptimistic) {
+    throw new UnsupportedOperationException();
+  }
+
+  default List<ODocument> executeLikeLegacy(
+      String text, Map<Object, Object> params, int limit, String fetchPlan, long timeoutTime) {
     throw new UnsupportedOperationException();
   }
 }
