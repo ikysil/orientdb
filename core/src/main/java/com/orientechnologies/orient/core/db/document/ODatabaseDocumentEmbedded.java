@@ -667,8 +667,8 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
   }
 
   @Override
-  public List<ODocument> executeLikeLegacy(
-      String query, Map<Object, Object> params, int limit, String fetchPlan, long timeoutTime) {
+  public List<ODocument> queryLikeLegacy(
+      String query, Map<Object, Object> params, int limit, String fetchPlan) {
     checkOpenness();
     checkIfActive();
 
@@ -678,6 +678,62 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
       OStatement statement = OSQLEngine.parse(query, this);
       OResultSet original = statement.execute(this, params, true);
       // fetch all, close and detach
+      List<ODocument> result = original.stream().map((x) -> (ODocument) x.toElement()).toList();
+      original.close();
+      queryCompleted();
+      return result;
+    } finally {
+      cleanQueryState();
+      getSharedContext().getOrientDB().endCommand();
+    }
+  }
+
+  @Override
+  public List<ODocument> commandLikeLegacy(String query, Map<Object, Object> params) {
+    checkOpenness();
+    checkIfActive();
+
+    getSharedContext().getOrientDB().startCommand(Optional.empty());
+    preQueryStart();
+    try {
+      OStatement statement = OSQLEngine.parse(query, this);
+      OResultSet original = statement.execute(this, params, true);
+      // fetch all, close and detach
+      List<ODocument> result = original.stream().map((x) -> (ODocument) x.toElement()).toList();
+      original.close();
+      queryCompleted();
+      return result;
+    } finally {
+      cleanQueryState();
+      getSharedContext().getOrientDB().endCommand();
+    }
+  }
+
+  @Override
+  public List<ODocument> executeLikeLegacy(
+      String language, String script, Map<Object, Object> params) {
+    checkOpenness();
+    checkIfActive();
+    if (!"sql".equalsIgnoreCase(language)) {
+      checkSecurity(ORule.ResourceGeneric.COMMAND, ORole.PERMISSION_EXECUTE, language);
+    }
+    getSharedContext().getOrientDB().startCommand(Optional.empty());
+    try {
+      preQueryStart();
+      OScriptExecutor executor =
+          sharedContext
+              .getOrientDB()
+              .getScriptManager()
+              .getCommandManager()
+              .getScriptExecutor(language);
+      OResultSet original;
+
+      ((OAbstractPaginatedStorage) this.storage).pauseConfigurationUpdateNotifications();
+      try {
+        original = executor.execute(this, script, params);
+      } finally {
+        ((OAbstractPaginatedStorage) this.storage).fireConfigurationUpdateNotifications();
+      }
       List<ODocument> result = original.stream().map((x) -> (ODocument) x.toElement()).toList();
       original.close();
       queryCompleted();

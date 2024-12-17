@@ -165,4 +165,8 @@ public class OSQLSynchQuery<T extends Object> extends OSQLAsynchQuery<T>
     if (queryParams == null) queryParams = new HashMap<Object, Object>();
     return queryParams;
   }
+
+  public Map<Object, Object> getPreviousQueryParams() {
+    return previousQueryParams;
+  }
 }

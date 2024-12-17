@@ -15,8 +15,6 @@ import com.orientechnologies.orient.client.remote.message.OCommitResponse.OUpdat
 import com.orientechnologies.orient.client.remote.message.tx.ORecordOperationRequest;
 import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
-import com.orientechnologies.orient.core.command.OCommandResultListener;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
@@ -73,10 +71,7 @@ import com.orientechnologies.orient.server.distributed.ODistributedConfiguration
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
 import com.orientechnologies.orient.server.distributed.ORemoteServerController;
 import com.orientechnologies.orient.server.network.protocol.binary.HandshakeInfo;
-import com.orientechnologies.orient.server.network.protocol.binary.OAbstractCommandResultListener;
-import com.orientechnologies.orient.server.network.protocol.binary.OLiveCommandResultListener;
 import com.orientechnologies.orient.server.network.protocol.binary.ONetworkProtocolBinary;
-import com.orientechnologies.orient.server.network.protocol.binary.OSyncCommandResultListener;
 import com.orientechnologies.orient.server.plugin.OServerPlugin;
 import com.orientechnologies.orient.server.tx.OTransactionOptimisticProxy;
 import com.orientechnologies.orient.server.tx.OTransactionOptimisticServer;
@@ -571,62 +566,39 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     try {
       connection.getDatabase().swapTx(new OTransactionNoTx(connection.getDatabase(), null));
 
-      final boolean live = request.isLive();
-
-      OCommandRequestText command = request.getQuery();
-
-      final Map<Object, Object> params = command.getParameters();
-
-      connection.getData().commandDetail = command.getText();
-
-      connection.getData().command = command;
-      OAbstractCommandResultListener listener = null;
-      OLiveCommandResultListener liveListener = null;
-
-      OCommandResultListener cmdResultListener = command.getResultListener();
-
-      if (live) {
-        liveListener = new OLiveCommandResultListener(server, connection, cmdResultListener);
-        listener = new OSyncCommandResultListener(null);
-        command.setResultListener(liveListener);
-      } else {
-        listener = new OSyncCommandResultListener(null);
-      }
-
-      final long serverTimeout =
-          connection
-              .getDatabase()
-              .getConfiguration()
-              .getValueAsLong(OGlobalConfiguration.COMMAND_TIMEOUT);
-
-      if (serverTimeout > 0 && command.getTimeoutTime() > serverTimeout)
-        // FORCE THE SERVER'S TIMEOUT
-        command.setTimeout(serverTimeout, command.getTimeoutStrategy());
-
-      // REQUEST CAN'T MODIFY THE RESULT, SO IT'S CACHEABLE
-      command.setCacheableResult(true);
-
       // ASSIGNED THE PARSED FETCHPLAN
-      listener.setFetchPlan(command.getFetchPlan());
       OCommandResponse response;
       // SYNCHRONOUS
       final Object result;
       ODatabaseDocumentInternal db = connection.getDatabase();
       // TODO: handle query/command/execute
-      result =
-          db.executeLikeLegacy(
-              command.getText(),
-              params,
-              command.getLimit(),
-              command.getFetchPlan(),
-              command.getTimeoutTime());
 
-      // FETCHPLAN HAS TO BE ASSIGNED AGAIN, because it can be changed by SQL statement
-      listener.setFetchPlan(command.getFetchPlan());
-      boolean isRecordResultSet = true;
-      isRecordResultSet = command.isRecordResultSet();
-      response =
-          new OCommandResponse(result, listener, isRecordResultSet, connection.getDatabase());
+      OCommandRequest.OQuery query = request.getQuery();
+      OCommandRequest.OCommand command = request.getQueryCommand();
+      OCommandRequest.OScript script = request.getScript();
+      OCommandRequest.OLQuery liveQ = request.getLiveQuery();
+      if (query != null) {
+        connection.getData().commandDetail = query.getText();
+        result =
+            db.queryLikeLegacy(
+                query.getText(), query.getParameters(), query.getLimit(), query.getFetchPlan());
+
+      } else if (command != null) {
+        connection.getData().commandDetail = command.getText();
+        result = db.commandLikeLegacy(command.getText(), command.getParameters());
+
+      } else if (script != null) {
+        connection.getData().commandDetail = script.getText();
+        result =
+            db.executeLikeLegacy(script.getLanguage(), script.getText(), script.getParameters());
+
+      } else if (liveQ != null) {
+        result = new ArrayList<>();
+      } else {
+        result = new ArrayList<>();
+      }
+
+      response = new OCommandResponse(result, null, true, connection.getDatabase());
       return response;
     } finally {
       connection.getDatabase().swapTx(oldTx);

@@ -317,8 +317,17 @@ public interface ODatabaseDocumentInternal extends ODatabaseSession, ODatabaseIn
     throw new UnsupportedOperationException();
   }
 
+  default List<ODocument> queryLikeLegacy(
+      String text, Map<Object, Object> params, int limit, String fetchPlan) {
+    throw new UnsupportedOperationException();
+  }
+
+  default List<ODocument> commandLikeLegacy(String text, Map<Object, Object> parameters) {
+    throw new UnsupportedOperationException();
+  }
+
   default List<ODocument> executeLikeLegacy(
-      String text, Map<Object, Object> params, int limit, String fetchPlan, long timeoutTime) {
+      String language, String text, Map<Object, Object> parameters) {
     throw new UnsupportedOperationException();
   }
 }
