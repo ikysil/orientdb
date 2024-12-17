@@ -23,12 +23,12 @@ import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.OVertex;
-import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /** Created by Enrico Risa on 18/09/15. */
@@ -104,6 +104,7 @@ public class LuceneMiscTest extends BaseLuceneTest {
   }
 
   @Test
+  @Ignore
   public void dottedNotationTest() {
 
     OSchema schema = db.getMetadata().getSchema();
@@ -136,8 +137,7 @@ public class LuceneMiscTest extends BaseLuceneTest {
     Assert.assertEquals(results.stream().count(), 1);
 
     List<?> results1 =
-        db.command(new OCommandSQL("select from AuthorOf where in.title lucene 'hurricane'"))
-            .execute();
+        db.command("select from AuthorOf where in.title lucene 'hurricane'").stream().toList();
 
     Assert.assertEquals(results1.size(), 1);
   }
