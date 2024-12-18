@@ -21,7 +21,6 @@ package com.orientechnologies.orient.core.sql.operator;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import java.util.regex.Pattern;
 
@@ -45,21 +44,6 @@ public class OQueryOperatorMatches extends OQueryOperatorEqualityNotNulls {
       final Object iRight,
       OCommandContext iContext) {
     return this.matches(iLeft.toString(), (String) iRight, iContext);
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(final Object iLeft, final Object iRight) {
-    return OIndexReuseType.NO_INDEX;
-  }
-
-  @Override
-  public ORID getBeginRidRange(final Object iLeft, final Object iRight) {
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(final Object iLeft, final Object iRight) {
-    return null;
   }
 
   private boolean matches(

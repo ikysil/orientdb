@@ -24,7 +24,6 @@ import com.orientechnologies.orient.core.collate.OCollate;
 import com.orientechnologies.orient.core.db.record.OMultiValueChangeEvent;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.OCommandExecutorSQLCreateIndex;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -397,8 +396,7 @@ public class OCompositeIndexDefinition extends OAbstractIndexDefinition {
     }
     ddl.append(" ) ").append(indexType).append(' ');
 
-    if (engine != null)
-      ddl.append(OCommandExecutorSQLCreateIndex.KEYWORD_ENGINE + " " + engine).append(' ');
+    if (engine != null) ddl.append(" engine " + engine).append(' ');
 
     if (multiValueDefinitionIndex == -1) {
       boolean first = true;

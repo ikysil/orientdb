@@ -19,16 +19,11 @@
  */
 package com.orientechnologies.orient.core.sql.operator;
 
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
-import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * CONTAINSTEXT operator. Look if a text is contained in a property. This is usually used with the
@@ -70,26 +65,5 @@ public class OQueryOperatorContainsText extends OQueryTargetOperator {
 
   public boolean isIgnoreCase() {
     return ignoreCase;
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(final Object iLeft, final Object iRight) {
-    return OIndexReuseType.INDEX_METHOD;
-  }
-
-  @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
-      OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
-    return null;
-  }
-
-  @Override
-  public ORID getBeginRidRange(Object iLeft, Object iRight) {
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(Object iLeft, Object iRight) {
-    return null;
   }
 }

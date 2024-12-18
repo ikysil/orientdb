@@ -19,18 +19,10 @@
  */
 package com.orientechnologies.orient.core.sql.operator;
 
-import com.orientechnologies.common.profiler.OProfiler;
-import com.orientechnologies.common.util.ORawPair;
-import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.index.OIndex;
-import com.orientechnologies.orient.core.index.OIndexDefinition;
-import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.OIndexSearchResult;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorDivide;
 import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorMinus;
@@ -38,7 +30,6 @@ import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorMod;
 import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorMultiply;
 import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorPlus;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Query Operators. Remember to handle the operator in OQueryItemCondition.
@@ -135,48 +126,6 @@ public abstract class OQueryOperator {
       OCommandContext iContext,
       final ODocumentSerializer serializer);
 
-  /**
-   * Returns hint how index can be used to calculate result of operator execution.
-   *
-   * @param iLeft Value of left query parameter.
-   * @param iRight Value of right query parameter.
-   * @return Hint how index can be used to calculate result of operator execution.
-   */
-  public abstract OIndexReuseType getIndexReuseType(Object iLeft, Object iRight);
-
-  public OIndexSearchResult getOIndexSearchResult(
-      OClass iSchemaClass,
-      OSQLFilterCondition iCondition,
-      List<OIndexSearchResult> iIndexSearchResults,
-      OCommandContext context) {
-
-    return null;
-  }
-
-  /**
-   * Performs index query and returns index stream which presents subset of index data which
-   * corresponds to result of execution of given operator.
-   *
-   * <p>Query that should be executed can be presented like: [[property0 = keyParam0] and [property1
-   * = keyParam1] and] propertyN operator keyParamN.
-   *
-   * <p>It is supped that index which passed in as parameter is used to index properties listed
-   * above and responsibility of given method execute query using given parameters.
-   *
-   * <p>Multiple parameters are passed in to implement composite indexes support.
-   *
-   * @param iContext
-   * @param index Instance of index that will be used to calculate result of operator execution.
-   * @param keyParams Parameters of query is used to calculate query result.
-   * @param ascSortOrder Data returned by cursors should be sorted in ascending or descending order.
-   * @return Cursor instance if index can be used to evaluate result of execution of given operator
-   *     and <code>null</code> otherwise.
-   */
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
-      OCommandContext iContext, OIndex index, final List<Object> keyParams, boolean ascSortOrder) {
-    return Stream.empty();
-  }
-
   @Override
   public String toString() {
     return keyword;
@@ -195,10 +144,6 @@ public abstract class OQueryOperator {
   public String getSyntax() {
     return "<left> " + keyword + " <right>";
   }
-
-  public abstract ORID getBeginRidRange(final Object iLeft, final Object iRight);
-
-  public abstract ORID getEndRidRange(final Object iLeft, final Object iRight);
 
   public boolean isUnary() {
     return unary;
@@ -241,48 +186,8 @@ public abstract class OQueryOperator {
     return ORDER.EQUAL;
   }
 
-  protected void updateProfiler(
-      final OCommandContext iContext,
-      final OIndex index,
-      final List<Object> keyParams,
-      final OIndexDefinition indexDefinition) {
-    if (iContext.isRecordingMetrics()) iContext.updateMetric("compositeIndexUsed", +1);
-
-    final OProfiler profiler = Orient.instance().getProfiler();
-    if (profiler.isRecording()) {
-      profiler.updateCounter(
-          profiler.getDatabaseMetric(index.getDatabaseName(), "query.indexUsed"),
-          "Used index in query",
-          +1);
-
-      int params = indexDefinition.getParamCount();
-      if (params > 1) {
-        final String profiler_prefix =
-            profiler.getDatabaseMetric(index.getDatabaseName(), "query.compositeIndexUsed");
-
-        profiler.updateCounter(profiler_prefix, "Used composite index in query", +1);
-        profiler.updateCounter(
-            profiler_prefix + "." + params,
-            "Used composite index in query with " + params + " params",
-            +1);
-        profiler.updateCounter(
-            profiler_prefix + "." + params + '.' + keyParams.size(),
-            "Used composite index in query with "
-                + params
-                + " params and "
-                + keyParams.size()
-                + " keys",
-            +1);
-      }
-    }
-  }
-
   public boolean canShortCircuit(Object l) {
     return false;
-  }
-
-  public boolean canBeMerged() {
-    return true;
   }
 
   public boolean isSupportingBinaryEvaluate() {

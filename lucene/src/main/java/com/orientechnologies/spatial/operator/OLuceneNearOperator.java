@@ -15,28 +15,18 @@
  */
 package com.orientechnologies.spatial.operator;
 
-import com.orientechnologies.common.util.ORawPair;
-import com.orientechnologies.lucene.operator.OLuceneOperatorUtil;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.index.OIndex;
-import com.orientechnologies.orient.core.index.OIndexDefinition;
-import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.OIndexSearchResult;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
-import com.orientechnologies.orient.core.sql.operator.OIndexReuseType;
 import com.orientechnologies.orient.core.sql.operator.OQueryTargetOperator;
-import com.orientechnologies.spatial.collections.OSpatialCompositeKey;
 import com.orientechnologies.spatial.shape.OShapeFactory;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import org.locationtech.spatial4j.distance.DistanceUtils;
 import org.locationtech.spatial4j.shape.Circle;
 import org.locationtech.spatial4j.shape.Point;
@@ -157,63 +147,8 @@ public class OLuceneNearOperator extends OQueryTargetOperator {
   }
 
   @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
-      OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
-    OIndexDefinition definition = index.getDefinition();
-    int idxSize = definition.getFields().size();
-    int paramsSize = keyParams.size();
-
-    double distance = 0;
-    Object spatial = iContext.getVariable("spatial");
-    if (spatial != null) {
-      if (spatial instanceof Number) {
-        distance = ((Double) OType.convert(spatial, Double.class)).doubleValue();
-      } else if (spatial instanceof Map) {
-        Map<String, Object> params = (Map<String, Object>) spatial;
-
-        Object dst = params.get("maxDistance");
-        if (dst != null && dst instanceof Number) {
-          distance = ((Double) OType.convert(dst, Double.class)).doubleValue();
-        }
-      }
-    }
-
-    iContext.setVariable("$luceneIndex", true);
-
-    return index
-        .getInternal()
-        .getRids(new OSpatialCompositeKey(keyParams).setMaxDistance(distance).setContext(iContext))
-        .map((rid) -> new ORawPair<>(new OSpatialCompositeKey(keyParams), rid));
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(Object iLeft, Object iRight) {
-    return OIndexReuseType.INDEX_OPERATOR;
-  }
-
-  @Override
-  public ORID getBeginRidRange(Object iLeft, Object iRight) {
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(Object iLeft, Object iRight) {
-    return null;
-  }
-
-  @Override
   public String getSyntax() {
     return "<left> NEAR[(<begin-deep-level> [,<maximum-deep-level> [,<fields>]] )] ( <conditions>"
         + " )";
-  }
-
-  @Override
-  public OIndexSearchResult getOIndexSearchResult(
-      OClass iSchemaClass,
-      OSQLFilterCondition iCondition,
-      List<OIndexSearchResult> iIndexSearchResults,
-      OCommandContext context) {
-    return OLuceneOperatorUtil.buildOIndexSearchResult(
-        iSchemaClass, iCondition, iIndexSearchResults, context);
   }
 }

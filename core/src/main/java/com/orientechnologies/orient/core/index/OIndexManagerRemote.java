@@ -36,7 +36,6 @@ import com.orientechnologies.orient.core.metadata.OMetadataInternal;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sharding.auto.OAutoShardingIndexFactory;
-import com.orientechnologies.orient.core.sql.OCommandExecutorSQLCreateIndex;
 import com.orientechnologies.orient.core.storage.OStorageInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -416,9 +415,7 @@ public class OIndexManagerRemote implements OIndexManagerAbstract {
       createIndexDDL = iIndexDefinition.toCreateIndexDDL(iName, iType, engine);
     else createIndexDDL = new OSimpleKeyIndexDefinition().toCreateIndexDDL(iName, iType, engine);
 
-    if (metadata != null)
-      createIndexDDL +=
-          " " + OCommandExecutorSQLCreateIndex.KEYWORD_METADATA + " " + metadata.toJSON();
+    if (metadata != null) createIndexDDL += " metadata " + metadata.toJSON();
 
     acquireExclusiveLock();
     try {

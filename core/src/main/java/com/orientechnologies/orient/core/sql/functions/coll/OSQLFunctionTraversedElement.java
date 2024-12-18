@@ -20,7 +20,6 @@
 package com.orientechnologies.orient.core.sql.functions.coll;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.traverse.OTraverseRecordProcess;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -98,22 +97,7 @@ public class OSQLFunctionTraversedElement extends OSQLFunctionConfigurableAbstra
       int i = -1;
       for (Iterator it = stack.iterator(); it.hasNext(); ) {
         final Object o = it.next();
-        if (o instanceof OTraverseRecordProcess) {
-          final OIdentifiable record = ((OTraverseRecordProcess) o).getTarget();
-
-          if (iClassName == null
-              || ODocumentInternal.getImmutableSchemaClass((ODocument) record.getRecord())
-                  .isSubClassOf(iClassName)) {
-            if (i <= beginIndex) {
-              if (items == 1) return record;
-              else {
-                result.add(record);
-                if (result.size() >= items) break;
-              }
-            }
-            i--;
-          }
-        } else if (o instanceof OIdentifiable) {
+        if (o instanceof OIdentifiable) {
           final OIdentifiable record = (OIdentifiable) o;
 
           if (iClassName == null
@@ -135,22 +119,7 @@ public class OSQLFunctionTraversedElement extends OSQLFunctionConfigurableAbstra
       List listStack = stackToList(stack);
       for (int x = listStack.size() - 1; x >= 0; x--) {
         final Object o = listStack.get(x);
-        if (o instanceof OTraverseRecordProcess) {
-          final OIdentifiable record = ((OTraverseRecordProcess) o).getTarget();
-
-          if (iClassName == null
-              || ODocumentInternal.getImmutableSchemaClass((ODocument) record.getRecord())
-                  .isSubClassOf(iClassName)) {
-            if (i >= beginIndex) {
-              if (items == 1) return record;
-              else {
-                result.add(record);
-                if (result.size() >= items) break;
-              }
-            }
-            i++;
-          }
-        } else if (o instanceof OIdentifiable) {
+        if (o instanceof OIdentifiable) {
           final OIdentifiable record = (OIdentifiable) o;
 
           if (iClassName == null

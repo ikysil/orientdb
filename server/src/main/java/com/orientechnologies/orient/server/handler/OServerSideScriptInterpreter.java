@@ -22,8 +22,6 @@ package com.orientechnologies.orient.server.handler;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.core.command.OScriptInterceptor;
-import com.orientechnologies.orient.core.command.script.OCommandExecutorScript;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
 import com.orientechnologies.orient.core.exception.OSecurityException;
 import com.orientechnologies.orient.server.OServer;
@@ -78,20 +76,6 @@ public class OServerSideScriptInterpreter extends OServerPluginAbstract {
 
     if (!enabled) return;
 
-    OrientDBInternal.extract(server.getContext())
-        .getScriptManager()
-        .getCommandManager()
-        .registerExecutor(
-            OCommandScript.class,
-            OCommandExecutorScript.class,
-            iArgument -> {
-              final String language =
-                  ((OCommandScript) iArgument).getLanguage().toLowerCase(Locale.ENGLISH);
-
-              checkLanguage(language);
-              return null;
-            });
-
     interceptor =
         (db, language, script, params) -> {
           checkLanguage(language);
@@ -121,11 +105,6 @@ public class OServerSideScriptInterpreter extends OServerPluginAbstract {
           .entrySet()
           .forEach(e -> e.getValue().unregisterInterceptor(interceptor));
     }
-
-    OrientDBInternal.extract(server.getContext())
-        .getScriptManager()
-        .getCommandManager()
-        .unregisterExecutor(OCommandScript.class);
   }
 
   private void checkLanguage(final String language) {

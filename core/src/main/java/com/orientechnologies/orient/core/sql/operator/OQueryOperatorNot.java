@@ -21,7 +21,6 @@ package com.orientechnologies.orient.core.sql.operator;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
@@ -59,41 +58,6 @@ public class OQueryOperatorNot extends OQueryOperator {
 
     if (iLeft == null) return false;
     return !(Boolean) iLeft;
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(final Object iLeft, final Object iRight) {
-    return OIndexReuseType.NO_INDEX;
-  }
-
-  @Override
-  public ORID getBeginRidRange(Object iLeft, Object iRight) {
-    if (iLeft instanceof OSQLFilterCondition) {
-      final ORID beginRange = ((OSQLFilterCondition) iLeft).getBeginRidRange();
-      final ORID endRange = ((OSQLFilterCondition) iLeft).getEndRidRange();
-
-      if (beginRange == null && endRange == null) return null;
-      else if (beginRange == null) return endRange;
-      else if (endRange == null) return null;
-      else return null;
-    }
-
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(Object iLeft, Object iRight) {
-    if (iLeft instanceof OSQLFilterCondition) {
-      final ORID beginRange = ((OSQLFilterCondition) iLeft).getBeginRidRange();
-      final ORID endRange = ((OSQLFilterCondition) iLeft).getEndRidRange();
-
-      if (beginRange == null && endRange == null) return null;
-      else if (beginRange == null) return null;
-      else if (endRange == null) return beginRange;
-      else return null;
-    }
-
-    return null;
   }
 
   public OQueryOperator getNext() {

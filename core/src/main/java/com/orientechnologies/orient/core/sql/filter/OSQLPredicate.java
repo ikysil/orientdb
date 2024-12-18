@@ -28,7 +28,6 @@ import com.orientechnologies.orient.core.exception.OQueryParsingException;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
-import com.orientechnologies.orient.core.sql.OCommandExecutorSQLSelect;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.OSQLHelper;
@@ -216,10 +215,10 @@ public class OSQLPredicate extends OBaseParser implements OCommandPredicate {
 
   protected boolean checkForEnd(final String iWord) {
     if (iWord != null
-        && (iWord.equals(OCommandExecutorSQLSelect.KEYWORD_ORDER)
-            || iWord.equals(OCommandExecutorSQLSelect.KEYWORD_LIMIT)
-            || iWord.equals(OCommandExecutorSQLSelect.KEYWORD_SKIP)
-            || iWord.equals(OCommandExecutorSQLSelect.KEYWORD_OFFSET))) {
+        && (iWord.equals("order")
+            || iWord.equals("limit")
+            || iWord.equals("skip")
+            || iWord.equals("offset"))) {
       parserMoveCurrentPosition(iWord.length() * -1);
       return true;
     }

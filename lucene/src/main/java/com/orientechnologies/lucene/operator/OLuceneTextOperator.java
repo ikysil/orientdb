@@ -18,23 +18,17 @@ package com.orientechnologies.lucene.operator;
 
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
-import com.orientechnologies.common.util.ORawPair;
-import com.orientechnologies.lucene.collections.OLuceneCompositeKey;
 import com.orientechnologies.lucene.index.OLuceneFullTextIndex;
-import com.orientechnologies.lucene.query.OLuceneKeyAndMetadata;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.OIndexSearchResult;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
-import com.orientechnologies.orient.core.sql.operator.OIndexReuseType;
 import com.orientechnologies.orient.core.sql.operator.OQueryTargetOperator;
 import com.orientechnologies.orient.core.sql.parser.ParseException;
 import java.io.IOException;
@@ -44,7 +38,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.memory.MemoryIndex;
 
@@ -62,57 +55,6 @@ public class OLuceneTextOperator extends OQueryTargetOperator {
 
   protected static ODatabaseDocumentInternal getDatabase() {
     return ODatabaseRecordThreadLocal.instance().get();
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(Object iLeft, Object iRight) {
-    return OIndexReuseType.INDEX_OPERATOR;
-  }
-
-  @Override
-  public OIndexSearchResult getOIndexSearchResult(
-      OClass iSchemaClass,
-      OSQLFilterCondition iCondition,
-      List<OIndexSearchResult> iIndexSearchResults,
-      OCommandContext context) {
-
-    // FIXME questo non trova l'indice se l'ordine e' errato
-    return OLuceneOperatorUtil.buildOIndexSearchResult(
-        iSchemaClass, iCondition, iIndexSearchResults, context);
-  }
-
-  @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
-      OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
-    if (!index.getType().toLowerCase().contains("fulltext")) {
-      return null;
-    }
-    if (index.getAlgorithm() == null || !index.getAlgorithm().toLowerCase().contains("lucene")) {
-      return null;
-    }
-
-    //noinspection resource
-    return index
-        .getInternal()
-        .getRids(
-            new OLuceneKeyAndMetadata(
-                new OLuceneCompositeKey(keyParams).setContext(iContext), new ODocument()))
-        .map((rid) -> new ORawPair<>(new OLuceneCompositeKey(keyParams), rid));
-  }
-
-  @Override
-  public ORID getBeginRidRange(Object iLeft, Object iRight) {
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(Object iLeft, Object iRight) {
-    return null;
-  }
-
-  @Override
-  public boolean canBeMerged() {
-    return false;
   }
 
   @Override

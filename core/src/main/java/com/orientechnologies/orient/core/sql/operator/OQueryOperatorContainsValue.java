@@ -20,19 +20,11 @@
 package com.orientechnologies.orient.core.sql.operator;
 
 import com.orientechnologies.common.exception.OException;
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ORecordElement;
 import com.orientechnologies.orient.core.exception.ODatabaseException;
 import com.orientechnologies.orient.core.exception.ORecordNotFoundException;
-import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.index.OCompositeIndexDefinition;
-import com.orientechnologies.orient.core.index.OIndex;
-import com.orientechnologies.orient.core.index.OIndexDefinition;
-import com.orientechnologies.orient.core.index.OIndexDefinitionMultiValue;
-import com.orientechnologies.orient.core.index.OIndexInternal;
-import com.orientechnologies.orient.core.index.OPropertyMapIndexDefinition;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.ORecord;
@@ -40,9 +32,7 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
  * CONTAINS KEY operator.
@@ -53,75 +43,6 @@ public class OQueryOperatorContainsValue extends OQueryOperatorEqualityNotNulls 
 
   public OQueryOperatorContainsValue() {
     super("CONTAINSVALUE", 5, false);
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(final Object iLeft, final Object iRight) {
-    if (!(iRight instanceof OSQLFilterCondition) && !(iLeft instanceof OSQLFilterCondition))
-      return OIndexReuseType.INDEX_METHOD;
-
-    return OIndexReuseType.NO_INDEX;
-  }
-
-  @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
-      OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
-    final OIndexDefinition indexDefinition = index.getDefinition();
-
-    final OIndexInternal internalIndex = index.getInternal();
-    Stream<ORawPair<Object, ORID>> stream;
-    if (!internalIndex.canBeUsedInEqualityOperators()) return null;
-
-    if (indexDefinition.getParamCount() == 1) {
-      if (!((indexDefinition instanceof OPropertyMapIndexDefinition)
-          && ((OPropertyMapIndexDefinition) indexDefinition).getIndexBy()
-              == OPropertyMapIndexDefinition.INDEX_BY.VALUE)) return null;
-
-      final Object key =
-          ((OIndexDefinitionMultiValue) indexDefinition).createSingleValue(keyParams.get(0));
-
-      if (key == null) return null;
-
-      stream = index.getInternal().getRids(key).map((rid) -> new ORawPair<>(key, rid));
-    } else {
-      // in case of composite keys several items can be returned in case of we perform search
-      // using part of composite key stored in index.
-      final OCompositeIndexDefinition compositeIndexDefinition =
-          (OCompositeIndexDefinition) indexDefinition;
-
-      if (!((compositeIndexDefinition.getMultiValueDefinition()
-              instanceof OPropertyMapIndexDefinition)
-          && ((OPropertyMapIndexDefinition) compositeIndexDefinition.getMultiValueDefinition())
-                  .getIndexBy()
-              == OPropertyMapIndexDefinition.INDEX_BY.VALUE)) return null;
-
-      final Object keyOne = compositeIndexDefinition.createSingleValue(keyParams);
-
-      if (keyOne == null) return null;
-
-      if (internalIndex.hasRangeQuerySupport()) {
-        final Object keyTwo = compositeIndexDefinition.createSingleValue(keyParams);
-
-        stream = index.getInternal().streamEntriesBetween(keyOne, true, keyTwo, true, ascSortOrder);
-      } else {
-        if (indexDefinition.getParamCount() == keyParams.size()) {
-          stream = index.getInternal().getRids(keyOne).map((rid) -> new ORawPair<>(keyOne, rid));
-        } else return null;
-      }
-    }
-
-    updateProfiler(iContext, index, keyParams, indexDefinition);
-    return stream;
-  }
-
-  @Override
-  public ORID getBeginRidRange(Object iLeft, Object iRight) {
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(Object iLeft, Object iRight) {
-    return null;
   }
 
   @Override

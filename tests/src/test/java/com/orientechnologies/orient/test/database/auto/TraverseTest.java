@@ -16,17 +16,11 @@
 
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.OCommandPredicate;
-import com.orientechnologies.orient.core.command.traverse.OTraverse;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.OVertex;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,12 +124,6 @@ public class TraverseTest extends DocumentDBBaseTest {
   public void traverseSQLAllFromActorNoWhere() {
     List<OResult> result1 =
         database.command("traverse * from " + tomCruise.getIdentity()).stream().toList();
-    Assert.assertEquals(result1.size(), totalElements);
-  }
-
-  public void traverseAPIAllFromActorNoWhere() {
-    List<OIdentifiable> result1 =
-        new OTraverse().fields("*").target(tomCruise.getIdentity()).execute();
     Assert.assertEquals(result1.size(), totalElements);
   }
 
@@ -277,37 +265,6 @@ public class TraverseTest extends DocumentDBBaseTest {
             .stream()
             .toList();
     Assert.assertEquals(result1.size(), totalElements);
-  }
-
-  @Test
-  public void traverseAPIIterating() {
-    int cycles = 0;
-    for (OIdentifiable id :
-        new OTraverse()
-            .target(database.browseClass("Movie").iterator())
-            .predicate(
-                new OCommandPredicate() {
-                  @Override
-                  public Object evaluate(
-                      OIdentifiable iRecord, ODocument iCurrentResult, OCommandContext iContext) {
-                    return ((Integer) iContext.getVariable("depth")) <= 2;
-                  }
-                })) {
-      cycles++;
-    }
-    Assert.assertTrue(cycles > 0);
-  }
-
-  @Test
-  public void traverseAPIandSQLIterating() {
-    int cycles = 0;
-    for (OIdentifiable id :
-        new OTraverse()
-            .target(database.browseClass("Movie").iterator())
-            .predicate(new OSQLPredicate("$depth <= 2"))) {
-      cycles++;
-    }
-    Assert.assertTrue(cycles > 0);
   }
 
   @Test

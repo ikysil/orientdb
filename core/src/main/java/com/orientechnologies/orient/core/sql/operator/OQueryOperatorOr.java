@@ -21,7 +21,6 @@ package com.orientechnologies.orient.core.sql.operator;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
@@ -48,46 +47,6 @@ public class OQueryOperatorOr extends OQueryOperator {
       final ODocumentSerializer serializer) {
     if (iLeft == null) return false;
     return (Boolean) iLeft || (Boolean) iRight;
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(final Object iLeft, final Object iRight) {
-    if (iLeft == null || iRight == null) return OIndexReuseType.NO_INDEX;
-    return OIndexReuseType.INDEX_UNION;
-  }
-
-  @Override
-  public ORID getBeginRidRange(final Object iLeft, final Object iRight) {
-    final ORID leftRange;
-    final ORID rightRange;
-
-    if (iLeft instanceof OSQLFilterCondition)
-      leftRange = ((OSQLFilterCondition) iLeft).getBeginRidRange();
-    else leftRange = null;
-
-    if (iRight instanceof OSQLFilterCondition)
-      rightRange = ((OSQLFilterCondition) iRight).getBeginRidRange();
-    else rightRange = null;
-
-    if (leftRange == null || rightRange == null) return null;
-    else return leftRange.compareTo(rightRange) <= 0 ? leftRange : rightRange;
-  }
-
-  @Override
-  public ORID getEndRidRange(final Object iLeft, final Object iRight) {
-    final ORID leftRange;
-    final ORID rightRange;
-
-    if (iLeft instanceof OSQLFilterCondition)
-      leftRange = ((OSQLFilterCondition) iLeft).getEndRidRange();
-    else leftRange = null;
-
-    if (iRight instanceof OSQLFilterCondition)
-      rightRange = ((OSQLFilterCondition) iRight).getEndRidRange();
-    else rightRange = null;
-
-    if (leftRange == null || rightRange == null) return null;
-    else return leftRange.compareTo(rightRange) >= 0 ? leftRange : rightRange;
   }
 
   @Override

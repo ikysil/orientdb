@@ -216,30 +216,6 @@ public class OSQLFilterCondition {
     return null;
   }
 
-  public ORID getBeginRidRange() {
-    if (operator == null) {
-      if (left instanceof OSQLFilterCondition) {
-        return ((OSQLFilterCondition) left).getBeginRidRange();
-      } else {
-        return null;
-      }
-    }
-
-    return operator.getBeginRidRange(left, right);
-  }
-
-  public ORID getEndRidRange() {
-    if (operator == null) {
-      if (left instanceof OSQLFilterCondition) {
-        return ((OSQLFilterCondition) left).getEndRidRange();
-      } else {
-        return null;
-      }
-    }
-
-    return operator.getEndRidRange(left, right);
-  }
-
   public List<String> getInvolvedFields(final List<String> list) {
     extractInvolvedFields(getLeft(), list);
     extractInvolvedFields(getRight(), list);

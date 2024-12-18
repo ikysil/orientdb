@@ -113,10 +113,6 @@ public class OSQLFilter extends OSQLPredicate implements OCommandPredicate {
     return rootCondition.evaluate(iRecord, iCurrentResult, iContext);
   }
 
-  public OSQLFilterCondition getRootCondition() {
-    return rootCondition;
-  }
-
   @Override
   public String toString() {
     if (rootCondition != null) {

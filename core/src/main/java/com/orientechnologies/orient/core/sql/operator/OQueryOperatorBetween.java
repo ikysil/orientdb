@@ -20,24 +20,11 @@
 package com.orientechnologies.orient.core.sql.operator;
 
 import com.orientechnologies.common.collection.OMultiValue;
-import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.index.OCompositeIndexDefinition;
-import com.orientechnologies.orient.core.index.OIndex;
-import com.orientechnologies.orient.core.index.OIndexDefinition;
-import com.orientechnologies.orient.core.index.OIndexInternal;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
-import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * BETWEEN operator.
@@ -122,119 +109,5 @@ public class OQueryOperatorBetween extends OQueryOperatorEqualityNotNulls {
   @Override
   public String getSyntax() {
     return "<left> " + keyword + " <minRange> AND <maxRange>";
-  }
-
-  @Override
-  public OIndexReuseType getIndexReuseType(final Object iLeft, final Object iRight) {
-    return OIndexReuseType.INDEX_METHOD;
-  }
-
-  @Override
-  public Stream<ORawPair<Object, ORID>> executeIndexQuery(
-      OCommandContext iContext, OIndex index, List<Object> keyParams, boolean ascSortOrder) {
-    final OIndexDefinition indexDefinition = index.getDefinition();
-
-    Stream<ORawPair<Object, ORID>> stream;
-    final OIndexInternal internalIndex = index.getInternal();
-    if (!internalIndex.canBeUsedInEqualityOperators() || !internalIndex.hasRangeQuerySupport())
-      return null;
-
-    if (indexDefinition.getParamCount() == 1) {
-      final Object[] betweenKeys = (Object[]) keyParams.get(0);
-
-      final Object keyOne =
-          indexDefinition.createValue(
-              Collections.singletonList(OSQLHelper.getValue(betweenKeys[0])));
-      final Object keyTwo =
-          indexDefinition.createValue(
-              Collections.singletonList(OSQLHelper.getValue(betweenKeys[2])));
-
-      if (keyOne == null || keyTwo == null) return null;
-
-      stream =
-          index
-              .getInternal()
-              .streamEntriesBetween(keyOne, leftInclusive, keyTwo, rightInclusive, ascSortOrder);
-    } else {
-      final OCompositeIndexDefinition compositeIndexDefinition =
-          (OCompositeIndexDefinition) indexDefinition;
-
-      final Object[] betweenKeys = (Object[]) keyParams.get(keyParams.size() - 1);
-
-      final Object betweenKeyOne = OSQLHelper.getValue(betweenKeys[0]);
-
-      if (betweenKeyOne == null) return null;
-
-      final Object betweenKeyTwo = OSQLHelper.getValue(betweenKeys[2]);
-
-      if (betweenKeyTwo == null) return null;
-
-      final List<Object> betweenKeyOneParams = new ArrayList<>(keyParams.size());
-      betweenKeyOneParams.addAll(keyParams.subList(0, keyParams.size() - 1));
-      betweenKeyOneParams.add(betweenKeyOne);
-
-      final List<Object> betweenKeyTwoParams = new ArrayList<>(keyParams.size());
-      betweenKeyTwoParams.addAll(keyParams.subList(0, keyParams.size() - 1));
-      betweenKeyTwoParams.add(betweenKeyTwo);
-
-      final Object keyOne = compositeIndexDefinition.createSingleValue(betweenKeyOneParams);
-
-      if (keyOne == null) return null;
-
-      final Object keyTwo = compositeIndexDefinition.createSingleValue(betweenKeyTwoParams);
-
-      if (keyTwo == null) return null;
-
-      stream =
-          index
-              .getInternal()
-              .streamEntriesBetween(keyOne, leftInclusive, keyTwo, rightInclusive, ascSortOrder);
-    }
-
-    updateProfiler(iContext, index, keyParams, indexDefinition);
-    return stream;
-  }
-
-  @Override
-  public ORID getBeginRidRange(final Object iLeft, final Object iRight) {
-    validate(iRight);
-
-    if (iLeft instanceof OSQLFilterItemField
-        && ODocumentHelper.ATTRIBUTE_RID.equals(((OSQLFilterItemField) iLeft).getRoot())) {
-      final Iterator<?> valueIterator = OMultiValue.getMultiValueIterator(iRight, false);
-
-      final Object right1 = valueIterator.next();
-      if (right1 != null) return (ORID) right1;
-
-      valueIterator.next();
-
-      return (ORID) valueIterator.next();
-    }
-
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(final Object iLeft, final Object iRight) {
-    validate(iRight);
-
-    validate(iRight);
-
-    if (iLeft instanceof OSQLFilterItemField
-        && ODocumentHelper.ATTRIBUTE_RID.equals(((OSQLFilterItemField) iLeft).getRoot())) {
-      final Iterator<?> valueIterator = OMultiValue.getMultiValueIterator(iRight, false);
-
-      final Object right1 = valueIterator.next();
-
-      valueIterator.next();
-
-      final Object right2 = valueIterator.next();
-
-      if (right2 == null) return (ORID) right1;
-
-      return (ORID) right2;
-    }
-
-    return null;
   }
 }

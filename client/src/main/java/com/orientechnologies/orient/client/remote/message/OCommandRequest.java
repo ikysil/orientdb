@@ -72,7 +72,8 @@ public final class OCommandRequest implements OBinaryRequest<OCommandResponse> {
   private static final byte[] SQL_COMMAND_CLASS_ASBYTES = SQL_COMMAND_CLASS.getBytes();
   private static final String QUERY_COMMAND_CLASS = "q";
   private static final byte[] QUERY_COMMAND_CLASS_ASBYTES = QUERY_COMMAND_CLASS.getBytes();
-  private static final String LIVE_QUERY_COMMAND_CLASS = OLiveQuery.class.getName();
+  private static final String LIVE_QUERY_COMMAND_CLASS =
+      "com.orientechnologies.orient.core.sql.query.OLiveQuery";
 
   public class OQuery {
 

@@ -175,8 +175,6 @@ public class OServerCommandPostCommand extends OServerCommandAuthenticatedDbAbst
       if (fp != null) {
         return fp.toString().substring("FETCHPLAN ".length());
       }
-    } else if (statement instanceof OMatchStatement) {
-      return ((OMatchStatement) statement).getFetchPlan();
     }
     return null;
   }

@@ -19,26 +19,19 @@
  */
 package com.orientechnologies.orient.core.sql;
 
-import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.parser.OBaseParser;
-import com.orientechnologies.common.util.OPair;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.metadata.schema.OImmutableClass;
-import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
-import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerCSVAbstract;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItem;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemAbstract;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemParameter;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
@@ -63,8 +56,6 @@ public class OSQLHelper {
   public static final String VALUE_NOT_PARSED = "_NOT_PARSED_";
   public static final String NOT_NULL = "_NOT_NULL_";
   public static final String DEFINED = "_DEFINED_";
-
-  private static ClassLoader orientClassLoader = OSQLFilterItemAbstract.class.getClassLoader();
 
   public static Object parseDefaultValue(ODocument iRecord, final String iWord) {
     return OSQLEngine.eval(iWord, iRecord, new OBasicCommandContext());
@@ -284,128 +275,5 @@ public class OSQLHelper {
     }
 
     return iObject;
-  }
-
-  public static Object resolveFieldValue(
-      final ODocument iDocument,
-      final String iFieldName,
-      final Object iFieldValue,
-      final OCommandParameters iArguments,
-      final OCommandContext iContext) {
-    if (iFieldValue instanceof OSQLFilterItemField) {
-      final OSQLFilterItemField f = (OSQLFilterItemField) iFieldValue;
-      if (f.getRoot().equals("?"))
-        // POSITIONAL PARAMETER
-        return iArguments.getNext();
-      else if (f.getRoot().startsWith(":"))
-        // NAMED PARAMETER
-        return iArguments.getByName(f.getRoot().substring(1));
-    }
-
-    if (iFieldValue instanceof ODocument && !((ODocument) iFieldValue).getIdentity().isValid())
-      // EMBEDDED DOCUMENT
-      ODocumentInternal.addOwner((ODocument) iFieldValue, iDocument);
-
-    // can't use existing getValue with iContext
-    if (iFieldValue == null) return null;
-    if (iFieldValue instanceof OSQLFilterItem)
-      return ((OSQLFilterItem) iFieldValue).getValue(iDocument, null, iContext);
-
-    return iFieldValue;
-  }
-
-  public static ODocument bindParameters(
-      final ODocument iDocument,
-      final Map<String, Object> iFields,
-      final OCommandParameters iArguments,
-      final OCommandContext iContext) {
-    if (iFields == null) return null;
-
-    final List<OPair<String, Object>> fields = new ArrayList<OPair<String, Object>>(iFields.size());
-
-    for (Map.Entry<String, Object> entry : iFields.entrySet())
-      fields.add(new OPair<String, Object>(entry.getKey(), entry.getValue()));
-
-    return bindParameters(iDocument, fields, iArguments, iContext);
-  }
-
-  public static ODocument bindParameters(
-      final ODocument iDocument,
-      final List<OPair<String, Object>> iFields,
-      final OCommandParameters iArguments,
-      final OCommandContext iContext) {
-    if (iFields == null) return null;
-
-    // BIND VALUES
-    for (OPair<String, Object> field : iFields) {
-      final String fieldName = field.getKey();
-      Object fieldValue = field.getValue();
-
-      if (fieldValue != null) {
-        if (fieldValue instanceof OCommandSQL) {
-          final OCommandSQL cmd = (OCommandSQL) fieldValue;
-          cmd.getContext().setParent(iContext);
-          fieldValue = null;
-
-          // CHECK FOR CONVERSIONS
-          OImmutableClass immutableClass = ODocumentInternal.getImmutableSchemaClass(iDocument);
-          if (immutableClass != null) {
-            final OProperty prop = immutableClass.getProperty(fieldName);
-            if (prop != null) {
-              if (prop.getType() == OType.LINK) {
-                if (OMultiValue.isMultiValue(fieldValue)) {
-                  final int size = OMultiValue.getSize(fieldValue);
-                  if (size == 1)
-                    // GET THE FIRST ITEM AS UNIQUE LINK
-                    fieldValue = OMultiValue.getFirstValue(fieldValue);
-                  else if (size == 0)
-                    // NO ITEMS, SET IT AS NULL
-                    fieldValue = null;
-                }
-              }
-            } else if (immutableClass.isEdgeType()
-                && ("out".equals(fieldName) || "in".equals(fieldName))
-                && (fieldValue instanceof List)) {
-              List lst = (List) fieldValue;
-              if (lst.size() == 1) {
-                fieldValue = lst.get(0);
-              }
-            }
-          }
-
-          if (OMultiValue.isMultiValue(fieldValue)) {
-            final List<Object> tempColl = new ArrayList<Object>(OMultiValue.getSize(fieldValue));
-
-            String singleFieldName = null;
-            for (Object o : OMultiValue.getMultiValueIterable(fieldValue, false)) {
-              if (o instanceof OIdentifiable && !((OIdentifiable) o).getIdentity().isPersistent()) {
-                // TEMPORARY / EMBEDDED
-                final ORecord rec = ((OIdentifiable) o).getRecord();
-                if (rec != null && rec instanceof ODocument) {
-                  // CHECK FOR ONE FIELD ONLY
-                  final ODocument doc = (ODocument) rec;
-                  if (doc.fields() == 1) {
-                    singleFieldName = doc.fieldNames()[0];
-                    tempColl.add(doc.field(singleFieldName));
-                  } else {
-                    // TRANSFORM IT IN EMBEDDED
-                    doc.getIdentity().reset();
-                    ODocumentInternal.addOwner(doc, iDocument);
-                    ODocumentInternal.addOwner(doc, iDocument);
-                    tempColl.add(doc);
-                  }
-                }
-              } else tempColl.add(o);
-            }
-
-            fieldValue = tempColl;
-          }
-        }
-      }
-
-      iDocument.field(
-          fieldName, resolveFieldValue(iDocument, fieldName, fieldValue, iArguments, iContext));
-    }
-    return iDocument;
   }
 }

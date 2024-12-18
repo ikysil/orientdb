@@ -26,7 +26,6 @@ import com.orientechnologies.orient.core.db.ODatabase.ATTRIBUTES;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.OCommandExecutorSQLSelect;
 import java.text.Collator;
 import java.util.Comparator;
 import java.util.List;
@@ -104,7 +103,7 @@ public class ODocumentComparator implements Comparator<OIdentifiable> {
   }
 
   private int factor(final int partialResult, final String iOrdering) {
-    if (iOrdering.equals(OCommandExecutorSQLSelect.KEYWORD_DESC))
+    if (iOrdering.equals("desc"))
       // INVERT THE ORDERING
       return partialResult * -1;
 

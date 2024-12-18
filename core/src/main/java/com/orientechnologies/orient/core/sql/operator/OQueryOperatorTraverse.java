@@ -204,23 +204,8 @@ public class OQueryOperatorTraverse extends OQueryOperatorEqualityNotNulls {
   }
 
   @Override
-  public OIndexReuseType getIndexReuseType(final Object iLeft, final Object iRight) {
-    return OIndexReuseType.NO_INDEX;
-  }
-
-  @Override
   public String toString() {
     return String.format(
         "%s(%d,%d,%s)", keyword, startDeepLevel, endDeepLevel, Arrays.toString(cfgFields));
-  }
-
-  @Override
-  public ORID getBeginRidRange(Object iLeft, Object iRight) {
-    return null;
-  }
-
-  @Override
-  public ORID getEndRidRange(Object iLeft, Object iRight) {
-    return null;
   }
 }
