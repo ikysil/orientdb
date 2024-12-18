@@ -388,7 +388,8 @@ public class OSelectStatementTest {
 
   @Test
   public void testSelectFromLetVariable_9689() {
-    checkRightSyntax("select $c as one let $a = (select 1 as a), $b = first($a), $c = (select b as c from $b)");
+    checkRightSyntax(
+        "select $c as one let $a = (select 1 as a), $b = first($a), $c = (select b as c from $b)");
   }
 
   @Test
