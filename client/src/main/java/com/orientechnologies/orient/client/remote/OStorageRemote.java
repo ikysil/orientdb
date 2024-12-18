@@ -45,8 +45,6 @@ import com.orientechnologies.orient.client.remote.message.OCeilingPhysicalPositi
 import com.orientechnologies.orient.client.remote.message.OCleanOutRecordRequest;
 import com.orientechnologies.orient.client.remote.message.OCleanOutRecordResponse;
 import com.orientechnologies.orient.client.remote.message.OCloseQueryRequest;
-import com.orientechnologies.orient.client.remote.message.OCommandRequest;
-import com.orientechnologies.orient.client.remote.message.OCommandResponse;
 import com.orientechnologies.orient.client.remote.message.OCommit37Response;
 import com.orientechnologies.orient.client.remote.message.OCommit38Request;
 import com.orientechnologies.orient.client.remote.message.OCountRecordsRequest;
@@ -122,8 +120,6 @@ import com.orientechnologies.orient.client.remote.message.OUnsubscribeRequest;
 import com.orientechnologies.orient.client.remote.message.OUpdateRecordRequest;
 import com.orientechnologies.orient.client.remote.message.OUpdateRecordResponse;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
-import com.orientechnologies.orient.core.command.OCommandRequestAsynch;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.config.OStorageClusterConfiguration;
@@ -154,7 +150,6 @@ import com.orientechnologies.orient.core.security.OSecurityManager;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkV37Client;
-import com.orientechnologies.orient.core.sql.query.OLiveQuery;
 import com.orientechnologies.orient.core.storage.OCluster;
 import com.orientechnologies.orient.core.storage.OPhysicalPosition;
 import com.orientechnologies.orient.core.storage.ORawBuffer;
@@ -1077,21 +1072,6 @@ public class OStorageRemote implements ORemotePushHandler, OStorage {
         networkOperation(
             request, "Error on read record count in clusters: " + Arrays.toString(iClusterIds));
     return response.getCount();
-  }
-
-  /** Execute the command remotely and get the results back. */
-  public Object command(final OCommandRequestText iCommand) {
-
-    final boolean live = iCommand instanceof OLiveQuery;
-    final ODatabaseDocumentInternal database = ODatabaseRecordThreadLocal.instance().get();
-    final boolean asynch =
-        iCommand instanceof OCommandRequestAsynch
-            && ((OCommandRequestAsynch) iCommand).isAsynchronous();
-
-    OCommandRequest request = new OCommandRequest(database, asynch, iCommand, live);
-    OCommandResponse response =
-        networkOperation(request, "Error on executing command: " + iCommand);
-    return response.getResult();
   }
 
   public void stickToSession() {

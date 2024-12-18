@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.command.script;
 
-import com.orientechnologies.common.util.OCommonConst;
 import com.orientechnologies.orient.core.db.ODatabase;
 import com.orientechnologies.orient.core.db.ODatabase.ATTRIBUTES;
 import com.orientechnologies.orient.core.db.ODatabase.OPERATION_MODE;
@@ -40,12 +39,10 @@ import com.orientechnologies.orient.core.metadata.security.OUser;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OSQLQuery;
 import com.orientechnologies.orient.core.storage.ORecordCallback;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -76,12 +73,6 @@ public class OScriptDocumentDatabaseWrapper {
     try (OResultSet rs = database.query(iText, iParameters)) {
       return rs.stream().map(x -> x.toElement()).toArray(size -> new OIdentifiable[size]);
     }
-  }
-
-  public OIdentifiable[] query(final OSQLQuery iQuery, final Object... iParameters) {
-    final List<OIdentifiable> res = database.query(iQuery, convertParameters(iParameters));
-    if (res == null) return OCommonConst.EMPTY_IDENTIFIABLE_ARRAY;
-    return res.toArray(new OIdentifiable[res.size()]);
   }
 
   /** To maintain the compatibility with JS API. */

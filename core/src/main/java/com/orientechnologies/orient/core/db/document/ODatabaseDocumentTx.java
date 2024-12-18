@@ -6,7 +6,6 @@ import com.orientechnologies.common.concur.lock.OLockException;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.cache.OLocalRecordCache;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
-import com.orientechnologies.orient.core.command.OCommandRequest;
 import com.orientechnologies.orient.core.command.script.OCommandScriptException;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
@@ -43,7 +42,6 @@ import com.orientechnologies.orient.core.metadata.security.ORule;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
 import com.orientechnologies.orient.core.metadata.security.OToken;
 import com.orientechnologies.orient.core.metadata.sequence.OSequenceAction;
-import com.orientechnologies.orient.core.query.OQuery;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.ORecord;
@@ -797,18 +795,6 @@ public class ODatabaseDocumentTx implements ODatabaseDocumentInternal {
     checkOpenness();
     internal.rollback(force);
     return this;
-  }
-
-  @Override
-  public <RET extends List<?>> RET query(OQuery<?> iCommand, Object... iArgs) {
-    checkOpenness();
-    return internal.query(iCommand, iArgs);
-  }
-
-  @Override
-  public <RET extends OCommandRequest> RET command(OCommandRequest iCommand) {
-    checkOpenness();
-    return internal.command(iCommand);
   }
 
   @Override

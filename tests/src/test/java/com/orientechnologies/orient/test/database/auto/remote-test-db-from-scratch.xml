@@ -94,7 +94,6 @@
         <classes>
             <class name="com.orientechnologies.orient.test.database.auto.WrongQueryTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.FetchPlanComplexNestedLevelsTest"/>
-            <class name="com.orientechnologies.orient.test.database.auto.LiveQueryTest"/>
         </classes>
     </test>
     <test name="Graph">

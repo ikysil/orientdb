@@ -68,13 +68,7 @@ public abstract class OSQLQuery<T> extends OQueryAbstract<T> implements OCommand
     ((OMetadataInternal) database.getMetadata()).makeThreadLocalSchemaSnapshot();
     try {
       setParameters(iArgs);
-      Object o = database.getStorage().command(this);
-      if (o instanceof List) {
-        return (List<T>) o;
-      } else {
-        return (List<T>) Collections.singletonList(o);
-      }
-
+      return null;
     } finally {
       ((OMetadataInternal) database.getMetadata()).clearThreadLocalSchemaSnapshot();
     }

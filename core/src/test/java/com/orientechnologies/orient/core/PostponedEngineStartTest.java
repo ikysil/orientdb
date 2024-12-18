@@ -21,7 +21,6 @@ package com.orientechnologies.orient.core;
 
 import com.orientechnologies.common.util.OCallable;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.conflict.ORecordConflictStrategy;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
@@ -483,11 +482,6 @@ public class PostponedEngineStartTest {
 
         @Override
         public void synch() {}
-
-        @Override
-        public Object command(OCommandRequestText iCommand) {
-          return null;
-        }
 
         @Override
         public long[] getClusterDataRange(int currentClusterId) {

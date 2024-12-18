@@ -37,9 +37,7 @@ import com.orientechnologies.orient.core.record.ODirection;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.OVertex;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilter;
-import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -173,17 +171,6 @@ public class OCommandExecutorSQLDeleteEdge extends OCommandExecutorSQLSetAware
             where = "";
           }
         else where = " WHERE " + where;
-
-        if (fromExpr == null && toExpr == null && rids == null)
-          if (clazz == null)
-            // DELETE ALL THE EDGES
-            query = curDb.command(new OSQLAsynchQuery<ODocument>("select from E" + where, this));
-          else
-            // DELETE EDGES OF CLASS X
-            query =
-                curDb.command(
-                    new OSQLAsynchQuery<ODocument>(
-                        "select from `" + clazz.getName() + "` " + where, this));
 
         return this;
       } finally {

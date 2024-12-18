@@ -206,12 +206,7 @@ public abstract class OCommandExecutorSQLResultsetAbstract extends OCommandExecu
       else if (parsedTarget.getTargetRecords() != null) {
         if (!lazyIteration && parsedTarget.getTargetQuery() != null) {
           // EXECUTE THE QUERY TO ALLOW DISTRIB EXECUTION
-          target =
-              ((Iterable<? extends OIdentifiable>)
-                      getDatabase()
-                          .command(new OCommandSQL(parsedTarget.getTargetQuery()))
-                          .execute(iArgs))
-                  .iterator();
+          target = null;
         } else if (parsedTarget.getTargetRecords() instanceof OIterableRecordSource) {
           target = ((OIterableRecordSource) parsedTarget.getTargetRecords()).iterator(iArgs);
         } else {
@@ -433,7 +428,7 @@ public abstract class OCommandExecutorSQLResultsetAbstract extends OCommandExecu
           subQuery.getContext().setParent(context);
           subQuery.getContext().setVariable("parentQuery", this);
           subQuery.getContext().setVariable("current", iRecord);
-          varValue = ODatabaseRecordThreadLocal.instance().get().query(subQuery);
+          varValue = null;
           if (varValue instanceof OLegacyResultSet) {
             varValue = ((OLegacyResultSet) varValue).copy();
           }

@@ -25,7 +25,6 @@ import com.orientechnologies.common.parser.OBaseParser;
 import com.orientechnologies.common.util.OPair;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.metadata.schema.OImmutableClass;
@@ -346,7 +345,7 @@ public class OSQLHelper {
         if (fieldValue instanceof OCommandSQL) {
           final OCommandSQL cmd = (OCommandSQL) fieldValue;
           cmd.getContext().setParent(iContext);
-          fieldValue = ODatabaseRecordThreadLocal.instance().get().command(cmd).execute();
+          fieldValue = null;
 
           // CHECK FOR CONVERSIONS
           OImmutableClass immutableClass = ODocumentInternal.getImmutableSchemaClass(iDocument);

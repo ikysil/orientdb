@@ -23,7 +23,6 @@ import com.orientechnologies.common.concur.ONeedRetryException;
 import com.orientechnologies.common.concur.lock.OLockException;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.cache.OLocalRecordCache;
-import com.orientechnologies.orient.core.command.OCommandRequest;
 import com.orientechnologies.orient.core.command.script.OCommandScriptException;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
@@ -39,7 +38,6 @@ import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
-import com.orientechnologies.orient.core.query.OQuery;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.storage.ORecordCallback;
@@ -49,7 +47,6 @@ import com.orientechnologies.orient.core.util.OBackupable;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -808,32 +805,6 @@ public interface ODatabase<T> extends OBackupable, Closeable {
   ODatabase<T> rollback() throws OTransactionException;
 
   ODatabase<T> rollback(boolean force) throws OTransactionException;
-
-  /**
-   * Execute a query against the database. If the OStorage used is remote (OStorageRemote) then the
-   * command will be executed remotely and the result returned back to the calling client.
-   *
-   * @param iCommand Query command
-   * @param iArgs Optional parameters to bind to the query
-   * @return List of POJOs
-   * @deprecated use {@link #query(String, Map)} or {@link #query(String, Object...)} instead
-   */
-  @Deprecated
-  <RET extends List<?>> RET query(final OQuery<?> iCommand, final Object... iArgs);
-
-  /**
-   * Creates a command request to run a command against the database (you have to invoke
-   * .execute(parameters) to actually execute it). A command can be a SQL statement or a Procedure.
-   * If the OStorage used is remote (OStorageRemote) then the command will be executed remotely and
-   * the result returned back to the calling client.
-   *
-   * @param iCommand Command request to execute.
-   * @return The same Command request received as parameter.
-   * @deprecated use {@link #command(String, Map)}, {@link #command(String, Object...)}, {@link
-   *     #execute(String, String, Map)}, {@link #execute(String, String, Object...)} instead
-   */
-  @Deprecated
-  <RET extends OCommandRequest> RET command(OCommandRequest iCommand);
 
   /**
    * Executes an SQL query. The result set has to be closed after usage <br>

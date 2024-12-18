@@ -41,7 +41,6 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
-import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -98,7 +97,7 @@ public class OCommandExecutorSQLDeleteVertex extends OCommandExecutorSQLAbstract
           final int newPos =
               OStringSerializerHelper.getEmbedded(parserText, parserGetCurrentPosition(), -1, q);
 
-          query = database.command(new OSQLAsynchQuery<ODocument>(q.toString(), this));
+          query = null;
 
           parserSetCurrentPosition(newPos);
 
@@ -114,10 +113,7 @@ public class OCommandExecutorSQLDeleteVertex extends OCommandExecutorSQLAbstract
               parserGetCurrentPosition() > -1
                   ? " " + parserText.substring(parserGetPreviousPosition())
                   : "";
-          query =
-              database.command(
-                  new OSQLAsynchQuery<ODocument>(
-                      "select from `" + clazz.getName() + "`" + where, this));
+          query = null;
           break;
 
         } else if (word.equals(KEYWORD_LIMIT)) {
@@ -166,7 +162,7 @@ public class OCommandExecutorSQLDeleteVertex extends OCommandExecutorSQLAbstract
         if (limit > -1) {
           queryString.append(" LIMIT ").append(limit);
         }
-        query = database.command(new OSQLAsynchQuery<ODocument>(queryString.toString(), this));
+        query = null;
       }
     } finally {
       textRequest.setText(originalQuery);

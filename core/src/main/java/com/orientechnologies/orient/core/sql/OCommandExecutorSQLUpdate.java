@@ -205,11 +205,7 @@ public class OCommandExecutorSQLUpdate extends OCommandExecutorSQLRetryAbstract
 
       if (subjectName.startsWith("(")) {
         subjectName = subjectName.trim();
-        query =
-            database.command(
-                new OSQLAsynchQuery<ODocument>(
-                        subjectName.substring(1, subjectName.length() - 1), this)
-                    .setContext(context));
+        query = null;
 
         if (additionalStatement.equals(OCommandExecutorSQLAbstract.KEYWORD_WHERE)
             || additionalStatement.equals(OCommandExecutorSQLAbstract.KEYWORD_LIMIT))
@@ -331,8 +327,6 @@ public class OCommandExecutorSQLUpdate extends OCommandExecutorSQLRetryAbstract
     if (lockStrategy.equals("RECORD"))
       query.getContext().setVariable("$locking", OStorage.LOCKING_STRATEGY.EXCLUSIVE_LOCK);
 
-    getDatabase().query(query, queryArgs);
-
     if (upsertMode && !updated) {
       // IF UPDATE DOES NOT PRODUCE RESULTS AND UPSERT MODE IS ENABLED, CREATE DOCUMENT AND APPLY
       // SET/ADD/PUT/MERGE and so on
@@ -344,20 +338,11 @@ public class OCommandExecutorSQLUpdate extends OCommandExecutorSQLRetryAbstract
       try {
         result(doc);
       } catch (ORecordDuplicatedException e) {
-        if (upsertMode)
-          // UPDATE THE NEW RECORD
-          getDatabase().query(query, queryArgs);
-        else throw e;
+        throw e;
       } catch (ORecordNotFoundException e) {
-        if (upsertMode)
-          // UPDATE THE NEW RECORD
-          getDatabase().query(query, queryArgs);
-        else throw e;
+        throw e;
       } catch (OConcurrentModificationException e) {
-        if (upsertMode)
-          // UPDATE THE NEW RECORD
-          getDatabase().query(query, queryArgs);
-        else throw e;
+        throw e;
       }
 
       lockStrategy = suspendedLockStrategy;

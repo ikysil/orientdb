@@ -29,8 +29,6 @@ import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OCallable;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.cache.OLocalRecordCache;
-import com.orientechnologies.orient.core.command.OCommandRequest;
-import com.orientechnologies.orient.core.command.OCommandRequestInternal;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OStorageEntryConfiguration;
 import com.orientechnologies.orient.core.db.ODatabase;
@@ -73,7 +71,6 @@ import com.orientechnologies.orient.core.metadata.security.OSecurityInternal;
 import com.orientechnologies.orient.core.metadata.security.OSecurityShared;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
 import com.orientechnologies.orient.core.metadata.security.OUser;
-import com.orientechnologies.orient.core.query.OQuery;
 import com.orientechnologies.orient.core.record.ODirection;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.OElement;
@@ -322,26 +319,6 @@ public abstract class ODatabaseDocumentAbstract extends OListenerManger<ODatabas
     final int clusterId = getClusterIdByName(iClusterName);
     return new ORecordIteratorCluster<REC>(
         this, clusterId, startClusterPosition, endClusterPosition);
-  }
-
-  /** {@inheritDoc} */
-  public OCommandRequest command(final OCommandRequest iCommand) {
-    checkSecurity(ORule.ResourceGeneric.COMMAND, ORole.PERMISSION_READ);
-    checkIfActive();
-    final OCommandRequestInternal command = (OCommandRequestInternal) iCommand;
-    try {
-      command.reset();
-      return command;
-    } catch (Exception e) {
-      throw OException.wrapException(new ODatabaseException("Error on command execution"), e);
-    }
-  }
-
-  /** {@inheritDoc} */
-  public <RET extends List<?>> RET query(final OQuery<?> iCommand, final Object... iArgs) {
-    checkIfActive();
-    iCommand.reset();
-    return iCommand.execute(iArgs);
   }
 
   /** {@inheritDoc} */

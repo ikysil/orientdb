@@ -700,7 +700,7 @@ public class OMatchStatement extends OStatement implements OCommandExecutor, OIt
     if (allCandidates == null) {
       OSelectStatement select =
           buildSelectStatement(aliasClasses.get(smallestAlias), aliasFilters.get(smallestAlias));
-      allCandidates = (Iterable) getDatabase().query(new OSQLSynchQuery<Object>(select.toString()));
+      allCandidates = null;
     }
 
     if (!processContextFromCandidates(

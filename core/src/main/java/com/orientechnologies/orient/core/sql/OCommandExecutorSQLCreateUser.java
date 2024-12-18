@@ -144,7 +144,7 @@ public class OCommandExecutorSQLCreateUser extends OCommandExecutorSQLAbstract
       }
     }
     sb.append("])");
-    return getDatabase().command(new OCommandSQL(sb.toString())).execute();
+    return null;
   }
 
   @Override

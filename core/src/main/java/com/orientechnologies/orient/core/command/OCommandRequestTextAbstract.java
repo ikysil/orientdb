@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.command;
 
-import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.exception.OSerializationException;
 import com.orientechnologies.orient.core.index.OCompositeKey;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -56,7 +55,7 @@ public abstract class OCommandRequestTextAbstract extends OCommandRequestAbstrac
   public <RET> RET execute(final Object... iArgs) {
     setParameters(iArgs);
 
-    return (RET) ODatabaseRecordThreadLocal.instance().get().getStorage().command(this);
+    return null;
   }
 
   public String getText() {

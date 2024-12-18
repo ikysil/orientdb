@@ -45,7 +45,6 @@ import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilter;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import com.orientechnologies.orient.core.sql.parser.ODeleteStatement;
-import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
 import com.orientechnologies.orient.core.sql.query.OSQLQuery;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
@@ -136,10 +135,7 @@ public class OCommandExecutorSQLDelete extends OCommandExecutorSQLAbstract
 
       } else if (subjectName.startsWith("(")) {
         subjectName = subjectName.trim();
-        query =
-            database.command(
-                new OSQLAsynchQuery<ODocument>(
-                    subjectName.substring(1, subjectName.length() - 1), this));
+        query = null;
         parserNextWord(true);
         if (!parserIsEnded()) {
           while (!parserIsEnded()) {
@@ -179,10 +175,7 @@ public class OCommandExecutorSQLDelete extends OCommandExecutorSQLAbstract
             parserGetCurrentPosition() > -1
                 ? " " + parserText.substring(parserGetCurrentPosition())
                 : "";
-        query =
-            database.command(
-                new OSQLAsynchQuery<ODocument>(
-                    "select from " + getSelectTarget(subjectName) + condition, this));
+        query = null;
       }
     } finally {
       textRequest.setText(originalQuery);

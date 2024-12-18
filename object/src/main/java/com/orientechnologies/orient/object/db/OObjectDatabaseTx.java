@@ -26,7 +26,6 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OCommonConst;
-import com.orientechnologies.orient.core.command.OCommandRequest;
 import com.orientechnologies.orient.core.command.script.OCommandScriptException;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.conflict.ORecordConflictStrategy;
@@ -59,7 +58,6 @@ import com.orientechnologies.orient.core.metadata.security.ORule;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
 import com.orientechnologies.orient.core.metadata.security.OToken;
 import com.orientechnologies.orient.core.metadata.security.OUser;
-import com.orientechnologies.orient.core.query.OQuery;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.ORecordInternal;
@@ -1034,41 +1032,6 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
               OGlobalConfiguration.DOCUMENT_BINARY_MAPPING,
               OGlobalConfiguration.DOCUMENT_BINARY_MAPPING.getValueAsInteger());
     }
-  }
-
-  /**
-   * Returns a wrapped OCommandRequest instance to catch the result-set by converting it before to
-   * return to the user application.
-   */
-  public <RET extends OCommandRequest> RET command(final OCommandRequest iCommand) {
-    return (RET) new OCommandSQLPojoWrapper(this, underlying.command(iCommand));
-  }
-
-  @Override
-  public <RET extends List<?>> RET query(OQuery<?> iCommand, Object... iArgs) {
-    checkOpenness();
-
-    convertParameters(iArgs);
-
-    final List<ODocument> result = underlying.query(iCommand, iArgs);
-
-    if (result == null) return null;
-
-    final List<Object> resultPojo = new ArrayList<Object>();
-    Object obj;
-    for (OIdentifiable doc : result) {
-      if (doc instanceof ODocument) {
-        // GET THE ASSOCIATED DOCUMENT
-        if (((ODocument) doc).getClassName() == null) obj = doc;
-        else obj = getUserObjectByRecord(((ODocument) doc), iCommand.getFetchPlan(), true);
-
-        resultPojo.add(obj);
-      } else {
-        resultPojo.add(doc);
-      }
-    }
-
-    return (RET) resultPojo;
   }
 
   /**

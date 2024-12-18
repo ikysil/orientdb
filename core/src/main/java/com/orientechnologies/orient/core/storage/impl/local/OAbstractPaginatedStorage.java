@@ -51,9 +51,7 @@ import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.common.util.ORawTriple;
 import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.command.OCommandExecutor;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.config.IndexEngineData;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
@@ -62,7 +60,6 @@ import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.config.OStorageConfigurationUpdateListener;
 import com.orientechnologies.orient.core.conflict.ORecordConflictStrategy;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.ODatabaseListener;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
@@ -75,7 +72,6 @@ import com.orientechnologies.orient.core.encryption.OEncryptionFactory;
 import com.orientechnologies.orient.core.encryption.impl.ONothingEncryption;
 import com.orientechnologies.orient.core.exception.OBackupInProgressException;
 import com.orientechnologies.orient.core.exception.OClusterDoesNotExistException;
-import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.exception.OCommitSerializationException;
 import com.orientechnologies.orient.core.exception.OConcurrentCreateException;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
@@ -86,7 +82,6 @@ import com.orientechnologies.orient.core.exception.OInvalidIndexEngineIdExceptio
 import com.orientechnologies.orient.core.exception.OInvalidInstanceIdException;
 import com.orientechnologies.orient.core.exception.OInvalidStorageEncryptionKeyException;
 import com.orientechnologies.orient.core.exception.ORecordNotFoundException;
-import com.orientechnologies.orient.core.exception.ORetryQueryException;
 import com.orientechnologies.orient.core.exception.OSecurityException;
 import com.orientechnologies.orient.core.exception.OStorageDoesNotExistException;
 import com.orientechnologies.orient.core.exception.OStorageException;
@@ -112,8 +107,6 @@ import com.orientechnologies.orient.core.metadata.OMetadataDefault;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OImmutableClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
-import com.orientechnologies.orient.core.query.OQueryAbstract;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.record.ORecordVersionHelper;
@@ -3948,102 +3941,6 @@ public abstract class OAbstractPaginatedStorage
       throw logAndPrepareForRethrow(ee);
     } catch (final Throwable t) {
       throw logAndPrepareForRethrow(t);
-    }
-  }
-
-  /** Executes the command request and return the result back. */
-  @Override
-  public final Object command(final OCommandRequestText command) {
-    try {
-      final ODatabaseDocumentInternal db = ODatabaseRecordThreadLocal.instance().get();
-      while (true) {
-        try {
-          final OCommandExecutor executor =
-              db.getSharedContext()
-                  .getOrientDB()
-                  .getScriptManager()
-                  .getCommandManager()
-                  .getExecutor(command);
-          // COPY THE CONTEXT FROM THE REQUEST
-          executor.setContext(command.getContext());
-          executor.setProgressListener(command.getProgressListener());
-          executor.parse(command);
-          return executeCommand(command, executor);
-        } catch (final ORetryQueryException ignore) {
-          if (command instanceof OQueryAbstract<?> query) {
-            query.reset();
-          }
-        }
-      }
-    } catch (final RuntimeException ee) {
-      throw logAndPrepareForRethrow(ee);
-    } catch (final Error ee) {
-      throw logAndPrepareForRethrow(ee, false);
-    } catch (final Throwable t) {
-      throw logAndPrepareForRethrow(t, false);
-    }
-  }
-
-  public final Object executeCommand(
-      final OCommandRequestText iCommand, final OCommandExecutor executor) {
-    try {
-      if (iCommand.isIdempotent() && !executor.isIdempotent()) {
-        throw new OCommandExecutionException("Cannot execute non idempotent command");
-      }
-      final long beginTime = Orient.instance().getProfiler().startChrono();
-      try {
-        final ODatabaseDocumentInternal db = ODatabaseRecordThreadLocal.instance().get();
-        // CALL BEFORE COMMAND
-        final Iterable<ODatabaseListener> listeners = db.getListeners();
-        for (final ODatabaseListener oDatabaseListener : listeners) {
-          oDatabaseListener.onBeforeCommand(iCommand, executor);
-        }
-
-        // EXECUTE THE COMMAND
-        final Map<Object, Object> params = iCommand.getParameters();
-        Object result = executor.execute(params);
-
-        // CALL AFTER COMMAND
-        for (final ODatabaseListener oDatabaseListener : listeners) {
-          oDatabaseListener.onAfterCommand(iCommand, executor, result);
-        }
-
-        return result;
-
-      } catch (final OException e) {
-        // PASS THROUGH
-        throw e;
-      } catch (final Exception e) {
-        throw OException.wrapException(
-            new OCommandExecutionException("Error on execution of command: " + iCommand), e);
-
-      } finally {
-        if (Orient.instance().getProfiler().isRecording()) {
-          final ODatabaseDocumentInternal db = ODatabaseRecordThreadLocal.instance().getIfDefined();
-          if (db != null) {
-            final OSecurityUser user = db.getUser();
-            final String userString = Optional.ofNullable(user).map(Object::toString).orElse(null);
-            Orient.instance()
-                .getProfiler()
-                .stopChrono(
-                    "db."
-                        + ODatabaseRecordThreadLocal.instance().get().getName()
-                        + ".command."
-                        + iCommand,
-                    "Command executed against the database",
-                    beginTime,
-                    "db.*.command.*",
-                    null,
-                    userString);
-          }
-        }
-      }
-    } catch (final RuntimeException ee) {
-      throw logAndPrepareForRethrow(ee);
-    } catch (final Error ee) {
-      throw logAndPrepareForRethrow(ee, false);
-    } catch (final Throwable t) {
-      throw logAndPrepareForRethrow(t, false);
     }
   }
 

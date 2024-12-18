@@ -35,7 +35,6 @@ import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -244,10 +243,7 @@ public class OCommandExecutorSQLCreateLink extends OCommandExecutorSQLAbstract {
               if (((String) value).length() == 0) value = null;
               else value = "'" + value + "'";
 
-            result =
-                database
-                    .<OCommandRequest>command(new OSQLSynchQuery<ODocument>(cmd + value))
-                    .execute();
+            result = null;
 
             if (result == null || result.size() == 0) value = null;
             else if (result.size() > 1)

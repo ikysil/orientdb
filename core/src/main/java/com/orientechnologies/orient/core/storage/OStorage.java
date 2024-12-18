@@ -20,7 +20,6 @@
 package com.orientechnologies.orient.core.storage;
 
 import com.orientechnologies.common.util.OCallable;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.conflict.ORecordConflictStrategy;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
@@ -196,9 +195,6 @@ public interface OStorage extends OBackupable, OStorageInfo {
   String getCreatedAtVersion();
 
   void synch();
-
-  /** Execute the command request and return the result back. */
-  Object command(OCommandRequestText iCommand);
 
   /**
    * Returns a pair of long values telling the begin and end positions of data in the requested
