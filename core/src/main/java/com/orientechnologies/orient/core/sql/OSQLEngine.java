@@ -49,6 +49,7 @@ import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 import com.orientechnologies.orient.core.sql.method.OSQLMethodFactory;
 import com.orientechnologies.orient.core.sql.operator.OQueryOperator;
 import com.orientechnologies.orient.core.sql.operator.OQueryOperatorFactory;
+import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OOrBlock;
 import com.orientechnologies.orient.core.sql.parser.OSecurityResourceSegment;
 import com.orientechnologies.orient.core.sql.parser.OServerStatement;
@@ -108,6 +109,17 @@ public class OSQLEngine {
     try {
       final OrientSql osql = new OrientSql(is);
       OOrBlock result = osql.OrBlock();
+      return result;
+    } catch (ParseException e) {
+      throw OException.wrapException(new OCommandSQLParsingException(e, ""), e);
+    }
+  }
+
+  public static OExpression parseExpression(String predicate) throws OCommandSQLParsingException {
+    final InputStream is = new ByteArrayInputStream(predicate.getBytes());
+    try {
+      final OrientSql osql = new OrientSql(is);
+      OExpression result = osql.Expression();
       return result;
     } catch (ParseException e) {
       throw OException.wrapException(new OCommandSQLParsingException(e, ""), e);

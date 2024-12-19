@@ -29,8 +29,8 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OConfigurationException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilter;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.etl.context.OETLContext;
 
 /** ETL abstract component. */
@@ -183,7 +183,12 @@ public abstract class OETLAbstractComponent implements OETLComponent {
     if (value instanceof String) {
       value =
           OVariableParser.resolveVariables(
-              (String) value, "={", "}", variable -> new OSQLPredicate(variable).evaluate(context));
+              (String) value,
+              "={",
+              "}",
+              variable -> {
+                return OSQLEngine.parseExpression(variable).execute((OIdentifiable) null, context);
+              });
     }
     return value;
   }

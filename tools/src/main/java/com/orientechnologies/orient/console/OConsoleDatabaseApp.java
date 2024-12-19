@@ -41,6 +41,7 @@ import com.orientechnologies.orient.client.remote.db.document.ODatabaseDocumentR
 import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.OSignalHandler;
 import com.orientechnologies.orient.core.Orient;
+import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.config.OStorageConfiguration;
@@ -83,6 +84,7 @@ import com.orientechnologies.orient.core.serialization.serializer.OStringSeriali
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerStringAbstract;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
@@ -1298,7 +1300,8 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     if (currentRecord == null) return;
 
-    final Object result = new OSQLPredicate(iText).evaluate(currentRecord, null, null);
+    final Object result =
+        OSQLEngine.parseExpression(iText).execute(currentRecord, new OBasicCommandContext());
     if (result != null) out.println("\n" + result);
   }
 

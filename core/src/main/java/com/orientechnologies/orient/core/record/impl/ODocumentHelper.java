@@ -49,9 +49,9 @@ import com.orientechnologies.orient.core.serialization.serializer.record.string.
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionRuntime;
 import com.orientechnologies.orient.core.sql.method.OSQLMethod;
+import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.util.ODateHelper;
 import java.lang.reflect.Array;
 import java.text.DateFormat;
@@ -519,20 +519,19 @@ public class ODocumentHelper {
 
           } else {
             // CONDITION
-            OSQLPredicate pred = new OSQLPredicate(indexAsString);
+            OExpression pred = OSQLEngine.parseExpression(indexAsString);
+
             final HashSet<Object> values = new LinkedHashSet<Object>();
 
             for (Object v : OMultiValue.getMultiValueIterable(value)) {
               if (v instanceof OIdentifiable) {
-                Object result =
-                    pred.evaluate(
-                        (OIdentifiable) v, (ODocument) ((OIdentifiable) v).getRecord(), iContext);
+                Object result = pred.execute((OIdentifiable) v, iContext);
                 if (Boolean.TRUE.equals(result)) {
                   values.add(v);
                 }
               } else if (v instanceof Map) {
                 ODocument doc = new ODocument().fromMap((Map<String, ? extends Object>) v);
-                Object result = pred.evaluate(doc, doc, iContext);
+                Object result = pred.execute(doc, iContext);
                 if (Boolean.TRUE.equals(result)) {
                   values.add(v);
                 }

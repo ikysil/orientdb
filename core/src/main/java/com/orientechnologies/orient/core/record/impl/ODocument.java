@@ -27,6 +27,7 @@ import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OCommonConst;
+import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
@@ -84,9 +85,9 @@ import com.orientechnologies.orient.core.serialization.serializer.OStringSeriali
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetwork;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import java.io.ByteArrayOutputStream;
 import java.io.Externalizable;
@@ -1378,8 +1379,11 @@ public class ODocument extends ORecordAbstract
    * @return The result of expression
    * @throws OQueryParsingException in case the expression is not valid
    */
-  public Object eval(final String iExpression, final OCommandContext iContext) {
-    return new OSQLPredicate(iExpression).evaluate(this, null, iContext);
+  public Object eval(final String iExpression, OCommandContext context) {
+    if (context == null) {
+      context = new OBasicCommandContext();
+    }
+    return OSQLEngine.parseExpression(iExpression).execute(this, context);
   }
 
   /**
