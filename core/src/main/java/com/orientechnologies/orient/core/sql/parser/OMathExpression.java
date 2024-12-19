@@ -52,7 +52,12 @@ public class OMathExpression extends SimpleNode {
     STAR(10) {
       @Override
       public Number apply(Integer left, Integer right) {
-        return left * right;
+        long result = left.longValue() * right.longValue();
+
+        if (result < Integer.MAX_VALUE && result > Integer.MIN_VALUE) {
+          return (int) result;
+        }
+        return result;
       }
 
       @Override
@@ -62,6 +67,11 @@ public class OMathExpression extends SimpleNode {
 
       @Override
       public Number apply(Float left, Float right) {
+        double result = left.doubleValue() * right.doubleValue();
+
+        if (result < Float.MAX_VALUE && result > Float.MIN_VALUE) {
+          return (float) result;
+        }
         return left * right;
       }
 
