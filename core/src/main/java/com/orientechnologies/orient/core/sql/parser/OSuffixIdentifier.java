@@ -72,7 +72,7 @@ public class OSuffixIdentifier extends SimpleNode {
       if (ctx != null && varName.equalsIgnoreCase("$parent")) {
         return ctx.getParent();
       }
-      if (varName.startsWith("$") && ctx != null && ctx.getVariable(varName) != null) {
+      if (varName.startsWith("$") && ctx != null) {
         return ctx.getVariable(varName);
       }
 
