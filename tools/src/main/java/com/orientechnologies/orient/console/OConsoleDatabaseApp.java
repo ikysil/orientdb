@@ -87,7 +87,6 @@ import com.orientechnologies.orient.core.serialization.serializer.record.string.
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import com.orientechnologies.orient.core.util.OURLConnection;
@@ -1273,7 +1272,9 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     if (currentRecord == null) return;
 
-    final Object result = new OSQLPredicate(iText).evaluate(currentRecord, null, null);
+    final Object result =
+        OSQLEngine.parseExpression(iText)
+            .execute(currentRecord, new OBasicCommandContext(currentDatabase));
 
     if (result != null) {
       if (result instanceof OIdentifiable) {
@@ -1300,8 +1301,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     if (currentRecord == null) return;
 
-    final Object result =
-        OSQLEngine.parseExpression(iText).execute(currentRecord, new OBasicCommandContext());
+    final Object result = OSQLEngine.eval(iText, currentRecord, new OBasicCommandContext());
     if (result != null) out.println("\n" + result);
   }
 

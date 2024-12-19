@@ -1383,7 +1383,7 @@ public class ODocument extends ORecordAbstract
     if (context == null) {
       context = new OBasicCommandContext();
     }
-    return OSQLEngine.parseExpression(iExpression).execute(this, context);
+    return OSQLEngine.eval(iExpression, this, context);
   }
 
   /**

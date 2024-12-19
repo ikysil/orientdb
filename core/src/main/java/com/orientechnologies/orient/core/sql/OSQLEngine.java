@@ -128,6 +128,15 @@ public class OSQLEngine {
     }
   }
 
+  public static Object eval(String expression, Object target, OCommandContext ctx) {
+    Optional<OOrBlock> predicate = maybeParsePredicate(expression);
+    if (predicate.isPresent()) {
+      return predicate.get().evaluate(target, ctx);
+    } else {
+      return parseExpression(expression).execute((OIdentifiable) target, ctx);
+    }
+  }
+
   public static OExpression parseExpression(String predicate) throws OCommandSQLParsingException {
     final InputStream is = new ByteArrayInputStream(predicate.getBytes());
     try {

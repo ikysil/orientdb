@@ -23,7 +23,8 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilter;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.core.sql.parser.OExpression;
 import java.util.List;
 
 public class OETLFieldTransformer extends OETLAbstractTransformer {
@@ -32,7 +33,7 @@ public class OETLFieldTransformer extends OETLAbstractTransformer {
   private String expression;
   private Object value;
   private boolean setOperation = true;
-  private OSQLFilter sqlFilter;
+  private OExpression sqlFilter;
   private boolean save = false;
 
   @Override
@@ -93,9 +94,9 @@ public class OETLFieldTransformer extends OETLAbstractTransformer {
           if (expression != null) {
             if (sqlFilter == null)
               // ONLY THE FIRST TIME
-              sqlFilter = new OSQLFilter(expression, context, null);
+              sqlFilter = OSQLEngine.parseExpression(expression);
 
-            newValue = sqlFilter.evaluate(doc, null, context);
+            newValue = sqlFilter.execute(doc, context);
           } else newValue = value;
 
           // SET THE TRANSFORMED FIELD BACK

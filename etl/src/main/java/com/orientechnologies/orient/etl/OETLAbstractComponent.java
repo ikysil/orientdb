@@ -30,7 +30,7 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OConfigurationException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilter;
+import com.orientechnologies.orient.core.sql.parser.OOrBlock;
 import com.orientechnologies.orient.etl.context.OETLContext;
 
 /** ETL abstract component. */
@@ -92,14 +92,14 @@ public abstract class OETLAbstractComponent implements OETLComponent {
   }
 
   protected boolean skip(final Object input) {
-    final OSQLFilter ifFilter = getIfFilter();
+    final OOrBlock ifFilter = getIfFilter();
     if (ifFilter != null) {
       final ODocument doc =
           input instanceof OIdentifiable ? (ODocument) ((OIdentifiable) input).getRecord() : null;
 
       debug("Evaluating conditional expression if=%s...", ifFilter);
 
-      final Object result = ifFilter.evaluate(doc, null, context);
+      final Object result = ifFilter.evaluate(doc, context);
       if (!(result instanceof Boolean))
         throw new OConfigurationException(
             "'if' expression in Transformer "
@@ -113,8 +113,8 @@ public abstract class OETLAbstractComponent implements OETLComponent {
     return false;
   }
 
-  protected OSQLFilter getIfFilter() {
-    if (ifExpression != null) return new OSQLFilter(ifExpression, context, null);
+  protected OOrBlock getIfFilter() {
+    if (ifExpression != null) return OSQLEngine.parsePredicate(ifExpression);
     return null;
   }
 

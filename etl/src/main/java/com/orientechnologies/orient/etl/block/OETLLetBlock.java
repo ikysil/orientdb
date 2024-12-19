@@ -20,11 +20,13 @@ package com.orientechnologies.orient.etl.block;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilter;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.parser.OExpression;
 
 public class OETLLetBlock extends OETLAbstractBlock {
   protected String name;
-  protected OSQLFilter expression;
+  protected OExpression expression;
   protected Object value;
 
   @Override
@@ -44,7 +46,7 @@ public class OETLLetBlock extends OETLAbstractBlock {
     name = iConfiguration.field("name");
     if (iConfiguration.containsField("value")) {
       value = iConfiguration.field("value");
-    } else expression = new OSQLFilter((String) iConfiguration.field("expression"), iContext, null);
+    } else expression = OSQLEngine.parseExpression(iConfiguration.field("expression"));
 
     if (value == null && expression == null)
       throw new IllegalArgumentException(
@@ -58,7 +60,8 @@ public class OETLLetBlock extends OETLAbstractBlock {
 
   @Override
   public Object executeBlock() {
-    final Object v = expression != null ? expression.evaluate(null, null, context) : resolve(value);
+    final Object v =
+        expression != null ? expression.execute((OResult) null, context) : resolve(value);
     context.setVariable(name, v);
     return v;
   }
