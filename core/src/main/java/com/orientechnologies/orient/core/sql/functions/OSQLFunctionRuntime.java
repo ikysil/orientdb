@@ -23,21 +23,17 @@ import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.parser.OBaseParser;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.OCommandExecutorNotFoundException;
 import com.orientechnologies.orient.core.db.record.OAutoConvertToRecord;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
-import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemAbstract;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import java.util.List;
 
 /**
@@ -96,30 +92,7 @@ public class OSQLFunctionRuntime extends OSQLFilterItemAbstract {
         runtimeParameters[i] =
             ((OSQLFilterItemVariable) configuredParameters[i])
                 .getValue(iCurrentRecord, iCurrentResult, iContext);
-      } else if (configuredParameters[i] instanceof OCommandSQL) {
-        try {
-          runtimeParameters[i] =
-              ((OCommandSQL) configuredParameters[i]).setContext(iContext).execute();
-        } catch (OCommandExecutorNotFoundException ignore) {
-          // TRY WITH SIMPLE CONDITION
-          final String text = ((OCommandSQL) configuredParameters[i]).getText();
-          final OSQLPredicate pred = new OSQLPredicate(text);
-          runtimeParameters[i] =
-              pred.evaluate(
-                  iCurrentRecord instanceof ORecord ? (ORecord) iCurrentRecord : null,
-                  (ODocument) iCurrentResult,
-                  iContext);
-          // REPLACE ORIGINAL PARAM
-          configuredParameters[i] = pred;
-        }
-      } else if (configuredParameters[i] instanceof OSQLPredicate)
-        runtimeParameters[i] =
-            ((OSQLPredicate) configuredParameters[i])
-                .evaluate(
-                    iCurrentRecord.getRecord(),
-                    (iCurrentRecord instanceof ODocument ? (ODocument) iCurrentResult : null),
-                    iContext);
-      else if (configuredParameters[i] instanceof String) {
+      } else if (configuredParameters[i] instanceof String) {
         if (configuredParameters[i].toString().startsWith("\"")
             || configuredParameters[i].toString().startsWith("'"))
           runtimeParameters[i] = OIOUtils.getStringContent(configuredParameters[i]);

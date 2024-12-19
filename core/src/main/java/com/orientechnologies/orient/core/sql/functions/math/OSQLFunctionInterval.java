@@ -2,7 +2,6 @@ package com.orientechnologies.orient.core.sql.functions.math;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import java.util.List;
 
 /**
@@ -18,8 +17,6 @@ import java.util.List;
  */
 public class OSQLFunctionInterval extends OSQLFunctionMathAbstract {
   public static final String NAME = "interval";
-
-  private OSQLPredicate predicate;
 
   public OSQLFunctionInterval() {
     super(NAME, 2, 0);
