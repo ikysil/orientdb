@@ -68,6 +68,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class OSQLEngine {
@@ -112,6 +113,18 @@ public class OSQLEngine {
       return result;
     } catch (ParseException e) {
       throw OException.wrapException(new OCommandSQLParsingException(e, ""), e);
+    }
+  }
+
+  public static Optional<OOrBlock> maybeParsePredicate(String predicate)
+      throws OCommandSQLParsingException {
+    final InputStream is = new ByteArrayInputStream(predicate.getBytes());
+    try {
+      final OrientSql osql = new OrientSql(is);
+      OOrBlock result = osql.OrBlock();
+      return Optional.of(result);
+    } catch (ParseException e) {
+      return Optional.empty();
     }
   }
 

@@ -25,8 +25,11 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.core.sql.parser.OExpression;
+import com.orientechnologies.orient.core.sql.parser.OOrBlock;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Evaluates a complex expression.
@@ -38,7 +41,8 @@ public class OSQLFunctionEval extends OSQLFunctionMathAbstract {
 
   public static final String NAME = "eval";
 
-  private OSQLPredicate predicate;
+  private OOrBlock predicate;
+  private OExpression expression;
 
   public OSQLFunctionEval() {
     super(NAME, 1, 1);
@@ -53,13 +57,23 @@ public class OSQLFunctionEval extends OSQLFunctionMathAbstract {
     if (iParams.length < 1) {
       throw new OCommandExecutionException("invalid ");
     }
-    if (predicate == null) predicate = new OSQLPredicate(String.valueOf(iParams[0]));
 
-    final ODocument currentResult =
-        iCurrentResult instanceof ODocument ? (ODocument) iCurrentResult : null;
+    if (predicate == null && expression == null) {
+      Optional<OOrBlock> res = OSQLEngine.maybeParsePredicate(String.valueOf(iParams[0]));
+      if (res.isPresent()) {
+        this.predicate = res.get();
+      } else {
+        expression = OSQLEngine.parseExpression(String.valueOf(iParams[0]));
+      }
+    }
+
+    final ODocument currentResult = iRecord instanceof ODocument ? (ODocument) iRecord : null;
     try {
-      return predicate.evaluate(
-          iRecord != null ? iRecord.getRecord() : null, currentResult, iContext);
+      if (predicate != null) {
+        return predicate.evaluate(currentResult, iContext);
+      } else {
+        return expression.execute(currentResult, iContext);
+      }
     } catch (ArithmeticException e) {
       logger.error("Division by 0", e);
       // DIVISION BY 0
