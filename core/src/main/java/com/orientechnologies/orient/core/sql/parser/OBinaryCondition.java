@@ -213,7 +213,7 @@ public class OBinaryCondition extends OBooleanExpression {
 
   public List<OBinaryCondition> getIndexedFunctionConditions(
       OClass iSchemaClass, ODatabaseDocumentInternal database) {
-    if (left.isIndexedFunctionCal()) {
+    if (!left.isFunctionAll() && !left.isFunctionAny() && left.isIndexedFunctionCal()) {
       return Collections.singletonList(this);
     }
     return null;
