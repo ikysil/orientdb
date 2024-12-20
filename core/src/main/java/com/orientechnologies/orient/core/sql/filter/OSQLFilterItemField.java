@@ -111,39 +111,7 @@ public class OSQLFilterItemField extends OSQLFilterItemAbstract {
 
   public Object getValue(
       final OIdentifiable iRecord, final Object iCurrentResult, final OCommandContext iContext) {
-    if (iRecord == null)
-      throw new OCommandExecutionException(
-          "expression item '" + name + "' cannot be resolved because current record is NULL");
-
-    if (preLoadedFields != null && preLoadedFields.size() == 1) {
-      if ("@rid".equalsIgnoreCase(preLoadedFields.iterator().next())) return iRecord.getIdentity();
-    }
-
-    final ODocument doc = (ODocument) iRecord.getRecord();
-
-    if (preLoadedFieldsArray == null
-        && preLoadedFields != null
-        && preLoadedFields.size() > 0
-        && preLoadedFields.size() < 5) {
-      // TRANSFORM THE SET IN ARRAY ONLY THE FIRST TIME AND IF FIELDS ARE MORE THAN ONE, OTHERWISE
-      // GO WITH THE DEFAULT BEHAVIOR
-      preLoadedFieldsArray = new String[preLoadedFields.size()];
-      preLoadedFields.toArray(preLoadedFieldsArray);
-    }
-
-    // UNMARSHALL THE SINGLE FIELD
-    if (preLoadedFieldsArray != null && !doc.deserializeFields(preLoadedFieldsArray)) return null;
-
-    final Object v = stringValue == null ? doc.rawField(name) : stringValue;
-
-    if (!collatePreset && doc != null) {
-      OClass schemaClass = ODocumentInternal.getImmutableSchemaClass(doc);
-      if (schemaClass != null) {
-        collate = getCollateForField(schemaClass, name);
-      }
-    }
-
-    return transformValue(iRecord, iContext, v);
+    return null;
   }
 
   public OBinaryField getBinaryField(final OIdentifiable iRecord) {

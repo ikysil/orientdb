@@ -117,7 +117,7 @@ public class OSQLFunctionRuntime extends OSQLFilterItemAbstract {
   }
 
   public Object getResult() {
-    return transformValue(null, null, function.getResult());
+    return null;
   }
 
   public void setResult(final Object iValue) {
@@ -128,7 +128,7 @@ public class OSQLFunctionRuntime extends OSQLFilterItemAbstract {
   public Object getValue(
       final OIdentifiable iRecord, Object iCurrentResult, OCommandContext iContext) {
     final ODocument current = iRecord != null ? (ODocument) iRecord.getRecord() : null;
-    return execute(current, current, null, iContext);
+    return null;
   }
 
   @Override

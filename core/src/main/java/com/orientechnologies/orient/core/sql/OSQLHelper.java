@@ -33,7 +33,6 @@ import com.orientechnologies.orient.core.serialization.serializer.record.string.
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionRuntime;
 import com.orientechnologies.orient.core.sql.parser.OOrBlock;
 import java.math.BigDecimal;
@@ -188,14 +187,6 @@ public class OSQLHelper {
     else if (t == OType.DATE || t == OType.DATETIME) return new Date(Long.parseLong(iValue));
 
     return null;
-  }
-
-  public static Object parseValue(
-      final OSQLPredicate iSQLFilter,
-      final OBaseParser iCommand,
-      final String iWord,
-      final OCommandContext iContext) {
-    return parseValue(iCommand, iWord, iContext);
   }
 
   public static Object parseValue(

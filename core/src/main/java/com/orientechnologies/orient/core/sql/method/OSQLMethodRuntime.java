@@ -23,8 +23,6 @@ import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.common.parser.OBaseParser;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
@@ -61,45 +59,13 @@ public class OSQLMethodRuntime extends OSQLFilterItemAbstract
       final OIdentifiable iCurrentRecord,
       final Object iCurrentResult,
       final OCommandContext iContext) {
-    if (iThis == null) return null;
-
-    if (configuredParameters != null) {
-      // RESOLVE VALUES USING THE CURRENT RECORD
-      for (int i = 0; i < configuredParameters.length; ++i) {
-        runtimeParameters[i] = configuredParameters[i];
-      }
-
-      if (method.getMaxParams() == -1 || method.getMaxParams() > 0) {
-        if (runtimeParameters.length < method.getMinParams()
-            || (method.getMaxParams() > -1 && runtimeParameters.length > method.getMaxParams())) {
-          String params;
-          if (method.getMinParams() == method.getMaxParams()) {
-            params = "" + method.getMinParams();
-          } else {
-            params = method.getMinParams() + "-" + method.getMaxParams();
-          }
-          throw new OCommandExecutionException(
-              "Syntax error: function '"
-                  + method.getName()
-                  + "' needs "
-                  + (params)
-                  + " argument(s) while has been received "
-                  + runtimeParameters.length);
-        }
-      }
-    }
-
-    final Object functionResult =
-        method.execute(iThis, iCurrentRecord, iContext, iCurrentResult, runtimeParameters);
-
-    return transformValue(iCurrentRecord, iContext, functionResult);
+    return null;
   }
 
   @Override
   public Object getValue(
       final OIdentifiable iRecord, Object iCurrentResult, OCommandContext iContext) {
-    final ODocument current = iRecord != null ? (ODocument) iRecord.getRecord() : null;
-    return execute(current, current, null, iContext);
+    return null;
   }
 
   @Override
@@ -135,7 +101,7 @@ public class OSQLMethodRuntime extends OSQLFilterItemAbstract
 
         if (iParameters[i] != null) {
           if (iParameters[i] instanceof String && !iParameters[i].toString().startsWith("[")) {
-            final Object v = OSQLHelper.parseValue(null, null, iParameters[i].toString(), null);
+            final Object v = OSQLHelper.parseValue(null, iParameters[i].toString(), null);
             if (v == OSQLHelper.VALUE_NOT_PARSED
                 || (v != null
                     && OMultiValue.isMultiValue(v)

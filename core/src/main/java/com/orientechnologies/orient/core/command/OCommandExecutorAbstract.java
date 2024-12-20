@@ -30,7 +30,6 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandInterruptedException;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.ORule;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -57,7 +56,6 @@ public abstract class OCommandExecutorAbstract extends OBaseParser implements OC
   public OCommandExecutorAbstract init(final OCommandRequestText iRequest) {
     getDatabase().checkSecurity(ORule.ResourceGeneric.COMMAND, ORole.PERMISSION_READ);
     parserText = iRequest.getText().trim();
-    parserTextUpperCase = OSQLPredicate.upperCase(parserText);
     return this;
   }
 
