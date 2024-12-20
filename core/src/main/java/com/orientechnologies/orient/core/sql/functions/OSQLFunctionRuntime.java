@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.sql.functions;
 
-import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.parser.OBaseParser;
 import com.orientechnologies.orient.core.command.OCommandContext;
@@ -30,10 +29,7 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
-import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemAbstract;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
 import java.util.List;
 
 /**
@@ -80,19 +76,11 @@ public class OSQLFunctionRuntime extends OSQLFilterItemAbstract {
     for (int i = 0; i < configuredParameters.length; ++i) {
       runtimeParameters[i] = configuredParameters[i];
 
-      if (configuredParameters[i] instanceof OSQLFilterItemField) {
-        runtimeParameters[i] =
-            ((OSQLFilterItemField) configuredParameters[i])
-                .getValue(iCurrentRecord, iCurrentResult, iContext);
-      } else if (configuredParameters[i] instanceof OSQLFunctionRuntime)
+      if (configuredParameters[i] instanceof OSQLFunctionRuntime)
         runtimeParameters[i] =
             ((OSQLFunctionRuntime) configuredParameters[i])
                 .execute(iThis, iCurrentRecord, iCurrentResult, iContext);
-      else if (configuredParameters[i] instanceof OSQLFilterItemVariable) {
-        runtimeParameters[i] =
-            ((OSQLFilterItemVariable) configuredParameters[i])
-                .getValue(iCurrentRecord, iCurrentResult, iContext);
-      } else if (configuredParameters[i] instanceof String) {
+      else if (configuredParameters[i] instanceof String) {
         if (configuredParameters[i].toString().startsWith("\"")
             || configuredParameters[i].toString().startsWith("'"))
           runtimeParameters[i] = OIOUtils.getStringContent(configuredParameters[i]);
@@ -152,19 +140,6 @@ public class OSQLFunctionRuntime extends OSQLFilterItemAbstract {
     this.configuredParameters = new Object[iParameters.length];
     for (int i = 0; i < iParameters.length; ++i) {
       this.configuredParameters[i] = iParameters[i];
-
-      if (iEvaluate)
-        if (iParameters[i] != null) {
-          if (iParameters[i] instanceof String) {
-            final Object v = OSQLHelper.parseValue(null, null, iParameters[i].toString(), null);
-            if (v == OSQLHelper.VALUE_NOT_PARSED
-                || (v != null
-                    && OMultiValue.isMultiValue(v)
-                    && OMultiValue.getFirstValue(v) == OSQLHelper.VALUE_NOT_PARSED)) continue;
-
-            configuredParameters[i] = v;
-          }
-        } else this.configuredParameters[i] = null;
     }
 
     function.config(configuredParameters);
@@ -172,9 +147,7 @@ public class OSQLFunctionRuntime extends OSQLFilterItemAbstract {
     // COPY STATIC VALUES
     this.runtimeParameters = new Object[configuredParameters.length];
     for (int i = 0; i < configuredParameters.length; ++i) {
-      if (!(configuredParameters[i] instanceof OSQLFilterItemField)
-          && !(configuredParameters[i] instanceof OSQLFunctionRuntime))
-        runtimeParameters[i] = configuredParameters[i];
+      runtimeParameters[i] = configuredParameters[i];
     }
 
     return this;

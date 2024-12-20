@@ -24,7 +24,6 @@ import com.orientechnologies.common.util.OSupportsContains;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -54,9 +53,6 @@ public class OSQLFunctionIntersect extends OSQLFunctionMultiValueAbstract<Object
       final Object[] iParams,
       OCommandContext iContext) {
     Object value = iParams[0];
-
-    if (value instanceof OSQLFilterItemVariable)
-      value = ((OSQLFilterItemVariable) value).getValue(iCurrentRecord, iCurrentResult, iContext);
 
     if (value == null) return Collections.emptySet();
 
@@ -90,9 +86,6 @@ public class OSQLFunctionIntersect extends OSQLFunctionMultiValueAbstract<Object
 
     for (int i = 1; i < iParams.length; ++i) {
       value = iParams[i];
-
-      if (value instanceof OSQLFilterItemVariable)
-        value = ((OSQLFilterItemVariable) value).getValue(iCurrentRecord, iCurrentResult, iContext);
 
       if (value != null) {
         value = intersectWith(iterator, value);

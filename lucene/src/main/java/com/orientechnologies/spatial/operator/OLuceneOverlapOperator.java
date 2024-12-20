@@ -16,10 +16,6 @@
 package com.orientechnologies.spatial.operator;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import java.util.Collection;
 import org.apache.lucene.spatial.query.SpatialOperation;
 import org.locationtech.spatial4j.shape.Shape;
@@ -28,31 +24,6 @@ public class OLuceneOverlapOperator extends OLuceneSpatialOperator {
 
   public OLuceneOverlapOperator() {
     super("&&", 5, false);
-  }
-
-  @Override
-  public Object evaluateRecord(
-      OIdentifiable iRecord,
-      ODocument iCurrentResult,
-      OSQLFilterCondition iCondition,
-      Object iLeft,
-      Object iRight,
-      OCommandContext iContext,
-      final ODocumentSerializer serializer) {
-    Shape shape = factory.fromDoc((ODocument) iLeft);
-
-    // TODO { 'shape' : { 'type' : 'LineString' , 'coordinates' : [[1,2],[4,6]]} }
-    // TODO is not translated in map but in array[ { 'type' : 'LineString' , 'coordinates' :
-    // [[1,2],[4,6]]} ]
-    Object filter;
-    if (iRight instanceof Collection) {
-      filter = ((Collection) iRight).iterator().next();
-    } else {
-      filter = iRight;
-    }
-    Shape shape1 = factory.fromObject(filter);
-
-    return SpatialOperation.BBoxIntersects.evaluate(shape, shape1.getBoundingBox());
   }
 
   @Override

@@ -5,7 +5,6 @@ import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItem;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionConfigurableAbstract;
 
 /**
@@ -28,14 +27,8 @@ public class OSQLFunctionSequence extends OSQLFunctionConfigurableAbstract {
       Object[] iParams,
       OCommandContext iContext) {
     final String seqName;
-    if (configuredParameters != null
-        && configuredParameters.length > 0
-        && configuredParameters[0] instanceof OSQLFilterItem) // old stuff
-    seqName =
-          (String)
-              ((OSQLFilterItem) configuredParameters[0])
-                  .getValue(iCurrentRecord, iCurrentResult, iContext);
-    else seqName = "" + iParams[0];
+
+    seqName = "" + iParams[0];
 
     OSequence result =
         ODatabaseRecordThreadLocal.instance()

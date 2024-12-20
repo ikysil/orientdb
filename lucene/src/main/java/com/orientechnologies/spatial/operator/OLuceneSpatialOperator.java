@@ -15,13 +15,6 @@
  */
 package com.orientechnologies.spatial.operator;
 
-import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.OSQLEngine;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
-import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
 import com.orientechnologies.orient.core.sql.operator.OQueryTargetOperator;
 import com.orientechnologies.spatial.shape.OShapeBuilder;
 import com.orientechnologies.spatial.shape.OShapeFactory;
@@ -34,21 +27,5 @@ public abstract class OLuceneSpatialOperator extends OQueryTargetOperator {
   protected OLuceneSpatialOperator(String iKeyword, int iPrecedence, boolean iLogical) {
     super(iKeyword, iPrecedence, iLogical);
     factory = OShapeFactory.INSTANCE;
-  }
-
-  // TODO HANDLE EVALUATE RECORD
-  @Override
-  public Object evaluateRecord(
-      OIdentifiable iRecord,
-      ODocument iCurrentResult,
-      OSQLFilterCondition iCondition,
-      Object iLeft,
-      Object iRight,
-      OCommandContext iContext,
-      final ODocumentSerializer serializer) {
-
-    OSQLFunction function = OSQLEngine.getInstance().getFunction(keyword);
-    return function.execute(
-        this, iRecord, iCurrentResult, new Object[] {iLeft, iCondition.getRight()}, iContext);
   }
 }

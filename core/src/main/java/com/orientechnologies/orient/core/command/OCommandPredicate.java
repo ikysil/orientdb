@@ -20,23 +20,9 @@
 
 package com.orientechnologies.orient.core.command;
 
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-
 /**
  * Command predicate to be evaluated against a record and a context.
  *
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
  */
-public interface OCommandPredicate {
-  /**
-   * Evaluates the predicate.
-   *
-   * @param iRecord Target record
-   * @param iCurrentResult TODO
-   * @param iContext Context of execution
-   * @return The result of predicate
-   */
-  public Object evaluate(
-      final OIdentifiable iRecord, ODocument iCurrentResult, final OCommandContext iContext);
-}
+public interface OCommandPredicate {}

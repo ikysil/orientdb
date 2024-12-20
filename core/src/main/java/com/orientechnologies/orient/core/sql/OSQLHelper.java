@@ -31,9 +31,7 @@ import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerCSVAbstract;
 import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItem;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemParameter;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionRuntime;
@@ -197,11 +195,7 @@ public class OSQLHelper {
       final OBaseParser iCommand,
       final String iWord,
       final OCommandContext iContext) {
-    if (iWord.charAt(0) == OStringSerializerHelper.PARAMETER_POSITIONAL
-        || iWord.charAt(0) == OStringSerializerHelper.PARAMETER_NAMED) {
-      if (iSQLFilter != null) return iSQLFilter.addParameter(iWord);
-      else return new OSQLFilterItemParameter(iWord);
-    } else return parseValue(iCommand, iWord, iContext);
+    return parseValue(iCommand, iWord, iContext);
   }
 
   public static Object parseValue(
@@ -250,22 +244,11 @@ public class OSQLHelper {
     return null;
   }
 
-  public static Object getValue(final Object iObject) {
-    if (iObject == null) return null;
-
-    if (iObject instanceof OSQLFilterItem)
-      return ((OSQLFilterItem) iObject).getValue(null, null, null);
-
-    return iObject;
-  }
-
   public static Object getValue(
       final Object iObject, final ORecord iRecord, final OCommandContext iContext) {
     if (iObject == null) return null;
 
-    if (iObject instanceof OSQLFilterItem)
-      return ((OSQLFilterItem) iObject).getValue(iRecord, null, iContext);
-    else if (iObject instanceof String) {
+    if (iObject instanceof String) {
       final String s = ((String) iObject).trim();
       if (iRecord != null & !s.isEmpty()
           && !OIOUtils.isStringContent(iObject)

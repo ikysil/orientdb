@@ -16,10 +16,6 @@
 package com.orientechnologies.spatial.operator;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
 import com.orientechnologies.orient.core.sql.operator.OQueryTargetOperator;
 import com.orientechnologies.spatial.collections.OSpatialCompositeKey;
 import com.orientechnologies.spatial.shape.legacy.OShapeBuilderLegacy;
@@ -35,28 +31,6 @@ public class OLuceneWithinOperator extends OQueryTargetOperator {
 
   public OLuceneWithinOperator() {
     super("WITHIN", 5, false);
-  }
-
-  @Override
-  public Object evaluateRecord(
-      OIdentifiable iRecord,
-      ODocument iCurrentResult,
-      OSQLFilterCondition iCondition,
-      Object iLeft,
-      Object iRight,
-      OCommandContext iContext,
-      final ODocumentSerializer serializer) {
-    List<Number> left = (List<Number>) iLeft;
-
-    double lat = left.get(0).doubleValue();
-    double lon = left.get(1).doubleValue();
-
-    Shape shape = SpatialContext.GEO.makePoint(lon, lat);
-
-    Shape shape1 =
-        shapeFactory.makeShape(new OSpatialCompositeKey((List<?>) iRight), SpatialContext.GEO);
-
-    return shape.relate(shape1) == SpatialRelation.WITHIN;
   }
 
   @Override

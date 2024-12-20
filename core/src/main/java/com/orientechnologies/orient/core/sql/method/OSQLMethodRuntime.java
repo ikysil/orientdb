@@ -20,7 +20,6 @@
 package com.orientechnologies.orient.core.sql.method;
 
 import com.orientechnologies.common.collection.OMultiValue;
-import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.parser.OBaseParser;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
@@ -31,9 +30,6 @@ import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemAbstract;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
-import com.orientechnologies.orient.core.sql.functions.OSQLFunctionRuntime;
 import java.util.List;
 
 /**
@@ -47,10 +43,6 @@ public class OSQLMethodRuntime extends OSQLFilterItemAbstract
   public OSQLMethod method;
   public Object[] configuredParameters;
   public Object[] runtimeParameters;
-
-  public OSQLMethodRuntime(final OBaseParser iQueryToParse, final String iText) {
-    super(iQueryToParse, iText);
-  }
 
   public OSQLMethodRuntime(final OSQLMethod iFunction) {
     method = iFunction;
@@ -75,40 +67,6 @@ public class OSQLMethodRuntime extends OSQLFilterItemAbstract
       // RESOLVE VALUES USING THE CURRENT RECORD
       for (int i = 0; i < configuredParameters.length; ++i) {
         runtimeParameters[i] = configuredParameters[i];
-
-        if (method.evaluateParameters()) {
-          if (configuredParameters[i] instanceof OSQLFilterItemField) {
-            runtimeParameters[i] =
-                ((OSQLFilterItemField) configuredParameters[i])
-                    .getValue(iCurrentRecord, iCurrentResult, iContext);
-            if (runtimeParameters[i] == null && iCurrentResult instanceof OIdentifiable)
-              // LOOK INTO THE CURRENT RESULT
-              runtimeParameters[i] =
-                  ((OSQLFilterItemField) configuredParameters[i])
-                      .getValue((OIdentifiable) iCurrentResult, iCurrentResult, iContext);
-          } else if (configuredParameters[i] instanceof OSQLMethodRuntime)
-            runtimeParameters[i] =
-                ((OSQLMethodRuntime) configuredParameters[i])
-                    .execute(iThis, iCurrentRecord, iCurrentResult, iContext);
-          else if (configuredParameters[i] instanceof OSQLFunctionRuntime)
-            runtimeParameters[i] =
-                ((OSQLFunctionRuntime) configuredParameters[i])
-                    .execute(iCurrentRecord, iCurrentRecord, iCurrentResult, iContext);
-          else if (configuredParameters[i] instanceof OSQLFilterItemVariable) {
-            runtimeParameters[i] =
-                ((OSQLFilterItemVariable) configuredParameters[i])
-                    .getValue(iCurrentRecord, iCurrentResult, iContext);
-            if (runtimeParameters[i] == null && iCurrentResult instanceof OIdentifiable)
-              // LOOK INTO THE CURRENT RESULT
-              runtimeParameters[i] =
-                  ((OSQLFilterItemVariable) configuredParameters[i])
-                      .getValue((OIdentifiable) iCurrentResult, iCurrentResult, iContext);
-          } else if (configuredParameters[i] instanceof String) {
-            if (configuredParameters[i].toString().startsWith("\"")
-                || configuredParameters[i].toString().startsWith("'"))
-              runtimeParameters[i] = OIOUtils.getStringContent(configuredParameters[i]);
-          }
-        }
       }
 
       if (method.getMaxParams() == -1 || method.getMaxParams() > 0) {
@@ -191,9 +149,7 @@ public class OSQLMethodRuntime extends OSQLFilterItemAbstract
       // COPY STATIC VALUES
       this.runtimeParameters = new Object[configuredParameters.length];
       for (int i = 0; i < configuredParameters.length; ++i) {
-        if (!(configuredParameters[i] instanceof OSQLFilterItemField)
-            && !(configuredParameters[i] instanceof OSQLMethodRuntime))
-          runtimeParameters[i] = configuredParameters[i];
+        runtimeParameters[i] = configuredParameters[i];
       }
     }
 

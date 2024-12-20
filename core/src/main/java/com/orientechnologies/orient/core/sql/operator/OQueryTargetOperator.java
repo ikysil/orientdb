@@ -19,12 +19,6 @@
  */
 package com.orientechnologies.orient.core.sql.operator;
 
-import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
-
 /**
  * Operator that filters the target records.
  *
@@ -34,22 +28,5 @@ public abstract class OQueryTargetOperator extends OQueryOperator {
   protected OQueryTargetOperator(
       final String iKeyword, final int iPrecedence, final boolean iLogical) {
     super(iKeyword, iPrecedence, false);
-  }
-
-  /**
-   * At run-time the evaluation per record must return always true since the recordset are filtered
-   * at the beginning unless an operator can work in both modes. In this case sub-class must extend
-   * it.
-   */
-  @Override
-  public Object evaluateRecord(
-      final OIdentifiable iRecord,
-      ODocument iCurrentResult,
-      final OSQLFilterCondition iCondition,
-      final Object iLeft,
-      final Object iRight,
-      OCommandContext iContext,
-      final ODocumentSerializer serializer) {
-    return true;
   }
 }

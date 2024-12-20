@@ -20,15 +20,6 @@
 package com.orientechnologies.orient.core.sql.operator;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializer;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterCondition;
-import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorDivide;
-import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorMinus;
-import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorMod;
-import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorMultiply;
-import com.orientechnologies.orient.core.sql.operator.math.OQueryOperatorPlus;
 import java.util.List;
 
 /**
@@ -56,35 +47,7 @@ public abstract class OQueryOperator {
    * <p>WARNING: ORDER IS IMPORTANT TO AVOID SUB-STRING LIKE "IS" and AND "INSTANCEOF": INSTANCEOF
    * MUST BE PLACED BEFORE! AND ALSO FOR PERFORMANCE (MOST USED BEFORE)
    */
-  protected static final Class<?>[] DEFAULT_OPERATORS_ORDER = {
-    OQueryOperatorEquals.class,
-    OQueryOperatorAnd.class,
-    OQueryOperatorOr.class,
-    OQueryOperatorNotEquals.class,
-    OQueryOperatorNotEquals2.class,
-    OQueryOperatorNot.class,
-    OQueryOperatorMinorEquals.class,
-    OQueryOperatorMinor.class,
-    OQueryOperatorMajorEquals.class,
-    OQueryOperatorContainsAll.class,
-    OQueryOperatorMajor.class,
-    OQueryOperatorLike.class,
-    OQueryOperatorMatches.class,
-    OQueryOperatorInstanceof.class,
-    OQueryOperatorIs.class,
-    OQueryOperatorIn.class,
-    OQueryOperatorContainsKey.class,
-    OQueryOperatorContainsValue.class,
-    OQueryOperatorContainsText.class,
-    OQueryOperatorContains.class,
-    OQueryOperatorTraverse.class,
-    OQueryOperatorBetween.class,
-    OQueryOperatorPlus.class,
-    OQueryOperatorMinus.class,
-    OQueryOperatorMultiply.class,
-    OQueryOperatorDivide.class,
-    OQueryOperatorMod.class
-  };
+  protected static final Class<?>[] DEFAULT_OPERATORS_ORDER = {};
 
   public final String keyword;
   public final int precedence;
@@ -116,15 +79,6 @@ public abstract class OQueryOperator {
     expectedRightWords = iExpectedRightWords;
     expectsParameters = iExpectsParameters;
   }
-
-  public abstract Object evaluateRecord(
-      final OIdentifiable iRecord,
-      ODocument iCurrentResult,
-      final OSQLFilterCondition iCondition,
-      final Object iLeft,
-      final Object iRight,
-      OCommandContext iContext,
-      final ODocumentSerializer serializer);
 
   @Override
   public String toString() {

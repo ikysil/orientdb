@@ -35,12 +35,10 @@ import com.orientechnologies.orient.core.index.OIndexMetadata;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
 import com.orientechnologies.orient.core.tx.OTransactionIndexChangesPerKey;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -53,7 +51,7 @@ import java.util.stream.Stream;
 /**
  * There are some cases when we need to create index for some class by traversed property.
  * Unfortunately, such functionality is not supported yet. But we can do that by creating index for
- * each element of {@link OSQLFilterItemField.FieldChain} (which define "way" to our property), and
+ * each element of (which define "way" to our property), and
  * then process operations consequently using previously created indexes.
  *
  * <p>This class provides possibility to find optimal chain of indexes and then use it just like it
@@ -76,95 +74,8 @@ public class OChainedIndexProxy<T> implements OIndexInternal {
     lastIndex = indexChain.get(indexChain.size() - 1);
   }
 
-  /**
-   * Create proxies that support maximum number of different operations. In case when several
-   * different indexes which support different operations (e.g. indexes of {@code UNIQUE} and {@code
-   * FULLTEXT} types) are possible, the creates the only one index of each type.
-   *
-   * @param longChain - property chain from the query, which should be evaluated
-   * @return proxies needed to process query.
-   */
-  public static <T> Collection<OChainedIndexProxy<T>> createProxies(
-      OClass iSchemaClass, OSQLFilterItemField.FieldChain longChain) {
-    List<OChainedIndexProxy<T>> proxies = new ArrayList<>();
-
-    for (List<OIndex> indexChain : getIndexesForChain(iSchemaClass, longChain)) {
-      //noinspection ObjectAllocationInLoop
-      proxies.add(new OChainedIndexProxy<>(indexChain));
-    }
-
-    return proxies;
-  }
-
   private static boolean isComposite(OIndex currentIndex) {
     return currentIndex.getDefinition().getParamCount() > 1;
-  }
-
-  private static Iterable<List<OIndex>> getIndexesForChain(
-      OClass iSchemaClass, OSQLFilterItemField.FieldChain fieldChain) {
-    List<OIndex> baseIndexes = prepareBaseIndexes(iSchemaClass, fieldChain);
-
-    if (baseIndexes == null) return Collections.emptyList();
-
-    Collection<OIndex> lastIndexes = prepareLastIndexVariants(iSchemaClass, fieldChain);
-
-    Collection<List<OIndex>> result = new ArrayList<>();
-    for (OIndex lastIndex : lastIndexes) {
-      @SuppressWarnings("ObjectAllocationInLoop")
-      final List<OIndex> indexes = new ArrayList<>(fieldChain.getItemCount());
-      indexes.addAll(baseIndexes);
-      indexes.add(lastIndex);
-
-      result.add(indexes);
-    }
-
-    return result;
-  }
-
-  private static Collection<OIndex> prepareLastIndexVariants(
-      OClass iSchemaClass, OSQLFilterItemField.FieldChain fieldChain) {
-    OClass oClass = iSchemaClass;
-    final Collection<OIndex> result = new ArrayList<>();
-
-    for (int i = 0; i < fieldChain.getItemCount() - 1; i++) {
-      oClass = oClass.getProperty(fieldChain.getItemName(i)).getLinkedClass();
-      if (oClass == null) {
-        return result;
-      }
-    }
-
-    final Set<OIndex> involvedIndexes =
-        new TreeSet<>(Comparator.comparingInt(o -> o.getDefinition().getParamCount()));
-
-    involvedIndexes.addAll(
-        oClass.getInvolvedIndexes(fieldChain.getItemName(fieldChain.getItemCount() - 1)));
-    final Collection<Class<? extends OIndex>> indexTypes = new HashSet<>(3);
-
-    for (OIndex involvedIndex : involvedIndexes) {
-      if (!indexTypes.contains(involvedIndex.getInternal().getClass())) {
-        result.add(involvedIndex);
-        indexTypes.add(involvedIndex.getInternal().getClass());
-      }
-    }
-
-    return result;
-  }
-
-  private static List<OIndex> prepareBaseIndexes(
-      OClass iSchemaClass, OSQLFilterItemField.FieldChain fieldChain) {
-    List<OIndex> result = new ArrayList<>(fieldChain.getItemCount() - 1);
-
-    OClass oClass = iSchemaClass;
-    for (int i = 0; i < fieldChain.getItemCount() - 1; i++) {
-      final Set<OIndex> involvedIndexes = oClass.getInvolvedIndexes(fieldChain.getItemName(i));
-      final OIndex bestIndex = findBestIndex(involvedIndexes);
-
-      if (bestIndex == null) return null;
-
-      result.add(bestIndex);
-      oClass = oClass.getProperty(fieldChain.getItemName(i)).getLinkedClass();
-    }
-    return result;
   }
 
   /**
