@@ -119,7 +119,7 @@ public class FetchFromIndexStep extends AbstractExecutionStep {
     OResultInternal result = new OResultInternal();
     result.setProperty("key", convertKey(key));
     result.setProperty("rid", value);
-    ctx.setVariable("$current", result);
+    ctx.setCurrent(result);
     return result;
   }
 

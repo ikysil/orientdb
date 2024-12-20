@@ -22,6 +22,7 @@ package com.orientechnologies.orient.core.command;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.sql.executor.OExecutionStep;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.Map;
 
 /**
@@ -100,4 +101,10 @@ public interface OCommandContext {
   void endProfiling(OExecutionStep step);
 
   OStepStats getStats(OExecutionStep step);
+
+  OResult getCurrent();
+
+  void setCurrent(OResult result);
+
+  void setCurrentIfMissing(OResult result);
 }

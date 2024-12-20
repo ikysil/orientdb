@@ -83,6 +83,21 @@ public class OBasicCommandContext implements OCommandContext {
     this.database = session;
   }
 
+  public OResult getCurrent() {
+    return (OResult) getVariable("$current");
+  }
+
+  @Override
+  public void setCurrentIfMissing(OResult result) {
+    if (getCurrent() == null) {
+      setCurrent(result);
+    }
+  }
+
+  public void setCurrent(OResult result) {
+    setVariable("$current", result);
+  }
+
   public Object getVariable(String iName) {
     return getVariable(iName, null);
   }

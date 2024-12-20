@@ -26,10 +26,10 @@ public class ProjectionCalculationStep extends AbstractExecutionStep {
   }
 
   private OResult mapResult(OResult result, OCommandContext ctx) {
-    Object oldCurrent = ctx.getVariable("$current");
-    ctx.setVariable("$current", result);
+    OResult oldCurrent = ctx.getCurrent();
+    ctx.setCurrent(result);
     OResult newResult = calculateProjections(ctx, result);
-    ctx.setVariable("$current", oldCurrent);
+    ctx.setCurrent(oldCurrent);
     return newResult;
   }
 

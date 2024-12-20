@@ -18,14 +18,14 @@ public class MatchFieldTraverser extends MatchEdgeTraverser {
   protected OExecutionStream traversePatternEdge(
       OIdentifiable startingPoint, OCommandContext iCommandContext) {
 
-    Object prevCurrent = iCommandContext.getVariable("$current");
-    iCommandContext.setVariable("$current", startingPoint);
+    OResult prevCurrent = iCommandContext.getCurrent();
+    iCommandContext.setCurrent(new OResultInternal(startingPoint));
     Object qR;
     try {
       // TODO check possible results!
       qR = ((OFieldMatchPathItem) this.item).getExp().execute(startingPoint, iCommandContext);
     } finally {
-      iCommandContext.setVariable("$current", prevCurrent);
+      iCommandContext.setCurrent(prevCurrent);
     }
 
     if (qR == null) {

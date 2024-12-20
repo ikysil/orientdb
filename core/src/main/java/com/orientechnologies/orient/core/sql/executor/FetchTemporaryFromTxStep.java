@@ -46,7 +46,7 @@ public class FetchTemporaryFromTxStep extends AbstractExecutionStep {
   }
 
   private OResult setContext(OResult result, OCommandContext context) {
-    context.setVariable("$current", result);
+    context.setCurrent(result);
     return result;
   }
 

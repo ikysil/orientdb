@@ -136,7 +136,7 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
   }
 
   private OResult setCurrent(OResult result, OCommandContext context) {
-    context.setVariable("$current", result);
+    context.setCurrent(result);
     return result;
   }
 

@@ -32,7 +32,7 @@ public final class OLoaderExecutionStream implements OExecutionStream {
 
     OResult result = nextResult;
     nextResult = null;
-    ctx.setVariable("$current", result);
+    ctx.setCurrent(result);
     return result;
   }
 

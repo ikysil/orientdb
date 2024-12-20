@@ -37,7 +37,7 @@ public class SubQueryStep extends AbstractExecutionStep {
   }
 
   private OResult mapResult(OResult result, OCommandContext ctx) {
-    ctx.setVariable("$current", result);
+    ctx.setCurrent(result);
     return result;
   }
 

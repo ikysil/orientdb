@@ -22,7 +22,7 @@ public class EmptyDataGeneratorStep extends AbstractExecutionStep {
 
   private OResult create(OCommandContext ctx) {
     OResultInternal result = new OResultInternal();
-    ctx.setVariable("$current", result);
+    ctx.setCurrent(result);
     return result;
   }
 
