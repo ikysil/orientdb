@@ -4,7 +4,6 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder.Operation;
-import com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquals;
 import java.util.Map;
 
 public class ONeqOperator extends SimpleNode implements OBinaryCompareOperator {
@@ -18,7 +17,7 @@ public class ONeqOperator extends SimpleNode implements OBinaryCompareOperator {
 
   @Override
   public boolean execute(Object left, Object right, OCommandContext ctx) {
-    return !OQueryOperatorEquals.equals(left, right);
+    return !OEqualsCompareOperator.equals(left, right);
   }
 
   @Override

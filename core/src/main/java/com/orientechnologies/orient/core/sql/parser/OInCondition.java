@@ -13,7 +13,6 @@ import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
-import com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquals;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -134,31 +133,31 @@ public class OInCondition extends OBooleanExpression {
         return true;
       }
       for (final Object o : OMultiValue.getMultiValueIterable(iRight, false)) {
-        if (OQueryOperatorEquals.equals(iLeft, o)) return true;
+        if (OEqualsCompareOperator.equals(iLeft, o)) return true;
         if (OMultiValue.isMultiValue(iLeft)) {
           for (final Object item : OMultiValue.getMultiValueIterable(iLeft, false)) {
-            if (OQueryOperatorEquals.equals(item, o)) {
+            if (OEqualsCompareOperator.equals(item, o)) {
               return true;
             }
             if (item instanceof OResult && ((OResult) item).getPropertyNames().size() == 1) {
               Object propValue =
                   ((OResult) item)
                       .getProperty(((OResult) item).getPropertyNames().iterator().next());
-              if (OQueryOperatorEquals.equals(propValue, o)) return true;
+              if (OEqualsCompareOperator.equals(propValue, o)) return true;
             }
           }
         }
       }
     } else if (iRight.getClass().isArray()) {
       for (final Object o : (Object[]) iRight) {
-        if (OQueryOperatorEquals.equals(iLeft, o)) return true;
+        if (OEqualsCompareOperator.equals(iLeft, o)) return true;
       }
     } else if (iRight instanceof OResultSet) {
 
       OResultSet rsRight = (OResultSet) iRight;
       rsRight.reset();
       while (((OResultSet) iRight).hasNext()) {
-        if (OQueryOperatorEquals.equals(iLeft, rsRight.next())) {
+        if (OEqualsCompareOperator.equals(iLeft, rsRight.next())) {
           return true;
         }
       }

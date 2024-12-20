@@ -2,10 +2,17 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
+import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
+import com.orientechnologies.orient.core.id.ORID;
+import com.orientechnologies.orient.core.metadata.schema.OType;
+import com.orientechnologies.orient.core.record.ORecord;
+import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder.Operation;
-import com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquals;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 
 public class OEqualsCompareOperator extends SimpleNode implements OBinaryCompareOperator {
   protected boolean doubleEquals = false;
@@ -20,7 +27,7 @@ public class OEqualsCompareOperator extends SimpleNode implements OBinaryCompare
 
   @Override
   public boolean execute(Object iLeft, Object iRight, OCommandContext ctx) {
-    return OQueryOperatorEquals.equals(iLeft, iRight);
+    return equals(iLeft, iRight);
   }
 
   @Override
@@ -78,6 +85,92 @@ public class OEqualsCompareOperator extends SimpleNode implements OBinaryCompare
   @Override
   public boolean isGreater() {
     return false;
+  }
+
+  public static boolean comparesValues(
+      final Object iValue, final OResult iRecord, final boolean iConsiderIn) {
+    if (iRecord.getIdentity().isPresent() && iRecord.getIdentity().get().isPersistent()) {
+      return iRecord.getIdentity().get().equals(iValue);
+    } else {
+      // ODOCUMENT AS RESULT OF SUB-QUERY: GET THE FIRST FIELD IF ANY
+      Set<String> firstFieldName = iRecord.getPropertyNames();
+      if (firstFieldName.size() == 1) {
+        Object fieldValue = iRecord.getProperty(firstFieldName.iterator().next());
+        if (fieldValue != null) {
+          if (iConsiderIn && OMultiValue.isMultiValue(fieldValue)) {
+            for (Object o : OMultiValue.getMultiValueIterable(fieldValue, false)) {
+              if (o != null && o.equals(iValue)) return true;
+            }
+          }
+
+          return fieldValue.equals(iValue);
+        }
+      }
+
+      return false;
+    }
+  }
+
+  public static boolean comparesValues(
+      final Object iValue, final ORecord iRecord, final boolean iConsiderIn) {
+    // ORID && RECORD
+    final ORID other = ((ORecord) iRecord).getIdentity();
+
+    if (!other.isPersistent() && iRecord instanceof ODocument) {
+      // ODOCUMENT AS RESULT OF SUB-QUERY: GET THE FIRST FIELD IF ANY
+      final Set<String> firstFieldName = ((ODocument) iRecord).getPropertyNames();
+      if (firstFieldName.size() > 0) {
+        Object fieldValue = ((ODocument) iRecord).getProperty(firstFieldName.iterator().next());
+        if (fieldValue != null) {
+          if (iConsiderIn && OMultiValue.isMultiValue(fieldValue)) {
+            for (Object o : OMultiValue.getMultiValueIterable(fieldValue, false)) {
+              if (o != null && o.equals(iValue)) return true;
+            }
+          }
+
+          return fieldValue.equals(iValue);
+        }
+      }
+      return false;
+    }
+    return other.equals(iValue);
+  }
+
+  public static boolean equals(Object iLeft, Object iRight) {
+    if (iLeft == null || iRight == null) return false;
+
+    if (iLeft == iRight) {
+      return true;
+    }
+
+    // RECORD & ORID
+    /*from this is only legacy query engine */
+    if (iLeft instanceof ORecord) return comparesValues(iRight, (ORecord) iLeft, true);
+    else if (iRight instanceof ORecord) return comparesValues(iLeft, (ORecord) iRight, true);
+    /*till this is only legacy query engine */
+    else if (iRight instanceof OResult) return comparesValues(iLeft, (OResult) iRight, true);
+    else if (iRight instanceof OResult) {
+      return comparesValues(iLeft, (OResult) iRight, true);
+    }
+
+    // NUMBERS
+    if (iLeft instanceof Number && iRight instanceof Number) {
+      Number[] couple = OType.castComparableNumber((Number) iLeft, (Number) iRight);
+      return couple[0].equals(couple[1]);
+    }
+
+    // ALL OTHER CASES
+    try {
+      final Object right = OType.convert(iRight, iLeft.getClass());
+
+      if (right == null) return false;
+      if (iLeft instanceof byte[] && iRight instanceof byte[]) {
+        return Arrays.equals((byte[]) iLeft, (byte[]) iRight);
+      }
+      return iLeft.equals(right);
+    } catch (Exception ignore) {
+      return false;
+    }
   }
 }
 /* JavaCC - OriginalChecksum=bd2ec5d13a1d171779c2bdbc9d3a56bc (do not edit this line) */

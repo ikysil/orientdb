@@ -11,7 +11,6 @@ import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
-import com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquals;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -129,7 +128,7 @@ public class OContainsCondition extends OBooleanExpression {
     if (left == null && right == null) {
       return true;
     } else {
-      return OQueryOperatorEquals.equals(left, right);
+      return OEqualsCompareOperator.equals(left, right);
     }
   }
 
