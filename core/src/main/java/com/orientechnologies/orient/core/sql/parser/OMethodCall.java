@@ -160,15 +160,8 @@ public class OMethodCall extends SimpleNode {
       List<Object> paramValues) {
     if (graphFunction instanceof OSQLFunctionFiltered) {
       OResult current = ctx.getCurrent();
-      OIdentifiable currentR = ((OResult) current).getElement().orElse(null);
       return ((OSQLFunctionFiltered) graphFunction)
-          .execute(
-              targetObjects,
-              (OIdentifiable) currentR,
-              null,
-              paramValues.toArray(),
-              iPossibleResults,
-              ctx);
+          .execute(targetObjects, current, null, paramValues.toArray(), iPossibleResults, ctx);
     } else {
       OResult current = ctx.getCurrent();
       if (current != null) {
