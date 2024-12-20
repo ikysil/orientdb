@@ -510,6 +510,18 @@ public class OSQLEngine {
   }
 
   public OSQLFunction getFunction(String iFunctionName) {
+    OSQLFunction function = getFunctionIfExists(iFunctionName);
+    if (function != null) {
+      return function;
+    }
+    throw new OCommandSQLParsingException(
+        "No function with name '"
+            + iFunctionName
+            + "', available names are : "
+            + OCollections.toString(getFunctionNames()));
+  }
+
+  public OSQLFunction getFunctionIfExists(String iFunctionName) {
     iFunctionName = iFunctionName.toLowerCase(Locale.ENGLISH);
 
     if (iFunctionName.equalsIgnoreCase("any") || iFunctionName.equalsIgnoreCase("all"))
@@ -523,12 +535,7 @@ public class OSQLEngine {
         return factory.createFunction(iFunctionName);
       }
     }
-
-    throw new OCommandSQLParsingException(
-        "No function with name '"
-            + iFunctionName
-            + "', available names are : "
-            + OCollections.toString(getFunctionNames()));
+    return null;
   }
 
   public void unregisterFunction(String iName) {

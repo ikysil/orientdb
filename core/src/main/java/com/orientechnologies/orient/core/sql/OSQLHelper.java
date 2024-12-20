@@ -23,6 +23,7 @@ import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.parser.OBaseParser;
 import com.orientechnologies.common.util.OPair;
+import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
@@ -36,6 +37,7 @@ import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerCSVAbstract;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItem;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemAbstract;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemField;
@@ -43,6 +45,7 @@ import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemParameter;
 import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionRuntime;
+import com.orientechnologies.orient.core.sql.parser.OOrBlock;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -65,20 +68,7 @@ public class OSQLHelper {
   private static ClassLoader orientClassLoader = OSQLFilterItemAbstract.class.getClassLoader();
 
   public static Object parseDefaultValue(ODocument iRecord, final String iWord) {
-    final Object v = OSQLHelper.parseValue(iWord, null);
-
-    if (v != VALUE_NOT_PARSED) {
-      return v;
-    }
-
-    // TRY TO PARSE AS FUNCTION
-    final OSQLFunctionRuntime func = OSQLHelper.getFunction(null, iWord);
-    if (func != null) {
-      return func.execute(iRecord, iRecord, null, null);
-    }
-
-    // PARSE AS FIELD
-    return iWord;
+    return OSQLEngine.eval(iWord, iRecord, new OBasicCommandContext());
   }
 
   /**
@@ -140,7 +130,8 @@ public class OSQLHelper {
         Object key = OStringSerializerHelper.decode(parseValue(parts.get(0), iContext).toString());
         Object value = parseValue(parts.get(1), iContext);
         if (VALUE_NOT_PARSED == value) {
-          value = new OSQLPredicate(parts.get(1)).evaluate(iContext);
+          OOrBlock parsed = OSQLEngine.parsePredicate(parts.get(1));
+          value = parsed.evaluate((OResult) null, iContext);
         }
         if (value instanceof String) {
           value = OStringSerializerHelper.decode(value.toString());

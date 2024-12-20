@@ -3545,11 +3545,18 @@ public class ODocument extends ORecordAbstract
         }
       } else {
         String defValue = prop.getDefaultValue();
-        if (defValue != null && /*defValue.length() > 0 && */ !containsField(prop.getName())) {
-          Object curFieldValue = OSQLHelper.parseDefaultValue(this, defValue);
-          Object fieldValue =
-              ODocumentHelper.convertField(
-                  this, prop.getName(), prop.getType(), null, curFieldValue);
+        if (defValue != null && !containsField(prop.getName())) {
+          Object fieldValue;
+          try {
+            fieldValue =
+                ODocumentHelper.convertField(this, prop.getName(), prop.getType(), null, defValue);
+          } catch (Exception e) {
+            Object curFieldValue = OSQLHelper.parseDefaultValue(this, defValue);
+            fieldValue =
+                ODocumentHelper.convertField(
+                    this, prop.getName(), prop.getType(), null, curFieldValue);
+          }
+
           rawField(prop.getName(), fieldValue, prop.getType());
         }
       }
