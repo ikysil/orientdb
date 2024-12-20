@@ -109,15 +109,9 @@ public class OFunctionCall extends SimpleNode {
       }
     }
     if (record == null) {
-      Object current = ctx == null ? null : ctx.getVariable("$current");
+      OResult current = ctx == null ? null : ctx.getCurrent();
       if (current != null) {
-        if (current instanceof OIdentifiable) {
-          record = current;
-        } else if (current instanceof OResult) {
-          record = ((OResult) current).toElement();
-        } else {
-          record = current;
-        }
+        record = ((OResult) current).toElement();
       }
     }
     for (OExpression expr : this.params) {

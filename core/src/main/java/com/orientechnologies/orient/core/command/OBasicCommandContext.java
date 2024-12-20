@@ -84,7 +84,7 @@ public class OBasicCommandContext implements OCommandContext {
   }
 
   public OResult getCurrent() {
-    return (OResult) getVariable("$current");
+    return (OResult) getSimpleVariable("current");
   }
 
   @Override
@@ -95,7 +95,7 @@ public class OBasicCommandContext implements OCommandContext {
   }
 
   public void setCurrent(OResult result) {
-    setVariable("$current", result);
+    setLocalVariable("current", result);
   }
 
   public Object getVariable(String iName) {
@@ -225,6 +225,39 @@ public class OBasicCommandContext implements OCommandContext {
       return ((OBasicCommandContext) parent).hasVariable(iName);
     }
     return false;
+  }
+
+  public Object getLocalVariable(String name) {
+    if (variables != null) {
+      return variables.get(name);
+    } else {
+      return null;
+    }
+  }
+
+  public void setLocalVariable(String name, Object value) {
+    if (variables == null) {
+      variables = new HashMap<>();
+    }
+    variables.put(name, value);
+  }
+
+  public boolean hasLocalVariable(String name) {
+    if (variables != null) {
+      return variables.containsKey(name);
+    } else {
+      return false;
+    }
+  }
+
+  public Object getSimpleVariable(String name) {
+    if (hasLocalVariable(name)) {
+      return variables.get(name);
+    } else if (parent != null && parent instanceof OBasicCommandContext) {
+      return ((OBasicCommandContext) parent).getSimpleVariable(name);
+    } else {
+      return null;
+    }
   }
 
   @Override

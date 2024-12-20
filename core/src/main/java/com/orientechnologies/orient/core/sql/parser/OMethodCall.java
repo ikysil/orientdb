@@ -123,7 +123,7 @@ public class OMethodCall extends SimpleNode {
       String name,
       List<OExpression> iParams,
       Iterable<OIdentifiable> iPossibleResults) {
-    Object val = ctx.getVariable("$current");
+    OResult val = ctx.getCurrent();
     if (val == null && targetObjects == null) {
       return null;
     }
@@ -159,24 +159,19 @@ public class OMethodCall extends SimpleNode {
       Iterable<OIdentifiable> iPossibleResults,
       List<Object> paramValues) {
     if (graphFunction instanceof OSQLFunctionFiltered) {
-      Object current = ctx.getVariable("$current");
-      if (current instanceof OResult) {
-        current = ((OResult) current).getElement().orElse(null);
-      }
+      OResult current = ctx.getCurrent();
+      OIdentifiable currentR = ((OResult) current).getElement().orElse(null);
       return ((OSQLFunctionFiltered) graphFunction)
           .execute(
               targetObjects,
-              (OIdentifiable) current,
+              (OIdentifiable) currentR,
               null,
               paramValues.toArray(),
               iPossibleResults,
               ctx);
     } else {
-      Object current = ctx.getVariable("$current");
-      if (current instanceof OIdentifiable) {
-        return graphFunction.execute(
-            targetObjects, (OIdentifiable) current, null, paramValues.toArray(), ctx);
-      } else if (current instanceof OResult) {
+      OResult current = ctx.getCurrent();
+      if (current != null) {
         return graphFunction.execute(
             targetObjects,
             ((OResult) current).getElement().orElse(null),
@@ -195,7 +190,7 @@ public class OMethodCall extends SimpleNode {
       String name,
       List<OExpression> iParams,
       Iterable<OIdentifiable> iPossibleResults) {
-    Object val = ctx.getVariable("$current");
+    OResult val = ctx.getCurrent();
     if (val == null && targetObjects == null) {
       return null;
     }
