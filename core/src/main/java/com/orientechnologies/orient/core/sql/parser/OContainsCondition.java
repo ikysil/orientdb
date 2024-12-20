@@ -176,7 +176,8 @@ public class OContainsCondition extends OBooleanExpression {
       Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
       while (iter.hasNext()) {
         Object item = iter.next();
-        if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
+        if (item instanceof OIdentifiable
+            && condition.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
           return true;
         } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {
           return true;
@@ -214,7 +215,8 @@ public class OContainsCondition extends OBooleanExpression {
         Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
         while (iter.hasNext()) {
           Object item = iter.next();
-          if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
+          if (item instanceof OIdentifiable
+              && condition.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
             return true;
           } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {
             return true;
@@ -254,7 +256,8 @@ public class OContainsCondition extends OBooleanExpression {
         boolean found = false;
         while (iter.hasNext()) {
           Object item = iter.next();
-          if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
+          if (item instanceof OIdentifiable
+              && condition.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
             found = true;
             break;
           } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {

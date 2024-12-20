@@ -8,8 +8,9 @@ import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.ODirection;
-import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionConfigurableAbstract;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,7 @@ public abstract class OSQLFunctionMove extends OSQLFunctionConfigurableAbstract 
   }
 
   protected abstract Object move(
-      final ODatabaseSession db, final OIdentifiable iRecord, final String[] iLabels);
+      final ODatabaseSession db, final OResult iRecord, final String[] iLabels);
 
   public String getSyntax() {
     return "Syntax error: " + name + "([<labels>])";
@@ -64,7 +65,7 @@ public abstract class OSQLFunctionMove extends OSQLFunctionConfigurableAbstract 
         new OCallable<Object, OIdentifiable>() {
           @Override
           public Object call(final OIdentifiable iArgument) {
-            return move(db, iArgument, labels);
+            return move(db, new OResultInternal(iArgument), labels);
           }
         },
         iThis,
@@ -73,13 +74,12 @@ public abstract class OSQLFunctionMove extends OSQLFunctionConfigurableAbstract 
 
   protected Object v2v(
       final ODatabaseSession graph,
-      final OIdentifiable iRecord,
+      final OResult source,
       final ODirection iDirection,
       final String[] iLabels) {
-    if (iRecord != null) {
-      OElement rec = iRecord.getRecord();
-      if (rec != null && rec.isVertex()) {
-        return rec.asVertex().get().getVertices(iDirection, iLabels);
+    if (source != null) {
+      if (source.isVertex()) {
+        return source.getVertex().get().getVertices(iDirection, iLabels);
       } else {
         return null;
       }
@@ -90,13 +90,12 @@ public abstract class OSQLFunctionMove extends OSQLFunctionConfigurableAbstract 
 
   protected Object v2e(
       final ODatabaseSession graph,
-      final OIdentifiable iRecord,
+      final OResult OResult,
       final ODirection iDirection,
       final String[] iLabels) {
-    if (iRecord != null) {
-      OElement rec = iRecord.getRecord();
-      if (rec != null && rec.isVertex()) {
-        return rec.asVertex().get().getEdges(iDirection, iLabels);
+    if (OResult != null) {
+      if (OResult.isVertex()) {
+        return OResult.getVertex().get().getEdges(iDirection, iLabels);
       } else {
         return null;
       }
@@ -107,22 +106,17 @@ public abstract class OSQLFunctionMove extends OSQLFunctionConfigurableAbstract 
 
   protected Object e2v(
       final ODatabaseSession graph,
-      final OIdentifiable iRecord,
+      final OResult iRecord,
       final ODirection iDirection,
       final String[] iLabels) {
-    if (iRecord != null) {
-      OElement rec = iRecord.getRecord();
-      if (rec.isEdge()) {
-        if (iDirection == ODirection.BOTH) {
-          List results = new ArrayList();
-          results.add(rec.asEdge().get().getVertex(ODirection.OUT));
-          results.add(rec.asEdge().get().getVertex(ODirection.IN));
-          return results;
-        }
-        return rec.asEdge().get().getVertex(iDirection);
-      } else {
-        return null;
+    if (iRecord != null && iRecord.isEdge()) {
+      if (iDirection == ODirection.BOTH) {
+        List results = new ArrayList();
+        results.add(iRecord.getEdge().get().getVertex(ODirection.OUT));
+        results.add(iRecord.getEdge().get().getVertex(ODirection.IN));
+        return results;
       }
+      return iRecord.getEdge().get().getVertex(iDirection);
     } else {
       return null;
     }

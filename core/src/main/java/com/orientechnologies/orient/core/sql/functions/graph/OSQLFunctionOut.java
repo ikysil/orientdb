@@ -12,6 +12,7 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.ODirection;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,42 +28,39 @@ public class OSQLFunctionOut extends OSQLFunctionMoveFiltered {
 
   @Override
   protected Object move(
-      final ODatabaseSession graph, final OIdentifiable iRecord, final String[] iLabels) {
+      final ODatabaseSession graph, final OResult iRecord, final String[] iLabels) {
     return v2v(graph, iRecord, ODirection.OUT, iLabels);
   }
 
   protected Object move(
       final ODatabaseSession graph,
-      final OIdentifiable iRecord,
+      final OResult rec,
       final String[] iLabels,
       Iterable<OIdentifiable> iPossibleResults) {
     if (iPossibleResults == null) {
-      return v2v(graph, iRecord, ODirection.OUT, iLabels);
+      return v2v(graph, rec, ODirection.OUT, iLabels);
     }
 
     if (!iPossibleResults.iterator().hasNext()) {
       return Collections.emptyList();
     }
 
-    Object edges = v2e(graph, iRecord, ODirection.OUT, iLabels);
+    Object edges = v2e(graph, rec, ODirection.OUT, iLabels);
     if (edges instanceof OSizeable) {
       int size = ((OSizeable) edges).size();
       if (size > supernodeThreshold) {
-        Object result = fetchFromIndex(graph, iRecord, iPossibleResults, iLabels);
+        Object result = fetchFromIndex(graph, rec, iPossibleResults, iLabels);
         if (result != null) {
           return result;
         }
       }
     }
 
-    return v2v(graph, iRecord, ODirection.OUT, iLabels);
+    return v2v(graph, rec, ODirection.OUT, iLabels);
   }
 
   private Object fetchFromIndex(
-      ODatabaseSession graph,
-      OIdentifiable iFrom,
-      Iterable<OIdentifiable> iTo,
-      String[] iEdgeTypes) {
+      ODatabaseSession graph, OResult iFrom, Iterable<OIdentifiable> iTo, String[] iEdgeTypes) {
     String edgeClassName = null;
     if (iEdgeTypes == null) {
       edgeClassName = "E";
@@ -87,7 +85,7 @@ public class OSQLFunctionOut extends OSQLFunctionMoveFiltered {
 
     OMultiCollectionIterator<OVertex> result = new OMultiCollectionIterator<OVertex>();
     for (OIdentifiable to : iTo) {
-      final OCompositeKey key = new OCompositeKey(iFrom, to);
+      final OCompositeKey key = new OCompositeKey(iFrom.getIdentity().get(), to);
       try (Stream<ORID> stream = index.getInternal().getRids(key)) {
         result.add(
             stream

@@ -26,18 +26,6 @@ public class MatchMultiEdgeTraverser extends MatchEdgeTraverser {
       OIdentifiable startingPoint, OCommandContext iCommandContext) {
 
     Iterable possibleResults = null;
-    //    if (this.edge.edge.item.getFilter() != null) {
-    //      String alias = this.edge.edge.item.getFilter().getAlias();
-    //      Object matchedNodes =
-    // iCommandContext.getVariable(MatchPrefetchStep.PREFETCHED_MATCH_ALIAS_PREFIX + alias);
-    //      if (matchedNodes != null) {
-    //        if (matchedNodes instanceof Iterable) {
-    //          possibleResults = (Iterable) matchedNodes;
-    //        } else {
-    //          possibleResults = Collections.singleton(matchedNodes);
-    //        }
-    //      }
-    //    }
 
     OMultiMatchPathItem item = (OMultiMatchPathItem) this.item;
     List<OResult> result = new ArrayList<>();
@@ -119,8 +107,6 @@ public class MatchMultiEdgeTraverser extends MatchEdgeTraverser {
     }
 
     iCommandContext.setCurrent(oldCurrent);
-    //    return (qR instanceof Iterable) ? (Iterable) qR : Collections.singleton((OIdentifiable)
-    // qR);
     return OExecutionStream.resultIterator(result.iterator());
   }
 
