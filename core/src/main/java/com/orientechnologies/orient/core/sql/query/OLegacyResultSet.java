@@ -27,7 +27,6 @@ import java.util.List;
  *
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
  * @param <T>
- * @see OSQLAsynchQuery
  */
 public interface OLegacyResultSet<T> extends List<T>, Externalizable {
 

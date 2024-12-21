@@ -103,26 +103,7 @@ public class OModifier extends SimpleNode {
   }
 
   public Object execute(OIdentifiable iCurrentRecord, Object result, OCommandContext ctx) {
-    if (iCurrentRecord != null) {
-      ctx.setCurrentIfMissing(new OResultInternal(iCurrentRecord));
-    }
-    if (methodCall != null) {
-      result = methodCall.execute(result, ctx);
-    } else if (suffix != null) {
-      result = suffix.execute(result, ctx);
-    } else if (arrayRange != null) {
-      result = arrayRange.execute(iCurrentRecord, result, ctx);
-    } else if (condition != null) {
-      result = filterByCondition(result, ctx);
-    } else if (arraySingleValues != null) {
-      result = arraySingleValues.execute(iCurrentRecord, result, ctx);
-    } else if (rightBinaryCondition != null) {
-      result = rightBinaryCondition.execute(iCurrentRecord, result, ctx);
-    }
-    if (next != null) {
-      result = next.execute(iCurrentRecord, result, ctx);
-    }
-    return result;
+    return execute(new OResultInternal(iCurrentRecord), result, ctx);
   }
 
   public Object execute(OResult iCurrentRecord, Object result, OCommandContext ctx) {

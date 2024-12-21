@@ -31,7 +31,6 @@ import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
 import com.orientechnologies.orient.core.command.OCommandDistributedReplicateRequest;
 import com.orientechnologies.orient.core.command.OCommandDistributedReplicateRequest.DISTRIBUTED_EXECUTION_MODE;
 import com.orientechnologies.orient.core.command.OCommandRequestText;
-import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OSerializationException;
@@ -47,9 +46,6 @@ import com.orientechnologies.orient.core.serialization.serializer.OStringSeriali
 import com.orientechnologies.orient.core.serialization.serializer.binary.impl.index.OCompositeKeySerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerStringAbstract;
-import com.orientechnologies.orient.core.sql.OCommandSQL;
-import com.orientechnologies.orient.core.sql.query.OLiveQuery;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinaryProtocol;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataInput;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataOutput;
@@ -215,56 +211,6 @@ public final class OCommandRequest implements OBinaryRequest<OCommandResponse> {
   private OCommand commandD;
   private OScript scriptD;
   private OLQuery lqueryD;
-
-  public OCommandRequest(
-      ODatabaseDocumentInternal database,
-      boolean asynch,
-      OCommandRequestText iCommand,
-      boolean live) {
-    this.database = database;
-    this.asynch = asynch;
-    this.query = iCommand;
-    this.live = live;
-
-    // SERIALIZE THE CLASS NAME
-    byte[] className = null;
-    if (query instanceof OLiveQuery<?>) {
-      try {
-        className = LIVE_QUERY_COMMAND_CLASS.getBytes("UTF-8");
-        this.lqueryD =
-            new OLQuery(
-                query.getText(), query.getLimit(), query.getFetchPlan(), query.getParameters());
-      } catch (Exception e) {
-        final String message = "Error on unmarshalling content. Class: " + className;
-        logger.error(message, e);
-        throw OException.wrapException(new OSerializationException(message), e);
-      }
-    } else if (query instanceof OSQLSynchQuery<?>) {
-      className = QUERY_COMMAND_CLASS_ASBYTES;
-      this.queryD =
-          new OQuery(
-              query.getText(),
-              query.getLimit(),
-              query.getFetchPlan(),
-              query.getParameters(),
-              ((OSQLSynchQuery<Object>) query).getNextPageRID(),
-              ((OSQLSynchQuery<Object>) query).getPreviousQueryParams());
-    } else if (query instanceof OCommandSQL) {
-      className = SQL_COMMAND_CLASS_ASBYTES;
-      this.commandD = new OCommand(query.getText(), query.getParameters());
-    } else if (query instanceof OCommandScript) {
-      className = SCRIPT_COMMAND_CLASS_ASBYTES;
-      this.scriptD =
-          new OScript(
-              ((OCommandScript) query).getLanguage(),
-              DISTRIBUTED_EXECUTION_MODE.LOCAL,
-              query.getText(),
-              query.getParameters());
-    } else {
-      throw new UnsupportedOperationException(
-          " query with type " + query.getClass().getName() + " not supported anymore");
-    }
-  }
 
   public OCommandRequest() {}
 

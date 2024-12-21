@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.command;
 
-import com.orientechnologies.common.listener.OProgressListener;
 import java.util.Map;
 
 /**
@@ -33,24 +32,5 @@ public interface OCommandRequestInternal extends OCommandRequest {
 
   OCommandResultListener getResultListener();
 
-  void setResultListener(OCommandResultListener iListener);
-
-  OProgressListener getProgressListener();
-
-  OCommandRequestInternal setProgressListener(OProgressListener iProgressListener);
-
   void reset();
-
-  boolean isCacheableResult();
-
-  void setCacheableResult(boolean iValue);
-
-  /**
-   * Communicate to a listener if the result set is an record based or anything else
-   *
-   * @param recordResultSet
-   */
-  void setRecordResultSet(boolean recordResultSet);
-
-  boolean isRecordResultSet();
 }

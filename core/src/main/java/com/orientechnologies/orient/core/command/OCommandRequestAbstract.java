@@ -135,16 +135,6 @@ public abstract class OCommandRequestAbstract implements OCommandRequestInternal
   }
 
   @Override
-  public boolean isCacheableResult() {
-    return cacheableResult;
-  }
-
-  @Override
-  public void setCacheableResult(final boolean iValue) {
-    cacheableResult = iValue;
-  }
-
-  @Override
   public OCommandContext getContext() {
     if (context == null)
       context = new OBasicCommandContext(ODatabaseRecordThreadLocal.instance().getIfDefined());
@@ -175,14 +165,5 @@ public abstract class OCommandRequestAbstract implements OCommandRequestInternal
 
   public void removeExcludedNode(String node) {
     nodesToExclude.remove(node);
-  }
-
-  @Override
-  public void setRecordResultSet(boolean recordResultSet) {
-    this.recordResultSet = recordResultSet;
-  }
-
-  public boolean isRecordResultSet() {
-    return recordResultSet;
   }
 }

@@ -40,7 +40,6 @@ import javax.script.ScriptException;
 /**
  * Executes Script Commands.
  *
- * @see OCommandScript
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
  */
 public class OCommandExecutorFunction extends OCommandExecutorAbstract {

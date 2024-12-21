@@ -36,7 +36,6 @@ import java.util.NoSuchElementException;
  *
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
  * @param <T>
- * @see OSQLAsynchQuery
  */
 public class OBasicLegacyResultSet<T> implements OLegacyResultSet<T> {
   protected List<T> underlying;

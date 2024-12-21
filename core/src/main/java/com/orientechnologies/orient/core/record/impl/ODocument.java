@@ -1353,7 +1353,7 @@ public class ODocument extends ORecordAbstract
     }
 
     // NOT FOUND, PARSE THE FIELD NAME
-    return ODocumentHelper.getFieldValue(this, iFieldName);
+    return (RET) eval(iFieldName, null);
   }
 
   /**

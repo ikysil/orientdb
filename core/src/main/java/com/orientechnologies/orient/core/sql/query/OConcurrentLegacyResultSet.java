@@ -35,7 +35,6 @@ import java.util.NoSuchElementException;
  *
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
  * @param <T>
- * @see OSQLAsynchQuery
  */
 public class OConcurrentLegacyResultSet<T> implements OLegacyResultSet<T> {
   private static final OLogger logger =

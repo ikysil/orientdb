@@ -66,7 +66,6 @@ import javax.script.ScriptException;
  * Executes Script Commands.
  *
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
- * @see OCommandScript
  */
 public class OScriptManager {
   private static final OLogger logger = OLogManager.instance().logger(OScriptManager.class);

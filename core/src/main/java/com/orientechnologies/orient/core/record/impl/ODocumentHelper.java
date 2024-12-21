@@ -47,16 +47,11 @@ import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerStringAbstract;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
-import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.functions.OSQLFunctionRuntime;
-import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
-import com.orientechnologies.orient.core.util.ODateHelper;
 import java.lang.reflect.Array;
 import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -67,7 +62,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -558,18 +552,7 @@ public class ODocumentHelper {
 
         if (fieldName.startsWith("$")) value = iContext.getVariable(fieldName);
         else if (fieldName.contains("(")) {
-          boolean executedMethod = false;
-          if (!firstInChain && fieldName.endsWith("()")) {
-            OSQLMethod method =
-                OSQLEngine.getMethod(fieldName.substring(0, fieldName.length() - 2));
-            if (method != null) {
-              value = method.execute(value, currentRecord, iContext, value, new Object[] {});
-              executedMethod = true;
-            }
-          }
-          if (!executedMethod) {
-            value = evaluateFunction(value, fieldName, iContext);
-          }
+          value = OSQLEngine.eval(iFieldName, value, iContext);
         } else {
           final List<String> indexCondition =
               OStringSerializerHelper.smartSplit(fieldName, '=', ' ');
@@ -809,121 +792,6 @@ public class ODocumentHelper {
       return null;
     }
     return doc.accessProperty(iFieldName);
-  }
-
-  public static Object evaluateFunction(
-      final Object currentValue, final String iFunction, final OCommandContext iContext) {
-    if (currentValue == null) return null;
-
-    Object result = null;
-
-    final String function = iFunction.toUpperCase(Locale.ENGLISH);
-
-    if (function.startsWith("SIZE("))
-      result = currentValue instanceof ORecord ? 1 : OMultiValue.getSize(currentValue);
-    else if (function.startsWith("LENGTH(")) result = currentValue.toString().length();
-    else if (function.startsWith("TOUPPERCASE("))
-      result = currentValue.toString().toUpperCase(Locale.ENGLISH);
-    else if (function.startsWith("TOLOWERCASE("))
-      result = currentValue.toString().toLowerCase(Locale.ENGLISH);
-    else if (function.startsWith("TRIM(")) result = currentValue.toString().trim();
-    else if (function.startsWith("TOJSON("))
-      result = currentValue instanceof ODocument ? ((ODocument) currentValue).toJSON() : null;
-    else if (function.startsWith("KEYS("))
-      result = currentValue instanceof Map<?, ?> ? ((Map<?, ?>) currentValue).keySet() : null;
-    else if (function.startsWith("VALUES("))
-      result = currentValue instanceof Map<?, ?> ? ((Map<?, ?>) currentValue).values() : null;
-    else if (function.startsWith("ASSTRING(")) result = currentValue.toString();
-    else if (function.startsWith("ASINTEGER(")) result = Integer.valueOf(currentValue.toString());
-    else if (function.startsWith("ASFLOAT(")) result = Float.valueOf(currentValue.toString());
-    else if (function.startsWith("ASBOOLEAN(")) {
-      if (currentValue instanceof String) result = new Boolean((String) currentValue);
-      else if (currentValue instanceof Number) {
-        final int bValue = ((Number) currentValue).intValue();
-        if (bValue == 0) result = Boolean.FALSE;
-        else if (bValue == 1) result = Boolean.TRUE;
-      }
-    } else if (function.startsWith("ASDATE("))
-      if (currentValue instanceof Date) result = currentValue;
-      else if (currentValue instanceof Number)
-        result = new Date(((Number) currentValue).longValue());
-      else
-        try {
-          result =
-              ODateHelper.getDateFormatInstance(ODatabaseRecordThreadLocal.instance().get())
-                  .parse(currentValue.toString());
-        } catch (ParseException ignore) {
-        }
-    else if (function.startsWith("ASDATETIME("))
-      if (currentValue instanceof Date) result = currentValue;
-      else if (currentValue instanceof Number)
-        result = new Date(((Number) currentValue).longValue());
-      else
-        try {
-          result =
-              ODateHelper.getDateTimeFormatInstance(ODatabaseRecordThreadLocal.instance().get())
-                  .parse(currentValue.toString());
-        } catch (ParseException ignore) {
-        }
-    else {
-      // EXTRACT ARGUMENTS
-      final List<String> args =
-          OStringSerializerHelper.getParameters(iFunction.substring(iFunction.indexOf('(')));
-
-      final ORecord currentRecord =
-          iContext != null ? (ORecord) iContext.getVariable("$current") : null;
-      for (int i = 0; i < args.size(); ++i) {
-        final String arg = args.get(i);
-        final Object o = OSQLHelper.getValue(arg, currentRecord, iContext);
-        if (o != null) args.set(i, o.toString());
-      }
-
-      if (function.startsWith("CHARAT("))
-        result = currentValue.toString().charAt(Integer.parseInt(args.get(0)));
-      else if (function.startsWith("INDEXOF("))
-        if (args.size() == 1)
-          result = currentValue.toString().indexOf(OIOUtils.getStringContent(args.get(0)));
-        else
-          result =
-              currentValue
-                  .toString()
-                  .indexOf(OIOUtils.getStringContent(args.get(0)), Integer.parseInt(args.get(1)));
-      else if (function.startsWith("SUBSTRING("))
-        if (args.size() == 1)
-          result = currentValue.toString().substring(Integer.parseInt(args.get(0)));
-        else
-          result =
-              currentValue
-                  .toString()
-                  .substring(Integer.parseInt(args.get(0)), Integer.parseInt(args.get(1)));
-      else if (function.startsWith("APPEND("))
-        result = currentValue.toString() + OIOUtils.getStringContent(args.get(0));
-      else if (function.startsWith("PREFIX("))
-        result = OIOUtils.getStringContent(args.get(0)) + currentValue.toString();
-      else if (function.startsWith("FORMAT("))
-        if (currentValue instanceof Date) {
-          SimpleDateFormat formatter = new SimpleDateFormat(OIOUtils.getStringContent(args.get(0)));
-          formatter.setTimeZone(ODateHelper.getDatabaseTimeZone());
-          result = formatter.format(currentValue);
-        } else
-          result = String.format(OIOUtils.getStringContent(args.get(0)), currentValue.toString());
-      else if (function.startsWith("LEFT(")) {
-        final int len = Integer.parseInt(args.get(0));
-        final String stringValue = currentValue.toString();
-        result = stringValue.substring(0, len <= stringValue.length() ? len : stringValue.length());
-      } else if (function.startsWith("RIGHT(")) {
-        final int offset = Integer.parseInt(args.get(0));
-        final String stringValue = currentValue.toString();
-        result =
-            stringValue.substring(
-                offset < stringValue.length() ? stringValue.length() - offset : 0);
-      } else {
-        final OSQLFunctionRuntime f = OSQLHelper.getFunction(null, iFunction);
-        if (f != null) result = f.execute(currentRecord, currentRecord, null, iContext);
-      }
-    }
-
-    return result;
   }
 
   @SuppressWarnings("unchecked")

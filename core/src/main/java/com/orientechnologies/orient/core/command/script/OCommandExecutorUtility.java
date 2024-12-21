@@ -31,7 +31,6 @@ import java.util.Map;
  * Script utility class
  *
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
- * @see OCommandScript
  */
 public class OCommandExecutorUtility {
   private static final OLogger logger =

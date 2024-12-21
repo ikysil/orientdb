@@ -3,17 +3,14 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.exception.OException;
-import com.orientechnologies.common.listener.OProgressListener;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.executor.OInternalExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
 import java.util.Map;
 
 public class OStatement extends SimpleNode {
@@ -47,13 +44,6 @@ public class OStatement extends SimpleNode {
     StringBuilder builder = new StringBuilder();
     toString(null, builder);
     return builder.toString();
-  }
-
-  public Object execute(
-      OSQLAsynchQuery<ODocument> request,
-      OCommandContext context,
-      OProgressListener progressListener) {
-    throw new UnsupportedOperationException("Unsupported command: " + getClass().getSimpleName());
   }
 
   public OResultSet execute(ODatabaseSession db, Object[] args) {

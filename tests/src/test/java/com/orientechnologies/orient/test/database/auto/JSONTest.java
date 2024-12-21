@@ -725,7 +725,7 @@ public class JSONTest extends DocumentDBBaseTest {
             + " {\"deeper\": { \"k\": \"v\",\"quotes\": \"\\\"\\\",\\\"oops\\\":\\\"123\\\"\","
             + " \"likeJson\": \"[1,2,3]\",\"spaces\": \"value with spaces\"}}}";
     doc.fromJSON(s);
-    Assert.assertEquals(doc.field("deep[deeper][quotes]"), "\"\",\"oops\":\"123\"");
+    Assert.assertEquals(doc.field("deep['deeper']['quotes']"), "\"\",\"oops\":\"123\"");
 
     String res = doc.toJSON();
 
