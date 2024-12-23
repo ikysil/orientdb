@@ -19,8 +19,6 @@
  */
 package com.orientechnologies.orient.core.db;
 
-import com.orientechnologies.orient.core.command.OCommandExecutor;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OView;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
@@ -52,11 +50,6 @@ public interface ODatabaseListener {
   void onAfterTxCommit(final ODatabase iDatabase);
 
   void onClose(final ODatabase iDatabase);
-
-  void onBeforeCommand(final OCommandRequestText iCommand, final OCommandExecutor executor);
-
-  void onAfterCommand(
-      final OCommandRequestText iCommand, final OCommandExecutor executor, Object result);
 
   default void onCreateClass(ODatabase iDatabase, OClass iClass) {}
 

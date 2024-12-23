@@ -10,8 +10,6 @@ import com.orientechnologies.agent.services.metrics.server.database.QueryInfo;
 import com.orientechnologies.enterprise.server.listener.OEnterpriseConnectionListener;
 import com.orientechnologies.enterprise.server.listener.OEnterpriseStorageListener;
 import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.command.OCommandExecutor;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.db.*;
 import com.orientechnologies.orient.core.db.OSystemDatabase;
 import com.orientechnologies.orient.core.db.document.OQueryDatabaseState;
@@ -405,13 +403,6 @@ public class OEnterpriseServerImpl
 
   @Override
   public void onClose(ODatabase iDatabase) {}
-
-  @Override
-  public void onBeforeCommand(OCommandRequestText iCommand, OCommandExecutor executor) {}
-
-  @Override
-  public void onAfterCommand(
-      OCommandRequestText iCommand, OCommandExecutor executor, Object result) {}
 
   @Override
   public void onCommandStart(ODatabase database, OResultSet result) {

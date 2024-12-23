@@ -598,7 +598,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
         result = new ArrayList<>();
       }
 
-      response = new OCommandResponse(result, null, true, connection.getDatabase());
+      response = new OCommandResponse(result, true, connection.getDatabase());
       return response;
     } finally {
       connection.getDatabase().swapTx(oldTx);

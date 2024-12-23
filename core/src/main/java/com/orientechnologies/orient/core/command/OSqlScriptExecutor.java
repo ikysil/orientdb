@@ -1,11 +1,13 @@
 package com.orientechnologies.orient.core.command;
 
-import com.orientechnologies.orient.core.command.script.OCommandExecutorFunction;
-import com.orientechnologies.orient.core.command.script.OCommandFunction;
-import com.orientechnologies.orient.core.command.traverse.OAbstractScriptExecutor;
+import com.orientechnologies.orient.core.command.script.OAbstractScriptExecutor;
+import com.orientechnologies.orient.core.command.script.OScriptManager;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
+import com.orientechnologies.orient.core.metadata.function.OFunction;
+import com.orientechnologies.orient.core.metadata.security.ORole;
+import com.orientechnologies.orient.core.metadata.security.ORule;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
@@ -139,8 +141,11 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
       db = ODatabaseRecordThreadLocal.instance().get();
     }
 
-    final OCommandExecutorFunction command = new OCommandExecutorFunction();
-    command.parse(new OCommandFunction(functionName));
-    return command.executeInContext(context, iArgs);
+    OFunction function = db.getMetadata().getFunctionLibrary().getFunction(functionName);
+
+    db.checkSecurity(ORule.ResourceGeneric.FUNCTION, ORole.PERMISSION_READ, function.getName());
+    final OScriptManager scriptManager = db.getSharedContext().getOrientDB().getScriptManager();
+    final Object[] args = iArgs == null ? null : iArgs.values().toArray();
+    return execute(db, scriptManager.getFunctionInvoke(function, args), iArgs);
   }
 }

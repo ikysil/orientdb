@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.server.network.protocol;
 
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerBinary;
@@ -47,7 +46,6 @@ public class ONetworkProtocolData {
   private String serializationImpl = null;
   public boolean serverUser = false;
   public String serverUsername = null;
-  public OCommandRequestText command = null;
   public boolean supportsLegacyPushMessages = true;
   public boolean collectStats = true;
   private ORecordSerializer serializer;

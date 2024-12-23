@@ -4,7 +4,7 @@ import com.orientechnologies.BaseMemoryDatabase;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.query.OLegacyResultSet;
+import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.ArrayList;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public class OFunctionSqlTest extends BaseMemoryDatabase {
     function.save(db);
     Object result = function.executeInContext(new OBasicCommandContext(), "Enrico");
 
-    Assert.assertEquals(((OLegacyResultSet) result).size(), 1);
+    Assert.assertEquals(((OResultSet) result).stream().count(), 1);
   }
 
   @Test
@@ -75,6 +75,6 @@ public class OFunctionSqlTest extends BaseMemoryDatabase {
     function1.save(db);
     Object result = function.executeInContext(new OBasicCommandContext(), "Enrico");
 
-    Assert.assertEquals(((OLegacyResultSet) result).size(), 1);
+    Assert.assertEquals(((OResultSet) result).stream().count(), 1);
   }
 }

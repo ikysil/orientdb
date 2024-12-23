@@ -15,8 +15,6 @@
  */
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.orient.core.command.OCommandExecutor;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.db.ODatabase;
 import com.orientechnologies.orient.core.db.ODatabaseListener;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
@@ -120,17 +118,6 @@ public class DbListenerTest extends DocumentDBBaseTest {
     @Override
     public void onClose(ODatabase iDatabase) {
       onClose++;
-    }
-
-    @Override
-    public void onBeforeCommand(OCommandRequestText iCommand, OCommandExecutor executor) {
-      command = iCommand.getText();
-    }
-
-    @Override
-    public void onAfterCommand(
-        OCommandRequestText iCommand, OCommandExecutor executor, Object result) {
-      commandResult = result;
     }
 
     @Override

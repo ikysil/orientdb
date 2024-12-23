@@ -42,8 +42,6 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.exception.OConfigurationException;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.metadata.function.OFunctionUtilWrapper;
-import com.orientechnologies.orient.core.sql.OSQLScriptEngine;
-import com.orientechnologies.orient.core.sql.OSQLScriptEngineFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -81,25 +79,11 @@ public class OScriptManager {
       new ConcurrentHashMap<String, ODatabaseScriptManager>();
   protected Map<String, OScriptResultHandler> handlers =
       new HashMap<String, OScriptResultHandler>();
-  protected Map<String, Function<String, OScriptExecutor>> executorsFactories = new HashMap<>();
   protected OCommandManager commandManager = new OCommandManager();
 
   public OScriptManager() {
     scriptEngineManager = new ScriptEngineManager();
-
     final boolean useGraal = OGlobalConfiguration.SCRIPT_POLYGLOT_USE_GRAAL.getValueAsBoolean();
-    executorsFactories.put(
-        "javascript",
-        (lang) ->
-            useGraal
-                ? new OPolyglotScriptExecutor(lang, new OScriptTransformerImpl())
-                : new OJsr223ScriptExecutor(lang, new OScriptTransformerImpl()));
-    executorsFactories.put(
-        "ecmascript",
-        (lang) ->
-            useGraal
-                ? new OPolyglotScriptExecutor(lang, new OScriptTransformerImpl())
-                : new OJsr223ScriptExecutor(lang, new OScriptTransformerImpl()));
 
     for (ScriptEngineFactory f : scriptEngineManager.getEngineFactories()) {
       registerEngine(f.getLanguageName().toLowerCase(Locale.ENGLISH), f);
@@ -125,10 +109,24 @@ public class OScriptManager {
       }
     }
 
-    registerFormatter(OSQLScriptEngine.NAME, new OSQLScriptFormatter());
+    registerFormatter("sql", new OSQLScriptFormatter());
     registerFormatter(DEF_LANGUAGE, new OJSScriptFormatter());
     registerFormatter("ruby", new ORubyScriptFormatter());
     registerFormatter("groovy", new OGroovyScriptFormatter());
+    Map<String, Function<String, OScriptExecutor>> executorsFactories = new HashMap<>();
+
+    executorsFactories.put(
+        "javascript",
+        (lang) ->
+            useGraal
+                ? new OPolyglotScriptExecutor(lang, new OScriptTransformerImpl())
+                : new OJsr223ScriptExecutor(lang, new OScriptTransformerImpl()));
+    executorsFactories.put(
+        "ecmascript",
+        (lang) ->
+            useGraal
+                ? new OPolyglotScriptExecutor(lang, new OScriptTransformerImpl())
+                : new OJsr223ScriptExecutor(lang, new OScriptTransformerImpl()));
     for (String lang : engines.keySet()) {
       Function<String, OScriptExecutor> factory = executorsFactories.get(lang);
       OScriptExecutor executor = null;
@@ -139,9 +137,6 @@ public class OScriptManager {
       }
       commandManager.registerScriptExecutor(lang, executor);
     }
-
-    // Registring sql script engine after for not fight with the basic engine
-    registerEngine(OSQLScriptEngine.NAME, new OSQLScriptEngineFactory());
 
     Iterator<OScriptExecutorRegister> customExecutors =
         lookupProviderWithOrientClassLoader(OScriptExecutorRegister.class);

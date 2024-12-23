@@ -25,7 +25,6 @@ import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.sql.executor.OExecutionStep;
@@ -70,7 +69,6 @@ public class OBasicCommandContext implements OCommandContext {
   private long timeoutMs;
   private OCommandContext.TIMEOUT_STRATEGY timeoutStrategy;
   protected AtomicLong resultsProcessed = new AtomicLong(0);
-  protected Set<Object> uniqueResult = new HashSet<Object>();
   private Map<OExecutionStep, OStepStats> stepStats = new IdentityHashMap<>();
   private LinkedList<OStepStats> currentStepStats = new LinkedList<>();
   private boolean indexStats = true;
@@ -428,21 +426,6 @@ public class OBasicCommandContext implements OCommandContext {
    */
   public AtomicLong getResultsProcessed() {
     return resultsProcessed;
-  }
-
-  /**
-   * adds an item to the unique result set
-   *
-   * @param o the result item to add
-   * @return true if the element is successfully added (it was not present yet), false otherwise (it
-   *     was already present)
-   */
-  public synchronized boolean addToUniqueResult(Object o) {
-    Object toAdd = o;
-    if (o instanceof ODocument && ((ODocument) o).getIdentity().isNew()) {
-      toAdd = new ODocumentEqualityWrapper((ODocument) o);
-    }
-    return this.uniqueResult.add(toAdd);
   }
 
   public ODatabaseSession getDatabase() {

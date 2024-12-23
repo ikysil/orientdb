@@ -7,7 +7,6 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.OChainedIndexProxy;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.Arrays;
 import java.util.List;
@@ -18,7 +17,6 @@ import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 /**
- * Testing functionality of {@link OChainedIndexProxy}.
  *
  * <p>Each test method tests different traverse index combination with different operations.
  *

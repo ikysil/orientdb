@@ -1,4 +1,4 @@
-package com.orientechnologies.orient.core.command.traverse;
+package com.orientechnologies.orient.core.command.script;
 
 import com.orientechnologies.orient.core.command.OScriptExecutor;
 import com.orientechnologies.orient.core.command.OScriptInterceptor;

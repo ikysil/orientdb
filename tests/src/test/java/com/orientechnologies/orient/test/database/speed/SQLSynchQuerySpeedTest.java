@@ -16,7 +16,6 @@
 package com.orientechnologies.orient.test.database.speed;
 
 import com.orientechnologies.common.test.SpeedTestMonoThread;
-import com.orientechnologies.orient.core.command.OCommandResultListener;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
@@ -25,7 +24,7 @@ import java.io.UnsupportedEncodingException;
 import org.testng.annotations.Test;
 
 @Test(enabled = false)
-public class SQLSynchQuerySpeedTest extends SpeedTestMonoThread implements OCommandResultListener {
+public class SQLSynchQuerySpeedTest extends SpeedTestMonoThread {
   protected int resultCount = 0;
   private ODatabaseDocument database;
 
@@ -51,13 +50,5 @@ public class SQLSynchQuerySpeedTest extends SpeedTestMonoThread implements OComm
   public boolean result(final Object iRecord) {
     OrientTest.printRecord(resultCount++, iRecord);
     return true;
-  }
-
-  @Override
-  public void end() {}
-
-  @Override
-  public Object getResult() {
-    return null;
   }
 }

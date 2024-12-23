@@ -20,7 +20,8 @@
 package com.orientechnologies.orient.core.sql.functions.graph;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.OCommandExecutorAbstract;
+import com.orientechnologies.orient.core.db.OExecutionThreadLocal;
+import com.orientechnologies.orient.core.exception.OCommandInterruptedException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.ODirection;
 import com.orientechnologies.orient.core.record.OVertex;
@@ -79,7 +80,8 @@ public abstract class OSQLFunctionPathFinder extends OSQLFunctionMathAbstract {
         // FOUND
         break;
 
-      if (!OCommandExecutorAbstract.checkInterruption(context)) break;
+      if (OExecutionThreadLocal.isInterruptCurrentOperation())
+        throw new OCommandInterruptedException("The command has been interrupted");
     }
 
     context.setVariable("maxDistances", maxDistances);

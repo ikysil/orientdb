@@ -23,10 +23,7 @@ import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.client.remote.OBinaryResponse;
-import com.orientechnologies.orient.client.remote.OFetchPlanResults;
 import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
-import com.orientechnologies.orient.client.remote.SimpleValueFetchPlanCommandListener;
-import com.orientechnologies.orient.core.command.OCommandResultListener;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
@@ -51,26 +48,19 @@ import java.util.Set;
 
 public final class OCommandResponse implements OBinaryResponse {
   private static final OLogger logger = OLogManager.instance().logger(OCommandResponse.class);
-  private final OCommandResultListener listener;
   private final ODatabaseDocumentInternal database;
   private boolean live;
   private Object result;
   private boolean isRecordResultSet;
 
   public OCommandResponse(
-      Object result,
-      SimpleValueFetchPlanCommandListener listener,
-      boolean isRecordResultSet,
-      ODatabaseDocumentInternal database) {
+      Object result, boolean isRecordResultSet, ODatabaseDocumentInternal database) {
     this.result = result;
-    this.listener = listener;
     this.isRecordResultSet = isRecordResultSet;
     this.database = database;
   }
 
-  public OCommandResponse(
-      OCommandResultListener listener, ODatabaseDocumentInternal database, boolean live) {
-    this.listener = listener;
+  public OCommandResponse(ODatabaseDocumentInternal database, boolean live) {
     this.database = database;
     this.live = live;
   }
@@ -78,30 +68,12 @@ public final class OCommandResponse implements OBinaryResponse {
   public void write(OChannelDataOutput channel, int protocolVersion, ORecordSerializer serializer)
       throws IOException {
 
-    serializeValue(
-        channel,
-        (SimpleValueFetchPlanCommandListener) listener,
-        result,
-        false,
-        isRecordResultSet,
-        protocolVersion,
-        serializer);
-    if (listener instanceof OFetchPlanResults) {
-      // SEND FETCHED RECORDS TO LOAD IN CLIENT CACHE
-      for (ORecord rec : ((OFetchPlanResults) listener).getFetchedRecordsToSend()) {
-        channel.writeByte((byte) 2); // CLIENT CACHE RECORD. IT
-        // ISN'T PART OF THE
-        // RESULT SET
-        OMessageHelper.writeIdentifiable(channel, rec, serializer);
-      }
-
-      channel.writeByte((byte) 0); // NO MORE RECORDS
-    }
+    serializeValue(channel, result, false, isRecordResultSet, protocolVersion, serializer);
+    channel.writeByte((byte) 0); // NO MORE RECORDS
   }
 
   public void serializeValue(
       OChannelDataOutput channel,
-      final SimpleValueFetchPlanCommandListener listener,
       Object result,
       boolean load,
       boolean isRecordResultSet,
@@ -116,10 +88,9 @@ public final class OCommandResponse implements OBinaryResponse {
       channel.writeByte((byte) 'r');
       if (load && result instanceof ORecordId) result = ((ORecordId) result).getRecord();
 
-      if (listener != null) listener.result(result);
       OMessageHelper.writeIdentifiable(channel, (OIdentifiable) result, recordSerializer);
     } else if (!isRecordResultSet) {
-      writeSimpleValue(channel, listener, result, protocolVersion, recordSerializer);
+      writeSimpleValue(channel, result, protocolVersion, recordSerializer);
     } else if (OMultiValue.isMultiValue(result)) {
       final byte collectionType = result instanceof Set ? (byte) 's' : (byte) 'l';
       channel.writeByte(collectionType);
@@ -127,7 +98,6 @@ public final class OCommandResponse implements OBinaryResponse {
       for (Object o : OMultiValue.getMultiValueIterable(result, false)) {
         try {
           if (load && o instanceof ORecordId) o = ((ORecordId) o).getRecord();
-          if (listener != null) listener.result(o);
 
           OMessageHelper.writeIdentifiable(channel, (OIdentifiable) o, recordSerializer);
         } catch (Exception e) {
@@ -142,7 +112,6 @@ public final class OCommandResponse implements OBinaryResponse {
         for (Object o : OMultiValue.getMultiValueIterable(result)) {
           try {
             if (load && o instanceof ORecordId) o = ((ORecordId) o).getRecord();
-            if (listener != null) listener.result(o);
 
             channel.writeByte((byte) 1); // ONE MORE RECORD
             OMessageHelper.writeIdentifiable(channel, (OIdentifiable) o, recordSerializer);
@@ -159,7 +128,6 @@ public final class OCommandResponse implements OBinaryResponse {
         for (Object o : OMultiValue.getMultiValueIterable(result)) {
           try {
             if (load && o instanceof ORecordId) o = ((ORecordId) o).getRecord();
-            if (listener != null) listener.result(o);
 
             OMessageHelper.writeIdentifiable(channel, (OIdentifiable) o, recordSerializer);
           } catch (Exception e) {
@@ -170,13 +138,12 @@ public final class OCommandResponse implements OBinaryResponse {
 
     } else {
       // ANY OTHER (INCLUDING LITERALS)
-      writeSimpleValue(channel, listener, result, protocolVersion, recordSerializer);
+      writeSimpleValue(channel, result, protocolVersion, recordSerializer);
     }
   }
 
   private void writeSimpleValue(
       OChannelDataOutput channel,
-      SimpleValueFetchPlanCommandListener listener,
       Object result,
       int protocolVersion,
       ORecordSerializer recordSerializer)
@@ -187,15 +154,9 @@ public final class OCommandResponse implements OBinaryResponse {
       ODocument document = new ODocument();
       document.field("result", result);
       OMessageHelper.writeIdentifiable(channel, document, recordSerializer);
-      if (listener != null) listener.linkdedBySimpleValue(document);
     } else {
       channel.writeByte((byte) 'a');
       final StringBuilder value = new StringBuilder(64);
-      if (listener != null) {
-        ODocument document = new ODocument();
-        document.field("result", result);
-        listener.linkdedBySimpleValue(document);
-      }
       ORecordSerializerStringAbstract.fieldTypeToString(
           value, OType.getTypeByClass(result.getClass()), result);
       channel.writeString(value.toString());
@@ -222,7 +183,6 @@ public final class OCommandResponse implements OBinaryResponse {
     } finally {
       // TODO: this is here because we allow query in end listener.
       session.commandExecuting = false;
-      if (listener != null && !live) listener.end();
     }
   }
 

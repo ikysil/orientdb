@@ -7,7 +7,6 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OCallable;
-import com.orientechnologies.orient.core.command.OCommandRequest;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
@@ -270,11 +269,6 @@ public final class OrientGraph implements OGraph {
     makeActive();
     OResultSet resultSet = database.execute(language, script, params);
     return new OGremlinResultSet(this, resultSet);
-  }
-
-  @Deprecated
-  public Object executeCommand(OCommandRequest command) {
-    return command.execute();
   }
 
   @Override

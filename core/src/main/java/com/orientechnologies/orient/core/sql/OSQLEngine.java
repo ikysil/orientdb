@@ -31,10 +31,11 @@ import com.orientechnologies.common.util.OCollections;
 import com.orientechnologies.orient.core.collate.OCollate;
 import com.orientechnologies.orient.core.collate.OCollateFactory;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.command.OCommandExecutorAbstract;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
+import com.orientechnologies.orient.core.db.OExecutionThreadLocal;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.exception.OCommandInterruptedException;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionFactory;
@@ -282,7 +283,8 @@ public class OSQLEngine {
       final OCommandContext iContext) {
     if (iCurrent == null) return null;
 
-    if (!OCommandExecutorAbstract.checkInterruption(iContext)) return null;
+    if (OExecutionThreadLocal.isInterruptCurrentOperation())
+      throw new OCommandInterruptedException("The command has been interrupted");
 
     if (iCurrent instanceof Iterable && !(iCurrent instanceof OIdentifiable)) {
       iCurrent = ((Iterable) iCurrent).iterator();
