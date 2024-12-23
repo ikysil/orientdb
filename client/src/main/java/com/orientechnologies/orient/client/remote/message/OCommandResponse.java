@@ -35,7 +35,6 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkV37Client;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerStringAbstract;
-import com.orientechnologies.orient.core.sql.query.OBasicLegacyResultSet;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinaryProtocol;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataInput;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataOutput;
@@ -210,10 +209,7 @@ public final class OCommandResponse implements OBinaryResponse {
         final int tot = network.readInt();
         final Collection<OIdentifiable> coll;
 
-        coll =
-            type == 's'
-                ? new HashSet<OIdentifiable>(tot)
-                : new OBasicLegacyResultSet<OIdentifiable>(tot);
+        coll = new HashSet<OIdentifiable>(tot);
         for (int i = 0; i < tot; ++i) {
           final OIdentifiable resultItem = OMessageHelper.readIdentifiable(network, serializer);
           if (resultItem instanceof ORecord)
@@ -224,7 +220,7 @@ public final class OCommandResponse implements OBinaryResponse {
         result = coll;
         break;
       case 'i':
-        coll = new OBasicLegacyResultSet<OIdentifiable>();
+        coll = new HashSet<OIdentifiable>();
         byte status;
         while ((status = network.readByte()) > 0) {
           final OIdentifiable record = OMessageHelper.readIdentifiable(network, serializer);

@@ -34,7 +34,6 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OLiveResultListener;
 import com.orientechnologies.orient.core.storage.OStorage;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +72,7 @@ public class OLiveQueryTest {
     odb.close();
   }
 
-  class MyLiveQueryListener implements OLiveResultListener, OLiveQueryResultListener {
+  class MyLiveQueryListener implements OLiveQueryResultListener {
 
     public CountDownLatch latch;
 
@@ -83,18 +82,6 @@ public class OLiveQueryTest {
 
     public List<ORecordOperation> ops = new ArrayList<ORecordOperation>();
     public List<OResult> created = new ArrayList<OResult>();
-
-    @Override
-    public void onLiveResult(int iLiveToken, ORecordOperation iOp) throws OException {
-      ops.add(iOp);
-      latch.countDown();
-    }
-
-    @Override
-    public void onError(int iLiveToken) {}
-
-    @Override
-    public void onUnsubscribe(int iLiveToken) {}
 
     @Override
     public void onCreate(ODatabaseDocument database, OResult data) {
