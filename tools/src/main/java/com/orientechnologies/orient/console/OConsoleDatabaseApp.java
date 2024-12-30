@@ -86,6 +86,7 @@ import com.orientechnologies.orient.core.serialization.serializer.record.ORecord
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerStringAbstract;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
@@ -1274,7 +1275,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     final Object result =
         OSQLEngine.parseExpression(iText)
-            .execute(currentRecord, new OBasicCommandContext(currentDatabase));
+            .execute(new OResultInternal(currentRecord), new OBasicCommandContext(currentDatabase));
 
     if (result != null) {
       if (result instanceof OIdentifiable) {

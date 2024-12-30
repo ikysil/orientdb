@@ -48,6 +48,7 @@ import com.orientechnologies.orient.core.serialization.serializer.OStringSeriali
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerStringAbstract;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import java.lang.reflect.Array;
 import java.text.DateFormat;
@@ -519,13 +520,13 @@ public class ODocumentHelper {
 
             for (Object v : OMultiValue.getMultiValueIterable(value)) {
               if (v instanceof OIdentifiable) {
-                Object result = pred.execute((OIdentifiable) v, iContext);
+                Object result = pred.execute(new OResultInternal((OIdentifiable) v), iContext);
                 if (Boolean.TRUE.equals(result)) {
                   values.add(v);
                 }
               } else if (v instanceof Map) {
-                ODocument doc = new ODocument().fromMap((Map<String, ? extends Object>) v);
-                Object result = pred.execute(doc, iContext);
+                Object result =
+                    pred.execute(new OResultInternal((Map<String, Object>) v), iContext);
                 if (Boolean.TRUE.equals(result)) {
                   values.add(v);
                 }

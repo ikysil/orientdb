@@ -4,7 +4,6 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
@@ -75,7 +74,7 @@ public class OAlterClusterStatement extends ODDLStatement {
     List<OResult> result = new ArrayList<>();
     List<Integer> clustersToUpdate = getClusters(ctx);
 
-    Object finalValue = attributeValue.execute((OIdentifiable) null, ctx);
+    Object finalValue = attributeValue.getDefaultAlias().getValue();
 
     final com.orientechnologies.orient.core.storage.OCluster.ATTRIBUTES attribute =
         Arrays.stream(OCluster.ATTRIBUTES.values())

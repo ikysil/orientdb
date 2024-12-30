@@ -4,9 +4,9 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OPropertyImpl;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.Map;
 
 public class OCreatePropertyAttributeStatement extends SimpleNode {
@@ -71,7 +71,7 @@ public class OCreatePropertyAttributeStatement extends SimpleNode {
   public Object setOnProperty(OPropertyImpl internalProp, OCommandContext ctx) {
     String attrName = settingName.getStringValue();
     Object attrValue =
-        this.settingValue == null ? true : this.settingValue.execute((OIdentifiable) null, ctx);
+        this.settingValue == null ? true : this.settingValue.execute((OResult) null, ctx);
     try {
       if (attrName.equalsIgnoreCase("readonly")) {
         internalProp.setReadonly((boolean) attrValue);

@@ -17,6 +17,7 @@ package com.orientechnologies.spatial.functions;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.parser.OBinaryCompareOperator;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OFromClause;
@@ -74,7 +75,7 @@ public class OSTDWithinFunction extends OSpatialFunctionAbstractIndexable {
 
     OExpression number = args[2];
 
-    Number parsedNumber = (Number) number.execute((OIdentifiable) null, ctx);
+    Number parsedNumber = (Number) number.execute((OResult) null, ctx);
 
     params.put("distance", parsedNumber.doubleValue());
   }

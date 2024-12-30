@@ -9,6 +9,7 @@ import com.orientechnologies.orient.core.command.script.transformer.OScriptTrans
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.ORule;
@@ -176,7 +177,7 @@ public class OPolyglotScriptExecutor extends OAbstractScriptExecutor
       } else if (result.hasArrayElements()) {
         final List<Object> array = new ArrayList<>((int) result.getArraySize());
         for (int i = 0; i < result.getArraySize(); ++i)
-          array.add(new OResultInternal(result.getArrayElement(i).asHostObject()));
+          array.add(new OResultInternal((OIdentifiable) result.getArrayElement(i).asHostObject()));
         finalResult = array;
       } else if (result.isHostObject()) {
         finalResult = result.asHostObject();

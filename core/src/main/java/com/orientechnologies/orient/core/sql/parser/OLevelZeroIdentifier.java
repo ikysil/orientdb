@@ -44,19 +44,6 @@ public class OLevelZeroIdentifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    if (functionCall != null) {
-      return functionCall.execute(iCurrentRecord, ctx);
-    }
-    if (collection != null) {
-      return collection.execute(iCurrentRecord, ctx);
-    }
-    if (Boolean.TRUE.equals(self)) {
-      return iCurrentRecord;
-    }
-    throw new UnsupportedOperationException();
-  }
-
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     if (functionCall != null) {
       return functionCall.execute(iCurrentRecord, ctx);

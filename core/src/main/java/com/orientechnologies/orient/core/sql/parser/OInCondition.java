@@ -5,7 +5,6 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
@@ -37,32 +36,6 @@ public class OInCondition extends OBooleanExpression {
 
   public OInCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftVal = evaluateLeft(currentRecord, ctx);
-    Object rightVal = evaluateRight(currentRecord, ctx);
-    if (rightVal == null) {
-      return false;
-    }
-    return evaluateExpression(leftVal, rightVal);
-  }
-
-  public Object evaluateRight(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object rightVal = null;
-    if (rightStatement != null) {
-      rightVal = executeQuery(rightStatement, ctx);
-    } else if (rightParam != null) {
-      rightVal = rightParam.getValue(ctx.getInputParameters());
-    } else if (rightMathExpression != null) {
-      rightVal = rightMathExpression.execute(currentRecord, ctx);
-    }
-    return rightVal;
-  }
-
-  public Object evaluateLeft(OIdentifiable currentRecord, OCommandContext ctx) {
-    return left.execute(currentRecord, ctx);
   }
 
   @Override

@@ -6,6 +6,7 @@ import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -91,35 +92,6 @@ public class OContainsAllCondition extends OBooleanExpression {
   }
 
   @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (right != null) {
-      Object rightValue = right.execute(currentRecord, ctx);
-      return execute(leftValue, rightValue);
-    } else {
-      if (!OMultiValue.isMultiValue(leftValue)) {
-        return false;
-      }
-      Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
-      while (iter.hasNext()) {
-        Object item = iter.next();
-        if (item instanceof OIdentifiable) {
-          if (!rightBlock.evaluate((OIdentifiable) item, ctx)) {
-            return false;
-          }
-        } else if (item instanceof OResult) {
-          if (!rightBlock.evaluate((OResult) item, ctx)) {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-      return true;
-    }
-  }
-
-  @Override
   public boolean evaluate(OResult currentRecord, OCommandContext ctx) {
     if (left.isFunctionAny()) {
       return evaluateAny(currentRecord, ctx);
@@ -165,7 +137,7 @@ public class OContainsAllCondition extends OBooleanExpression {
       while (iter.hasNext()) {
         Object item = iter.next();
         if (item instanceof OIdentifiable) {
-          if (!rightBlock.evaluate((OIdentifiable) item, ctx)) {
+          if (!rightBlock.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
             return false;
           }
         } else if (item instanceof OResult) {

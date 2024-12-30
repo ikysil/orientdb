@@ -127,7 +127,7 @@ public class OLuceneSearchOnClassFunction extends OLuceneSearchFunctionTemplate 
     OLuceneFullTextIndex index = searchForIndex(target, ctx);
 
     OExpression expression = args[0];
-    String query = (String) expression.execute((OIdentifiable) null, ctx);
+    String query = (String) expression.execute((OResult) null, ctx);
 
     if (index != null) {
 

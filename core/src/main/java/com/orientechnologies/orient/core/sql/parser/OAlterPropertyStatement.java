@@ -5,11 +5,11 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
 import java.util.Arrays;
@@ -57,7 +57,7 @@ public class OAlterPropertyStatement extends ODDLStatement {
     if (customPropertyName != null) {
       String customName = customPropertyName.getStringValue();
       Object oldValue = property.getCustom(customName);
-      Object finalValue = customPropertyValue.execute((OIdentifiable) null, ctx);
+      Object finalValue = customPropertyValue.execute((OResult) null, ctx);
       property.setCustom(customName, finalValue == null ? null : "" + finalValue);
 
       result.setProperty("operation", "alter property custom");
@@ -67,7 +67,7 @@ public class OAlterPropertyStatement extends ODDLStatement {
     } else {
       String setting = settingName.getStringValue();
       boolean isCollate = setting.equalsIgnoreCase("collate");
-      Object finalValue = settingValue.execute((OIdentifiable) null, ctx);
+      Object finalValue = settingValue.execute((OResult) null, ctx);
       if (finalValue == null
           && (setting.equalsIgnoreCase("name")
               || setting.equalsIgnoreCase("shortname")

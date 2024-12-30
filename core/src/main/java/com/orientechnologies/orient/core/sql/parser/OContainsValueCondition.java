@@ -3,7 +3,6 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
@@ -28,26 +27,6 @@ public class OContainsValueCondition extends OBooleanExpression {
 
   public OContainsValueCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (leftValue instanceof Map) {
-      Map map = (Map) leftValue;
-      if (condition != null) {
-        for (Object o : map.values()) {
-          if (condition.evaluate(o, ctx)) {
-            return true;
-          }
-        }
-        return false;
-      } else {
-        Object rightValue = expression.execute(currentRecord, ctx);
-        return map.values().contains(rightValue); // TODO type conversions...?
-      }
-    }
-    return false;
   }
 
   @Override

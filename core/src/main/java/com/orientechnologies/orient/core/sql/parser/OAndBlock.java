@@ -4,7 +4,6 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
@@ -25,20 +24,6 @@ public class OAndBlock extends OBooleanExpression {
 
   public OAndBlock(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    if (getSubBlocks() == null) {
-      return true;
-    }
-
-    for (OBooleanExpression block : subBlocks) {
-      if (!block.evaluate(currentRecord, ctx)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   @Override

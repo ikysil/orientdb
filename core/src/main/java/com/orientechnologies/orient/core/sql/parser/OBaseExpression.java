@@ -101,25 +101,6 @@ public class OBaseExpression extends OMathExpression {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    Object result = null;
-    if (number != null) {
-      result = number.getValue();
-    } else if (identifier != null) {
-      result = identifier.execute(iCurrentRecord, ctx);
-    } else if (string != null && string.length() > 1) {
-      result = OStringSerializerHelper.decode(string.substring(1, string.length() - 1));
-    } else if (inputParam != null) {
-      result = inputParam.getValue(ctx.getInputParameters());
-    }
-
-    if (modifier != null) {
-      result = modifier.execute(iCurrentRecord, result, ctx);
-    }
-
-    return result;
-  }
-
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     Object result = null;
     if (number != null) {

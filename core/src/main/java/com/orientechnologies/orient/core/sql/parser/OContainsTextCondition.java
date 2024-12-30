@@ -3,7 +3,6 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
@@ -25,20 +24,6 @@ public class OContainsTextCondition extends OBooleanExpression {
 
   public OContainsTextCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (leftValue == null || !(leftValue instanceof String)) {
-      return false;
-    }
-    Object rightValue = right.execute(currentRecord, ctx);
-    if (rightValue == null || !(rightValue instanceof String)) {
-      return false;
-    }
-
-    return ((String) leftValue).indexOf((String) rightValue) > -1;
   }
 
   @Override

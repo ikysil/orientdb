@@ -24,8 +24,8 @@ import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OOrBlock;
 import java.util.List;
@@ -67,12 +67,11 @@ public class OSQLFunctionEval extends OSQLFunctionMathAbstract {
       }
     }
 
-    final ODocument currentResult = iRecord instanceof ODocument ? (ODocument) iRecord : null;
     try {
       if (predicate != null) {
-        return predicate.evaluate(currentResult, iContext);
+        return predicate.evaluate(new OResultInternal(iRecord), iContext);
       } else {
-        return expression.execute(currentResult, iContext);
+        return expression.execute(new OResultInternal(iRecord), iContext);
       }
     } catch (ArithmeticException e) {
       logger.error("Division by 0", e);

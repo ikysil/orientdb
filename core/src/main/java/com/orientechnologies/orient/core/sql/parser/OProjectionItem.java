@@ -131,19 +131,6 @@ public class OProjectionItem extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    Object result;
-    if (all) {
-      result = iCurrentRecord;
-    } else {
-      result = expression.execute(iCurrentRecord, ctx);
-    }
-    if (nestedProjection != null) {
-      result = nestedProjection.apply(expression, result, ctx);
-    }
-    return convert(result, ctx);
-  }
-
   public static Object convert(Object value, OCommandContext context) {
     if (value instanceof ORidBag) {
       List result = new ArrayList();

@@ -45,10 +45,7 @@ public class OWhereClause extends SimpleNode {
   }
 
   public boolean matchesFilters(OIdentifiable currentRecord, OCommandContext ctx) {
-    if (baseExpression == null) {
-      return true;
-    }
-    return baseExpression.evaluate(currentRecord, ctx);
+    return matchesFilters(new OResultInternal(currentRecord), ctx);
   }
 
   public boolean matchesFilters(OResult currentRecord, OCommandContext ctx) {

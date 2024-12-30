@@ -197,11 +197,11 @@ public class OMethodCall extends SimpleNode {
     List<Object> paramValues = new ArrayList<Object>();
     for (OExpression expr : iParams) {
       if (val instanceof OIdentifiable) {
-        paramValues.add(expr.execute((OIdentifiable) val, ctx));
+        paramValues.add(expr.execute(new OResultInternal((OIdentifiable) val), ctx));
       } else if (val instanceof OResult) {
         paramValues.add(expr.execute((OResult) val, ctx));
       } else if (targetObjects instanceof OIdentifiable) {
-        paramValues.add(expr.execute((OIdentifiable) targetObjects, ctx));
+        paramValues.add(expr.execute(new OResultInternal((OIdentifiable) targetObjects), ctx));
       } else if (targetObjects instanceof OResult) {
         paramValues.add(expr.execute((OResult) targetObjects, ctx));
       } else if (val == null) {

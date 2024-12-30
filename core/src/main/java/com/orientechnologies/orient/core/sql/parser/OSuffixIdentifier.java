@@ -7,7 +7,6 @@ import com.orientechnologies.orient.core.collate.OCollate;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.id.OContextualRecordId;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -15,6 +14,7 @@ import com.orientechnologies.orient.core.sql.executor.AggregationContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
+import com.orientechnologies.orient.core.sql.executor.OUpdatableResult;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -63,51 +63,6 @@ public class OSuffixIdentifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    if (star) {
-      return iCurrentRecord;
-    }
-    if (identifier != null) {
-      String varName = identifier.getStringValue();
-      if (ctx != null && varName.equalsIgnoreCase("$parent")) {
-        return ctx.getParent();
-      }
-      if (varName.startsWith("$") && ctx != null) {
-        return ctx.getVariable(varName);
-      }
-
-      if (iCurrentRecord != null) {
-        if (iCurrentRecord instanceof OContextualRecordId) {
-          Map<String, Object> meta = ((OContextualRecordId) iCurrentRecord).getContext();
-          if (meta != null && meta.containsKey(varName)) {
-            return meta.get(varName);
-          }
-        }
-        OElement rec = iCurrentRecord.getRecord();
-        if (rec == null) {
-          return null;
-        }
-        Object result = rec.getProperty(varName);
-        if (result == null && ctx != null) {
-          result = ctx.getVariable(varName);
-        }
-        return result;
-      }
-      return varName;
-    }
-    if (recordAttribute != null && iCurrentRecord != null) {
-      OElement rec =
-          iCurrentRecord instanceof OElement
-              ? (OElement) iCurrentRecord
-              : iCurrentRecord.getRecord();
-      if (rec != null) {
-        return recordAttribute.evaluate(rec, ctx);
-      }
-    }
-
-    return null;
-  }
-
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     if (star) {
       return iCurrentRecord;
@@ -135,8 +90,10 @@ public class OSuffixIdentifier extends SimpleNode {
             && ((OResultInternal) iCurrentRecord).getTemporaryProperties().contains(varName)) {
           return ((OResultInternal) iCurrentRecord).getTemporaryProperty(varName);
         }
+        return null;
+      } else {
+        return null;
       }
-      return null;
     }
 
     if (iCurrentRecord != null && recordAttribute != null) {
@@ -226,7 +183,7 @@ public class OSuffixIdentifier extends SimpleNode {
       return execute((OResult) currentValue, ctx);
     }
     if (currentValue instanceof OIdentifiable) {
-      return execute((OIdentifiable) currentValue, ctx);
+      return execute(new OResultInternal((OIdentifiable) currentValue), ctx);
     }
     if (currentValue instanceof Map) {
       return execute((Map) currentValue, ctx);
@@ -341,7 +298,12 @@ public class OSuffixIdentifier extends SimpleNode {
     if (target instanceof OResult) {
       setValue((OResult) target, value, ctx);
     } else if (target instanceof OIdentifiable) {
-      setValue((OIdentifiable) target, value, ctx);
+      if (target instanceof OElement) {
+        setValue(new OUpdatableResult((OElement) target), value, ctx);
+      } else {
+        OElement element = ctx.getDatabase().load(((OIdentifiable) target).getIdentity());
+        setValue(new OUpdatableResult(element), value, ctx);
+      }
     } else if (target instanceof Map) {
       setValue((Map) target, value, ctx);
     }

@@ -6,7 +6,6 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.config.OStorageEntryConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.ORule;
 import com.orientechnologies.orient.core.sql.executor.OResult;
@@ -57,7 +56,7 @@ public class OAlterDatabaseStatement extends ODDLStatement {
         }
       }
     }
-    Object finalValue = customPropertyValue.execute((OIdentifiable) null, ctx);
+    Object finalValue = customPropertyValue.execute((OResult) null, ctx);
     db.setCustom(customPropertyName.getStringValue(), finalValue);
 
     OResultInternal result = new OResultInternal();
@@ -76,7 +75,7 @@ public class OAlterDatabaseStatement extends ODDLStatement {
     ODatabaseDocumentInternal db = (ODatabaseDocumentInternal) ctx.getDatabase();
     db.checkSecurity(ORule.ResourceGeneric.DATABASE, ORole.PERMISSION_UPDATE);
     Object oldValue = db.get(attribute);
-    Object finalValue = settingValue.execute((OIdentifiable) null, ctx);
+    Object finalValue = settingValue.execute((OResult) null, ctx);
     db.setInternal(attribute, finalValue);
 
     OResultInternal result = new OResultInternal();

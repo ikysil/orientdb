@@ -5,8 +5,6 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
-import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import java.util.ArrayList;
@@ -46,7 +44,7 @@ public class ONestedProjection extends SimpleNode {
     if (input instanceof OIdentifiable) {
       return apply(
           expression,
-          (OIdentifiable) input,
+          new OResultInternal((OIdentifiable) input),
           ctx,
           recursion == null ? 0 : recursion.getValue().intValue());
     }
@@ -124,47 +122,6 @@ public class ONestedProjection extends SimpleNode {
       }
     }
     return propValue;
-  }
-
-  private Object apply(
-      OExpression expression, OIdentifiable input, OCommandContext ctx, int recursion) {
-    OElement elem;
-    if (input instanceof OElement) {
-      elem = (OElement) input;
-    } else {
-      ORecord e = input.getRecord();
-      if (e instanceof OElement) {
-        elem = (OElement) e;
-      } else {
-        return input;
-      }
-    }
-    OResultInternal result = new OResultInternal();
-    if (starItem != null || includeItems.size() == 0) {
-      for (String property : elem.getPropertyNames()) {
-        if (isExclude(property)) {
-          continue;
-        }
-        result.setProperty(
-            property,
-            convert(tryExpand(expression, property, elem.getProperty(property), ctx, recursion)));
-      }
-    }
-    if (includeItems.size() > 0) {
-      // TODO manage wildcards!
-      for (ONestedProjectionItem item : includeItems) {
-        String alias =
-            item.alias != null
-                ? item.alias.getStringValue()
-                : item.expression.getDefaultAlias().getStringValue();
-        Object value = item.expression.execute(elem, ctx);
-        if (item.expansion != null) {
-          value = item.expand(expression, alias, value, ctx, recursion - 1);
-        }
-        result.setProperty(alias, convert(value));
-      }
-    }
-    return result;
   }
 
   private Object apply(

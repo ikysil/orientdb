@@ -135,7 +135,7 @@ public class OLuceneSearchMoreLikeThisFunction extends OSQLFunctionAbstract
 
   private List<String> parseRids(OCommandContext ctx, OExpression expression) {
 
-    Object expResult = expression.execute((OIdentifiable) null, ctx);
+    Object expResult = expression.execute((OResult) null, ctx);
 
     // single rind
     if (expResult instanceof OIdentifiable) {

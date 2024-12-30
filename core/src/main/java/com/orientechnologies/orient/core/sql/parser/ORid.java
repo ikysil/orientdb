@@ -68,24 +68,6 @@ public class ORid extends SimpleNode {
     }
   }
 
-  public ORecordId toRecordId(OIdentifiable target, OCommandContext ctx) {
-    if (legacy || (expression == null && cluster != null && position != null)) {
-      return new ORecordId(cluster.value.intValue(), position.value.longValue());
-    } else {
-      Object result = expression.execute(target, ctx);
-      if (result == null) {
-        return null;
-      }
-      if (result instanceof OIdentifiable) {
-        return (ORecordId) ((OIdentifiable) result).getIdentity();
-      }
-      if (result instanceof String) {
-        return new ORecordId((String) result);
-      }
-      return null;
-    }
-  }
-
   public ORid copy() {
     ORid result = new ORid(-1);
     result.cluster = cluster == null ? null : cluster.copy();

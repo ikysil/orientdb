@@ -6,8 +6,8 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.ORequiredIndexCanditate;
@@ -30,20 +30,6 @@ public class OOrBlock extends OBooleanExpression {
   }
 
   @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    if (getSubBlocks() == null) {
-      return true;
-    }
-
-    for (OBooleanExpression block : subBlocks) {
-      if (block.evaluate(currentRecord, ctx)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @Override
   public boolean evaluate(OResult currentRecord, OCommandContext ctx) {
     if (getSubBlocks() == null) {
       return true;
@@ -61,11 +47,9 @@ public class OOrBlock extends OBooleanExpression {
     if (currentRecord instanceof OResult) {
       return evaluate((OResult) currentRecord, ctx);
     } else if (currentRecord instanceof OIdentifiable) {
-      return evaluate((OIdentifiable) currentRecord, ctx);
+      return evaluate(new OResultInternal((OIdentifiable) currentRecord), ctx);
     } else if (currentRecord instanceof Map) {
-      ODocument doc = new ODocument();
-      doc.fromMap((Map<String, Object>) currentRecord);
-      return evaluate(doc, ctx);
+      return evaluate(new OResultInternal((Map<String, Object>) currentRecord), ctx);
     }
     return false;
   }

@@ -133,29 +133,6 @@ public class OContainsCondition extends OBooleanExpression {
   }
 
   @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (right != null) {
-      Object rightValue = right.execute(currentRecord, ctx);
-      return execute(leftValue, rightValue);
-    } else {
-      if (!OMultiValue.isMultiValue(leftValue)) {
-        return false;
-      }
-      Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
-      while (iter.hasNext()) {
-        Object item = iter.next();
-        if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
-          return true;
-        } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {
-          return true;
-        }
-      }
-      return false;
-    }
-  }
-
-  @Override
   public boolean evaluate(OResult currentRecord, OCommandContext ctx) {
     if (left.isFunctionAny()) {
       return evaluateAny(currentRecord, ctx);

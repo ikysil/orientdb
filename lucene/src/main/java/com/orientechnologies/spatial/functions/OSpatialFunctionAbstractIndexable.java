@@ -97,7 +97,7 @@ public abstract class OSpatialFunctionAbstractIndexable extends OSpatialFunction
       ODocument doc = new ODocument().fromJSON(json.toString());
       shape = doc.toMap();
     } else {
-      shape = args[1].execute((OIdentifiable) null, ctx);
+      shape = args[1].execute((OResult) null, ctx);
     }
 
     if (shape instanceof Collection) {

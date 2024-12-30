@@ -5,6 +5,7 @@ import com.orientechnologies.lucene.index.OLuceneFullTextIndex;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.functions.OIndexableSQLFunction;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
 import com.orientechnologies.orient.core.sql.parser.OBinaryCompareOperator;
@@ -72,7 +73,7 @@ public abstract class OLuceneSearchFunctionTemplate extends OSQLFunctionAbstract
   }
 
   protected ODocument getMetadata(OExpression metadata, OCommandContext ctx) {
-    final Object md = metadata.execute((OIdentifiable) null, ctx);
+    final Object md = metadata.execute((OResult) null, ctx);
     if (md instanceof ODocument) {
       return (ODocument) md;
     } else if (md instanceof Map) {

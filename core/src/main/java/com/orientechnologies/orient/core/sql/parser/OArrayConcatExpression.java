@@ -4,7 +4,6 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.executor.AggregationContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
@@ -82,14 +81,6 @@ public class OArrayConcatExpression extends SimpleNode {
       result.add(right);
     }
 
-    return result;
-  }
-
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    Object result = childExpressions.get(0).execute(iCurrentRecord, ctx);
-    for (int i = 1; i < childExpressions.size(); i++) {
-      result = apply(result, childExpressions.get(i).execute(iCurrentRecord, ctx));
-    }
     return result;
   }
 

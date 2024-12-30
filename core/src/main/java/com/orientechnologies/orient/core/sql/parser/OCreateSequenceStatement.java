@@ -5,10 +5,10 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence;
 import com.orientechnologies.orient.core.metadata.sequence.SequenceOrderType;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
 import java.util.Map;
@@ -85,7 +85,7 @@ public class OCreateSequenceStatement extends OSimpleExecStatement {
   private OSequence.CreateParams createParams(OCommandContext ctx, OResultInternal result) {
     OSequence.CreateParams params = new OSequence.CreateParams();
     if (start != null) {
-      Object o = start.execute((OIdentifiable) null, ctx);
+      Object o = start.execute((OResult) null, ctx);
       if (o instanceof Number) {
         params.setStart(((Number) o).longValue());
         result.setProperty("start", o);
@@ -94,7 +94,7 @@ public class OCreateSequenceStatement extends OSimpleExecStatement {
       }
     }
     if (increment != null) {
-      Object o = increment.execute((OIdentifiable) null, ctx);
+      Object o = increment.execute((OResult) null, ctx);
       if (o instanceof Number) {
         params.setIncrement(((Number) o).intValue());
         result.setProperty("increment", o);
@@ -103,7 +103,7 @@ public class OCreateSequenceStatement extends OSimpleExecStatement {
       }
     }
     if (cache != null) {
-      Object o = cache.execute((OIdentifiable) null, ctx);
+      Object o = cache.execute((OResult) null, ctx);
       if (o instanceof Number) {
         params.setCacheSize(((Number) o).intValue());
         result.setProperty("cacheSize", o);
@@ -113,7 +113,7 @@ public class OCreateSequenceStatement extends OSimpleExecStatement {
     }
 
     if (limitValue != null) {
-      Object o = limitValue.execute((OIdentifiable) null, ctx);
+      Object o = limitValue.execute((OResult) null, ctx);
       if (o instanceof Number) {
         params.setLimitValue(((Number) o).longValue());
         result.setProperty("limitValue", o);

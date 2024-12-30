@@ -15,6 +15,7 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.functions.OIndexableSQLFunction;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
 import com.orientechnologies.orient.core.sql.parser.OBinaryCompareOperator;
@@ -55,7 +56,7 @@ public class OLuceneCrossClassSearchFunction extends OSQLFunctionAbstract
     OLuceneFullTextIndex fullTextIndex = searchForIndex();
 
     OExpression expression = args[0];
-    String query = (String) expression.execute((OIdentifiable) null, ctx);
+    String query = (String) expression.execute((OResult) null, ctx);
 
     if (fullTextIndex != null) {
 

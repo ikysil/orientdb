@@ -1463,7 +1463,7 @@ public abstract class OClassImpl implements OClass {
 
     if (!hasClusterId(clusterId)) return;
 
-    database.command("alter cluster `" + oldName + "` NAME \"" + newName + "\"").close();
+    database.command("alter cluster `" + oldName + "` NAME " + newName + "").close();
   }
 
   protected void onlyAddPolymorphicClusterId(int clusterId) {

@@ -30,6 +30,8 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OConfigurationException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.parser.OOrBlock;
 import com.orientechnologies.orient.etl.context.OETLContext;
 
@@ -94,8 +96,8 @@ public abstract class OETLAbstractComponent implements OETLComponent {
   protected boolean skip(final Object input) {
     final OOrBlock ifFilter = getIfFilter();
     if (ifFilter != null) {
-      final ODocument doc =
-          input instanceof OIdentifiable ? (ODocument) ((OIdentifiable) input).getRecord() : null;
+      final OResult doc =
+          input instanceof OIdentifiable ? new OResultInternal(((OIdentifiable) input)) : null;
 
       debug("Evaluating conditional expression if=%s...", ifFilter);
 
@@ -187,7 +189,7 @@ public abstract class OETLAbstractComponent implements OETLComponent {
               "={",
               "}",
               variable -> {
-                return OSQLEngine.parseExpression(variable).execute((OIdentifiable) null, context);
+                return OSQLEngine.parseExpression(variable).execute((OResult) null, context);
               });
     }
     return value;

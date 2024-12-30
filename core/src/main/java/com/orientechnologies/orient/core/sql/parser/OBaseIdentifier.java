@@ -55,16 +55,6 @@ public class OBaseIdentifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    if (levelZero != null) {
-      return levelZero.execute(iCurrentRecord, ctx);
-    }
-    if (suffix != null) {
-      return suffix.execute(iCurrentRecord, ctx);
-    }
-    return null;
-  }
-
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     if (levelZero != null) {
       return levelZero.execute(iCurrentRecord, ctx);

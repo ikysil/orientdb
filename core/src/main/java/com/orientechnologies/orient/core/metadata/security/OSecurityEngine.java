@@ -11,6 +11,7 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.parser.OAndBlock;
 import com.orientechnologies.orient.core.sql.parser.OBooleanExpression;
 import com.orientechnologies.orient.core.sql.parser.OOrBlock;
@@ -430,7 +431,7 @@ public class OSecurityEngine {
                     (inContext) -> {
                       return user;
                     });
-                return predicate.evaluate(record, ctx);
+                return predicate.evaluate(new OResultInternal(record), ctx);
               }))
           .get();
     } catch (Exception e) {

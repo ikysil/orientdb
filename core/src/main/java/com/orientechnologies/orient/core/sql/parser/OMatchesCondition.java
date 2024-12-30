@@ -3,7 +3,6 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,31 +22,6 @@ public class OMatchesCondition extends OBooleanExpression {
 
   public OMatchesCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    String regex = right;
-    if (regex != null) {
-      regex = regex.substring(1, regex.length() - 1);
-    } else if (rightExpression != null) {
-      Object val = rightExpression.execute(currentRecord, ctx);
-      if (val instanceof String) {
-        regex = (String) val;
-      } else {
-        return false;
-      }
-    } else {
-      Object paramVal = rightParam.getValue(ctx.getInputParameters());
-      if (paramVal instanceof String) {
-        regex = (String) paramVal;
-      } else {
-        return false;
-      }
-    }
-    Object value = expression.execute(currentRecord, ctx);
-
-    return matches(value, regex, ctx);
   }
 
   private boolean matches(Object value, String regex, OCommandContext ctx) {

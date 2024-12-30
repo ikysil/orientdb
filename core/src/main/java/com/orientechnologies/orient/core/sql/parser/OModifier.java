@@ -102,10 +102,6 @@ public class OModifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, Object result, OCommandContext ctx) {
-    return execute(new OResultInternal(iCurrentRecord), result, ctx);
-  }
-
   public Object execute(OResult iCurrentRecord, Object result, OCommandContext ctx) {
     ctx.setCurrentIfMissing(iCurrentRecord);
     if (methodCall != null) {

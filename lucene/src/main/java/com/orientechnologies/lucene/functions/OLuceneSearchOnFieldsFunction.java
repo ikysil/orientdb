@@ -114,7 +114,7 @@ public class OLuceneSearchOnFieldsFunction extends OLuceneSearchFunctionTemplate
     OLuceneFullTextIndex index = searchForIndex(target, ctx, args);
 
     OExpression expression = args[1];
-    Object query = expression.execute((OIdentifiable) null, ctx);
+    Object query = expression.execute((OResult) null, ctx);
     if (index != null) {
 
       ODocument meta = getMetadata(args, ctx);
@@ -143,7 +143,7 @@ public class OLuceneSearchOnFieldsFunction extends OLuceneSearchFunctionTemplate
   @Override
   protected OLuceneFullTextIndex searchForIndex(
       OFromClause target, OCommandContext ctx, OExpression... args) {
-    List<String> fieldNames = (List<String>) args[0].execute((OIdentifiable) null, ctx);
+    List<String> fieldNames = (List<String>) args[0].execute((OResult) null, ctx);
     OFromItem item = target.getItem();
     String className = item.getIdentifier().getStringValue();
 

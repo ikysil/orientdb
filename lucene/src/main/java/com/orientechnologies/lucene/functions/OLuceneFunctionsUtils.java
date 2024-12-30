@@ -3,8 +3,8 @@ package com.orientechnologies.lucene.functions;
 import com.orientechnologies.lucene.index.OLuceneFullTextIndex;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.OMetadataInternal;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import org.apache.lucene.index.memory.MemoryIndex;
 
@@ -13,7 +13,7 @@ public class OLuceneFunctionsUtils {
   public static final String MEMORY_INDEX = "_memoryIndex";
 
   protected static OLuceneFullTextIndex searchForIndex(OExpression[] args, OCommandContext ctx) {
-    final String indexName = (String) args[0].execute((OIdentifiable) null, ctx);
+    final String indexName = (String) args[0].execute((OResult) null, ctx);
     return getLuceneFullTextIndex(ctx, indexName);
   }
 

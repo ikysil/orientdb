@@ -125,7 +125,7 @@ public class OLuceneSearchOnIndexFunction extends OLuceneSearchFunctionTemplate 
     OLuceneFullTextIndex index = searchForIndex(target, ctx, args);
 
     OExpression expression = args[1];
-    String query = (String) expression.execute((OIdentifiable) null, ctx);
+    String query = (String) expression.execute((OResult) null, ctx);
     if (index != null && query != null) {
 
       ODocument meta = getMetadata(args, ctx);
@@ -164,7 +164,7 @@ public class OLuceneSearchOnIndexFunction extends OLuceneSearchFunctionTemplate 
   private OLuceneFullTextIndex searchForIndex(
       String className, OCommandContext ctx, OExpression... args) {
 
-    String indexName = (String) args[0].execute((OIdentifiable) null, ctx);
+    String indexName = (String) args[0].execute((OResult) null, ctx);
 
     final ODatabaseDocumentInternal database = (ODatabaseDocumentInternal) ctx.getDatabase();
     OIndex index =

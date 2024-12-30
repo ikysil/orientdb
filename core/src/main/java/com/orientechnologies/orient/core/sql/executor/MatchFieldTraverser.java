@@ -23,7 +23,10 @@ public class MatchFieldTraverser extends MatchEdgeTraverser {
     Object qR;
     try {
       // TODO check possible results!
-      qR = ((OFieldMatchPathItem) this.item).getExp().execute(startingPoint, iCommandContext);
+      qR =
+          ((OFieldMatchPathItem) this.item)
+              .getExp()
+              .execute(new OResultInternal(startingPoint), iCommandContext);
     } finally {
       iCommandContext.setCurrent(prevCurrent);
     }

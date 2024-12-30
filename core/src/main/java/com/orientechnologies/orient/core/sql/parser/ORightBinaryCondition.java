@@ -101,50 +101,6 @@ public class ORightBinaryCondition extends SimpleNode {
     return result;
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, Object elementToFilter, OCommandContext ctx) {
-    if (elementToFilter == null) {
-      return null;
-    }
-    Iterator iterator;
-    if (elementToFilter instanceof OIdentifiable) {
-      iterator = Collections.singleton(elementToFilter).iterator();
-    } else if (elementToFilter instanceof Iterable) {
-      iterator = ((Iterable) elementToFilter).iterator();
-    } else if (elementToFilter instanceof Iterator) {
-      iterator = (Iterator) elementToFilter;
-    } else {
-      iterator = Collections.singleton(elementToFilter).iterator();
-    }
-
-    List result = new ArrayList();
-    while (iterator.hasNext()) {
-      Object element = iterator.next();
-      if (matchesFilters(iCurrentRecord, element, ctx)) {
-        result.add(element);
-      }
-    }
-    return result;
-  }
-
-  private boolean matchesFilters(
-      OIdentifiable iCurrentRecord, Object element, OCommandContext ctx) {
-    if (operator != null) {
-      operator.execute(element, right.execute(iCurrentRecord, ctx), ctx);
-    } else if (inOperator != null) {
-
-      Object rightVal = evaluateRight(iCurrentRecord, ctx);
-      if (rightVal == null) {
-        return false;
-      }
-      boolean result = OInCondition.evaluateExpression(element, rightVal);
-      if (not) {
-        result = !result;
-      }
-      return result;
-    }
-    return false;
-  }
-
   private boolean matchesFilters(OResult iCurrentRecord, Object element, OCommandContext ctx) {
     if (operator != null) {
       return operator.execute(element, right.execute(iCurrentRecord, ctx), ctx);
@@ -161,10 +117,6 @@ public class ORightBinaryCondition extends SimpleNode {
       return result;
     }
     return false;
-  }
-
-  public Object evaluateRight(OIdentifiable currentRecord, OCommandContext ctx) {
-    return right.execute(currentRecord, ctx);
   }
 
   public Object evaluateRight(OResult currentRecord, OCommandContext ctx) {

@@ -36,7 +36,9 @@ import com.orientechnologies.orient.core.db.OExecutionThreadLocal;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandInterruptedException;
+import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OUpdatableResult;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionFactory;
 import com.orientechnologies.orient.core.sql.method.OSQLMethod;
@@ -121,7 +123,7 @@ public class OSQLEngine {
     if (predicate.isPresent()) {
       return predicate.get().evaluate(target, ctx);
     } else {
-      return parseExpression(expression).execute((OIdentifiable) target, ctx);
+      return parseExpression(expression).execute(new OUpdatableResult((OElement) target), ctx);
     }
   }
 

@@ -90,22 +90,18 @@ public class OFunctionCall extends SimpleNode {
     builder.append(")");
   }
 
-  public Object execute(Object targetObjects, OCommandContext ctx) {
+  public Object execute(OResult targetObjects, OCommandContext ctx) {
     return execute(targetObjects, ctx, name.getStringValue());
   }
 
-  private Object execute(Object targetObjects, OCommandContext ctx, String name) {
+  private Object execute(OResult targetObjects, OCommandContext ctx, String name) {
     List<Object> paramValues = new ArrayList<Object>();
 
     Object record = null;
 
     if (record == null) {
-      if (targetObjects instanceof OIdentifiable) {
-        record = (OIdentifiable) targetObjects;
-      } else if (targetObjects instanceof OResult) {
+      if (targetObjects != null) {
         record = ((OResult) targetObjects).toElement();
-      } else {
-        record = targetObjects;
       }
     }
     if (record == null) {
@@ -118,7 +114,7 @@ public class OFunctionCall extends SimpleNode {
       if (targetObjects instanceof OResult) {
         paramValues.add(expr.execute((OResult) targetObjects, ctx));
       } else if (record instanceof OIdentifiable) {
-        paramValues.add(expr.execute((OIdentifiable) record, ctx));
+        paramValues.add(expr.execute(new OResultInternal((OIdentifiable) record), ctx));
       } else if (record instanceof OResult) {
         paramValues.add(expr.execute((OResult) record, ctx));
       } else if (record == null) {
