@@ -22,6 +22,7 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ORecordLazyList;
 import com.orientechnologies.orient.core.db.record.ORecordLazyMultiValue;
 import com.orientechnologies.orient.core.id.ORID;
+import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.OBlob;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -311,9 +312,8 @@ public class OrientJdbcResultSet implements ResultSet {
 
     OType columnType =
         result
-            .toElement()
-            .getSchemaType()
-            .map(t -> t.getProperty(columnLabel).getType())
+            .getElement()
+            .flatMap((e) -> e.getSchemaType().map(t -> t.getProperty(columnLabel).getType()))
             .orElse(OType.EMBEDDEDLIST);
 
     assert columnType.isEmbedded() && columnType.isMultiValue();
@@ -446,7 +446,7 @@ public class OrientJdbcResultSet implements ResultSet {
           "An error occurred during the retrieval of the boolean value at column '"
               + columnLabel
               + "' ---> "
-              + result.toElement().toJSON(),
+              + result.toJSON(),
           e);
     }
   }
@@ -634,7 +634,7 @@ public class OrientJdbcResultSet implements ResultSet {
   }
 
   public int getInt(String columnLabel) throws SQLException {
-    if ("@version".equals(columnLabel)) return result.toElement().getVersion();
+    if ("@version".equals(columnLabel)) return result.getProperty("@version");
 
     try {
       final Integer r = result.getProperty(columnLabel);
@@ -719,9 +719,14 @@ public class OrientJdbcResultSet implements ResultSet {
     }
 
     if ("@class".equals(columnLabel) || "class".equals(columnLabel)) {
-      String r = result.toElement().getSchemaType().map(t -> t.getName()).orElse(null);
-      lastReadWasNull = r == null;
-      return r;
+      Object cl = result.getProperty("@class");
+      if (cl != null) {
+        lastReadWasNull = false;
+        return cl.toString();
+      } else {
+        lastReadWasNull = true;
+        return null;
+      }
     }
 
     try {
@@ -777,7 +782,8 @@ public class OrientJdbcResultSet implements ResultSet {
   public RowId getRowId(final int columnIndex) throws SQLException {
     try {
       lastReadWasNull = false;
-      return new OrientRowId(result.toElement().getIdentity());
+      return new OrientRowId(
+          result.getElement().map((e) -> e.getIdentity()).orElse(new ORecordId()));
     } catch (Exception e) {
       throw new SQLException(
           "An error occurred during the retrieval of the rowid for record '" + result + "'", e);
@@ -828,12 +834,22 @@ public class OrientJdbcResultSet implements ResultSet {
 
     if ("@rid".equals(columnLabel) || "rid".equals(columnLabel)) {
       lastReadWasNull = false;
-      return result.toElement().getIdentity().toString();
+      Object id = result.getProperty("@rid");
+      if (id != null) {
+        return id.toString();
+      } else {
+        return "";
+      }
     }
 
     if ("@class".equals(columnLabel) || "class".equals(columnLabel)) {
       lastReadWasNull = false;
-      return result.toElement().getSchemaType().map(c -> c.getName()).orElse("NOCLASS");
+      Object cl = result.getProperty("@class");
+      if (cl != null) {
+        return cl.toString();
+      } else {
+        return "NOCLASS";
+      }
     }
 
     try {

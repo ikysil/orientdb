@@ -39,7 +39,7 @@ public class CopyRecordContentBeforeUpdateStep extends AbstractExecutionStep {
         prevValue.setProperty(
             "@class", ODocumentInternal.getImmutableSchemaClass(((ODocument) rec)).getName());
       }
-      if (!result.toElement().getIdentity().isNew()) {
+      if (!result.getIdentity().map((i) -> i.isNew()).orElse(false)) {
         for (String propName : result.getPropertyNames()) {
           prevValue.setProperty(
               propName, OLiveQueryHookV2.unboxRidbags(result.getProperty(propName)));
