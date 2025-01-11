@@ -93,10 +93,8 @@ import com.orientechnologies.orient.core.index.OIndexException;
 import com.orientechnologies.orient.core.index.OIndexInternal;
 import com.orientechnologies.orient.core.index.OIndexManagerAbstract;
 import com.orientechnologies.orient.core.index.OIndexMetadata;
-import com.orientechnologies.orient.core.index.OIndexOneValue;
 import com.orientechnologies.orient.core.index.OIndexes;
 import com.orientechnologies.orient.core.index.ORuntimeKeyIndexDefinition;
-import com.orientechnologies.orient.core.index.engine.IndexEngineValidator;
 import com.orientechnologies.orient.core.index.engine.IndexEngineValuesTransformer;
 import com.orientechnologies.orient.core.index.engine.OBaseIndexEngine;
 import com.orientechnologies.orient.core.index.engine.OIndexEngine;
@@ -171,7 +169,6 @@ import com.orientechnologies.orient.core.tx.OTransactionAbstract;
 import com.orientechnologies.orient.core.tx.OTransactionData;
 import com.orientechnologies.orient.core.tx.OTransactionId;
 import com.orientechnologies.orient.core.tx.OTransactionIndexChanges;
-import com.orientechnologies.orient.core.tx.OTransactionIndexChangesPerKey;
 import com.orientechnologies.orient.core.tx.OTransactionInternal;
 import com.orientechnologies.orient.core.tx.OTxMetadataHolder;
 import com.orientechnologies.orient.core.tx.OTxMetadataHolderImpl;
@@ -2625,51 +2622,10 @@ public abstract class OAbstractPaginatedStorage
         final OBaseIndexEngine engine = indexEngines.get(indexId);
         assert engine.getId() == indexId;
 
-        for (final OTransactionIndexChangesPerKey changesPerKey : changes.changesPerKey.values()) {
-          applyTxChanges(atomicOperation, changesPerKey, engine, index);
-        }
-        applyTxChanges(atomicOperation, changes.nullKeyChanges, engine, index);
+        engine.applyTxChanges(atomicOperation, changes);
+
       } catch (final OInvalidIndexEngineIdException e) {
         throw OException.wrapException(new OStorageException("Error during index commit"), e);
-      }
-    }
-  }
-
-  private void applyTxChanges(
-      OAtomicOperation atomicOperation,
-      OTransactionIndexChangesPerKey changes,
-      OBaseIndexEngine engine,
-      OIndexInternal index)
-      throws OInvalidIndexEngineIdException {
-
-    IndexEngineValidator<Object, ORID> uniqueValidator = null;
-    if (index.isUnique()) {
-      uniqueValidator = ((OIndexOneValue) index).getUniqueValidator();
-    }
-    for (OTransactionIndexChangesPerKey.OTransactionIndexEntry op :
-        index.interpretTxKeyChanges(changes)) {
-      switch (op.getOperation()) {
-        case PUT:
-          if (uniqueValidator != null) {
-            engine.validatedPut(
-                atomicOperation, changes.key, op.getValue().getIdentity(), uniqueValidator);
-          } else {
-            engine.put(atomicOperation, changes.key, op.getValue().getIdentity());
-          }
-          break;
-        case REMOVE:
-          if (op.getValue() != null) {
-            engine.remove(atomicOperation, changes.key, op.getValue().getIdentity());
-          } else {
-            engine.remove(atomicOperation, changes.key);
-          }
-          break;
-        case CLEAR:
-          // SHOULD NEVER BE THE CASE HANDLE BY cleared FLAG
-          break;
-      }
-      if (!isDistributedMode(lastMetadata)) {
-        engine.updateUniqueIndexVersion(changes.key);
       }
     }
   }
