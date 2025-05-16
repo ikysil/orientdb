@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /** Created by luigidellaquila on 22/07/16. */
 public class SubQueryStep extends AbstractExecutionStep {
@@ -18,11 +18,8 @@ public class SubQueryStep extends AbstractExecutionStep {
    * @param subCtx the context of the subquery execution plan
    */
   public SubQueryStep(
-      OInternalExecutionPlan subExecutionPlan,
-      OCommandContext ctx,
-      OCommandContext subCtx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+      OInternalExecutionPlan subExecutionPlan, OCommandContext ctx, OCommandContext subCtx) {
+    super();
     this.subExecuitonPlan = subExecutionPlan;
     this.childCtx = subCtx;
 
@@ -37,17 +34,19 @@ public class SubQueryStep extends AbstractExecutionStep {
   }
 
   private OResult mapResult(OResult result, OCommandContext ctx) {
-    ctx.setVariable("$current", result);
+    ctx.setCurrent(result);
     return result;
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder builder = new StringBuilder();
-    String ind = OExecutionStepInternal.getIndent(depth, indent);
+    String ind = OExecutionStepInternal.getIndent(ctx);
     builder.append(ind);
     builder.append("+ FETCH FROM SUBQUERY \n");
-    builder.append(subExecuitonPlan.prettyPrint(depth + 1, indent));
+    ctx.incDepth();
+    builder.append(subExecuitonPlan.prettyPrint(ctx));
+    ctx.decDepth();
     return builder.toString();
   }
 
@@ -57,7 +56,7 @@ public class SubQueryStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new SubQueryStep(subExecuitonPlan.copy(ctx), ctx, ctx, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new SubQueryStep(subExecuitonPlan.copy(ctx), ctx, ctx);
   }
 }

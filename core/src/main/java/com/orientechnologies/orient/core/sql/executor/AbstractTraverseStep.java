@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OInteger;
 import com.orientechnologies.orient.core.sql.parser.OTraverseProjectionItem;
 import com.orientechnologies.orient.core.sql.parser.OWhereClause;
@@ -20,12 +20,8 @@ public abstract class AbstractTraverseStep extends AbstractExecutionStep {
   protected final OInteger maxDepth;
 
   public AbstractTraverseStep(
-      List<OTraverseProjectionItem> projections,
-      OWhereClause whileClause,
-      OInteger maxDepth,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+      List<OTraverseProjectionItem> projections, OWhereClause whileClause, OInteger maxDepth) {
+    super();
     this.whileClause = whileClause;
     this.maxDepth = maxDepth;
 
@@ -67,6 +63,11 @@ public abstract class AbstractTraverseStep extends AbstractExecutionStep {
 
       @Override
       public void close(OCommandContext ctx) {}
+
+      @Override
+      public boolean isTermination(OCommandContext ctx) {
+        return false;
+      }
     };
   }
 
@@ -104,6 +105,6 @@ public abstract class AbstractTraverseStep extends AbstractExecutionStep {
 
   @Override
   public String toString() {
-    return prettyPrint(0, 2);
+    return prettyPrint(new OPrintContexImpl(null, 0, 2));
   }
 }

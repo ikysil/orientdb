@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Collection;
 
 /**
@@ -13,8 +13,8 @@ import java.util.Collection;
  */
 public abstract class AbstractUnrollStep extends AbstractExecutionStep {
 
-  public AbstractUnrollStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public AbstractUnrollStep() {
+    super();
   }
 
   @Override
@@ -27,7 +27,7 @@ public abstract class AbstractUnrollStep extends AbstractExecutionStep {
   }
 
   private OExecutionStream fetchNextResults(OResult res, OCommandContext ctx) {
-    return OExecutionStream.resultIterator(unroll(res, ctx).iterator());
+    return OExecutionStream.resultCollection(unroll(res, ctx));
   }
 
   protected abstract Collection<OResult> unroll(final OResult doc, final OCommandContext iContext);

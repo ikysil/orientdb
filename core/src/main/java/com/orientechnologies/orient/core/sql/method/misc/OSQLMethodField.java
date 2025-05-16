@@ -109,9 +109,4 @@ public class OSQLMethodField extends OAbstractSQLMethod {
 
     return ioResult;
   }
-
-  @Override
-  public boolean evaluateParameters() {
-    return false;
-  }
 }

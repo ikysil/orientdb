@@ -2,7 +2,8 @@ package com.orientechnologies.orient.server.network;
 
 import static org.junit.Assert.assertTrue;
 
-import com.orientechnologies.orient.client.remote.OStorageRemote;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
+import com.orientechnologies.orient.client.remote.db.document.ODatabaseDocumentRemote;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
 import com.orientechnologies.orient.server.BaseServerMemoryDatabase;
 import java.io.ByteArrayInputStream;
@@ -17,9 +18,10 @@ public class ORemoteImportTest extends BaseServerMemoryDatabase {
     String content =
         "{\"records\": [{\"@type\": \"d\", \"@rid\": \"#9:0\",\"@version\": 1,\"@class\": \"V\"}]}";
 
-    OStorageRemote storage = (OStorageRemote) db.getStorage();
+    ORemoteClient storage = ((ODatabaseDocumentRemote) db).getRemoteClient();
     final StringBuffer buff = new StringBuffer();
     storage.importDatabase(
+        ((ODatabaseDocumentRemote) db).getSession(),
         "-merge=true",
         new ByteArrayInputStream(content.getBytes("UTF8")),
         "data.json",

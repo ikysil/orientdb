@@ -1,7 +1,7 @@
 package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OWhereClause;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,19 +13,14 @@ public class WhileMatchStep extends AbstractUnrollStep {
   private final OInternalExecutionPlan body;
   private final OWhereClause condition;
 
-  public WhileMatchStep(
-      OCommandContext ctx,
-      OWhereClause condition,
-      OInternalExecutionPlan body,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public WhileMatchStep(OCommandContext ctx, OWhereClause condition, OInternalExecutionPlan body) {
+    super();
     this.body = body;
     this.condition = condition;
   }
 
   @Override
   protected Collection<OResult> unroll(OResult doc, OCommandContext iContext) {
-    body.reset(iContext);
     List<OResult> result = new ArrayList<>();
     OExecutionStream block = body.start(iContext);
     while (block.hasNext(iContext)) {
@@ -36,9 +31,9 @@ public class WhileMatchStep extends AbstractUnrollStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String indentStep = OExecutionStepInternal.getIndent(1, indent);
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String indentStep = OExecutionStepInternal.getIndent(ctx);
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ WHILE\n");
@@ -51,7 +46,9 @@ public class WhileMatchStep extends AbstractUnrollStep {
     result.append(spaces);
     result.append("  DO\n");
 
-    result.append(body.prettyPrint(depth + 1, indent));
+    ctx.incDepth();
+    result.append(body.prettyPrint(ctx));
+    ctx.decDepth();
     result.append("\n");
 
     result.append(spaces);

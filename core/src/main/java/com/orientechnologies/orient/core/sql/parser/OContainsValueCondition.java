@@ -3,14 +3,14 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,26 +28,6 @@ public class OContainsValueCondition extends OBooleanExpression {
 
   public OContainsValueCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (leftValue instanceof Map) {
-      Map map = (Map) leftValue;
-      if (condition != null) {
-        for (Object o : map.values()) {
-          if (condition.evaluate(o, ctx)) {
-            return true;
-          }
-        }
-        return false;
-      } else {
-        Object rightValue = expression.execute(currentRecord, ctx);
-        return map.values().contains(rightValue); // TODO type conversions...?
-      }
-    }
-    return false;
   }
 
   @Override
@@ -304,64 +284,22 @@ public class OContainsValueCondition extends OBooleanExpression {
     Optional<OPath> path = left.getPath();
     if (path.isPresent()) {
       if (expression != null && expression.isEarlyCalculated(ctx)) {
-        Object value = expression.execute((OResult) null, ctx);
-        return info.findByValueIndex(path.get(), value, ctx);
+
+        return info.findByValue(path.get(), this::expressionMapValue, ctx);
       }
     }
 
     return Optional.empty();
   }
 
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
-    if (left.isBaseIdentifier()) {
-      if (info.getField().equals(left.getDefaultAlias().getStringValue())) {
-        if (expression != null
-            && expression.isEarlyCalculated(info.getCtx())
-            && info.isMap()
-            && info.isIndexByValue()) {
-          return true;
-        }
-      }
+  private Collection<Object> expressionMapValue(OCommandContext ctx, boolean asc) {
+    List<Object> keys = new ArrayList<>();
+    for (Object key : expression.getIndexKey(ctx)) {
+      Map<Object, Object> newValue = new HashMap<>();
+      newValue.put("", key);
+      keys.add(newValue);
     }
-    return false;
-  }
-
-  @Override
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    return getExpression();
-  }
-
-  @Override
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    return getExpression();
-  }
-
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    OBinaryCompareOperator operator = getOperator();
-    if (operator.isGreater()) {
-      return operator.isInclude();
-    } else {
-      if (additional != null && additional.getOperator() != null) {
-        return additional.getOperator().isGreaterInclude();
-      } else {
-        return true;
-      }
-    }
-  }
-
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    OBinaryCompareOperator operator = getOperator();
-    if (operator.isLess()) {
-      return operator.isInclude();
-    } else {
-      if (additional != null && additional.getOperator() != null) {
-        return additional.getOperator().isLessInclude();
-      } else {
-        return true;
-      }
-    }
+    return keys;
   }
 }
 /* JavaCC - OriginalChecksum=6fda752f10c8d8731f43efa706e39459 (do not edit this line) */

@@ -50,12 +50,11 @@ import com.orientechnologies.orient.core.query.live.OLiveQueryHookV2;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.OInternalExecutionPlan;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.storage.ORecordDuplicatedException;
 import com.orientechnologies.orient.core.storage.ORecordMetadata;
 import com.orientechnologies.orient.core.storage.OStorage;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import com.orientechnologies.orient.core.tx.OTransactionData;
 import com.orientechnologies.orient.core.tx.OTransactionId;
@@ -116,11 +115,9 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
 
   private final ODistributedPlugin distributedManager;
 
-  public ODatabaseDocumentDistributed(
-      OStorage storage, ODistributedPlugin distributedPlugin, OSharedContext context) {
+  public ODatabaseDocumentDistributed(OStorage storage, ODistributedPlugin distributedPlugin) {
     super(storage);
     this.distributedManager = distributedPlugin;
-    this.sharedContext = context;
   }
 
   /**
@@ -180,7 +177,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
   @Override
   public ODatabaseDocumentInternal copy() {
     ODatabaseDocumentDistributed database =
-        new ODatabaseDocumentDistributed(getStorage(), distributedManager, this.sharedContext);
+        new ODatabaseDocumentDistributed(getStorage(), distributedManager);
     database.init(getConfig(), getSharedContext());
     String user;
     if (getUser() != null) {
@@ -250,7 +247,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
 
   @Override
   public OExecutionStream queryOnNode(
-      String nodeName, OExecutionPlan executionPlan, Map<Object, Object> inputParameters) {
+      String nodeName, OInternalExecutionPlan executionPlan, Map<Object, Object> inputParameters) {
     ORunQueryExecutionPlanTask task =
         new ORunQueryExecutionPlanTask(executionPlan, inputParameters, nodeName);
     ODistributedResponse result = executeTaskOnNode(task, nodeName);
@@ -278,9 +275,8 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
 
   protected void createMetadata(OSharedContext ctx) {
     // CREATE THE DEFAULT SCHEMA WITH DEFAULT USER
-    OSharedContext shared = ctx;
-    metadata.init(shared);
-    ((OSharedContextDistributed) shared).create(this);
+    metadata.init(ctx);
+    ((OSharedContextDistributed) ctx).create(this);
   }
 
   public int assignAndCheckCluster(ORecord record, String iClusterName) {
@@ -447,8 +443,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
   private int getVersionForIndexKey(
       OTransactionInternal tx, String index, Object key, boolean isCoordinator) {
     if (isCoordinator) {
-      return ((OAbstractPaginatedStorage) tx.getDatabase().getStorage())
-          .getVersionForKey(index, key);
+      return tx.getDatabase().getStorage().getVersionForKey(index, key);
     }
     return ((OTransactionOptimisticDistributed) tx).getVersionForKey(index, key);
   }
@@ -771,7 +766,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
       OTransactionInternal tx = txContext.getTransaction();
       this.currentTx = tx;
       tx.setDatabase(this);
-      ((OAbstractPaginatedStorage) this.getStorage()).commitPreAllocated(tx);
+      this.getStorage().commitPreAllocated(tx);
     } catch (OLowDiskSpaceException ex) {
       distributedManager.setDatabaseStatus(
           getLocalNodeName(), getName(), ODistributedServerManager.DB_STATUS.OFFLINE);
@@ -809,7 +804,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
         // make sure the create record operations have a valid id assigned that is used also on the
         // followers.
         getDistributedShared().getManager().messageBeforeOp("allocate", txContext.getReqId());
-        ((OAbstractPaginatedStorage) getStorage()).preallocateRids(transaction);
+        getStorage().preallocateRids(transaction);
         getDistributedShared().getManager().messageAfterOp("allocate", txContext.getReqId());
       }
 
@@ -829,7 +824,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
 
     if (!isCoordinator) {
       getDistributedShared().getManager().messageBeforeOp("allocate", txContext.getReqId());
-      ((OAbstractPaginatedStorage) getStorage()).preallocateRids(transaction);
+      getStorage().preallocateRids(transaction);
       getDistributedShared().getManager().messageAfterOp("allocate", txContext.getReqId());
     }
 
@@ -878,9 +873,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
           if (!isCoordinator) {
             // Version check need to be done only from the nodes that are not coordinating the
             // transaction.
-            final long version =
-                ((OAbstractPaginatedStorage) getStorage())
-                    .getVersionForKey(indexName, changesPerKey.key);
+            final long version = getStorage().getVersionForKey(indexName, changesPerKey.key);
             int sourceVersion =
                 ((OTransactionOptimisticDistributed) transaction)
                     .getVersionForKey(indexName, changesPerKey.key);
@@ -928,7 +921,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
         int changeVersion = entry.getRecord().getVersion();
         ORecordMetadata metadata = getStorage().getRecordMetadata(entry.getRID());
         if (metadata == null) {
-          if (((OAbstractPaginatedStorage) getStorage()).isDeleted(entry.getRID())) {
+          if (getStorage().isDeleted(entry.getRID())) {
             throw new OConcurrentModificationException(
                 entry.getRID(), changeVersion, changeVersion, entry.getType());
           } else {
@@ -1286,7 +1279,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
               new ONewDistributedTxContextImpl(
                   ddb, new ODistributedRequestId(-1, -1), tx, data.getTransactionId());
           ddb.validate(data.getTransactionId());
-          ((OAbstractPaginatedStorage) getStorage()).preallocateRids(tx);
+          getStorage().preallocateRids(tx);
           txContext.commit(this);
           return null;
         });
@@ -1320,7 +1313,7 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
     ODistributedDatabase localDistributedDatabase = getDistributedShared();
     ODDLContextImpl context =
         (ODDLContextImpl) localDistributedDatabase.popTxContext(confirmSentRequest);
-    OAbstractPaginatedStorage storage = (OAbstractPaginatedStorage) getStorage();
+    OStorage storage = getStorage();
     if (apply) {
       ((ODistributedDatabaseImpl) localDistributedDatabase).resetLastValidBackup();
       if (context.getStatus() == SUCCESS) {
@@ -1393,6 +1386,9 @@ public class ODatabaseDocumentDistributed extends ODatabaseDocumentEmbedded {
                   });
         }
       }
+    } else if (context != null) {
+      localDistributedDatabase.rollback(context.getPreChangeId());
+      localDistributedDatabase.rollback(context.getAfterChangeId());
     }
   }
 }

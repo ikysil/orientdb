@@ -3,10 +3,8 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OBooleanExpression;
-import com.orientechnologies.orient.core.sql.parser.OIfStatement;
-import com.orientechnologies.orient.core.sql.parser.OReturnStatement;
 import com.orientechnologies.orient.core.sql.parser.OStatement;
 import java.util.List;
 
@@ -16,8 +14,8 @@ public class IfStep extends AbstractExecutionStep {
   public List<OStatement> positiveStatements;
   public List<OStatement> negativeStatements;
 
-  public IfStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public IfStep() {
+    super();
   }
 
   @Override
@@ -32,15 +30,10 @@ public class IfStep extends AbstractExecutionStep {
 
   public OScriptExecutionPlan producePlan(OCommandContext ctx) {
     if (condition.evaluate((OResult) null, ctx)) {
-      OScriptExecutionPlan positivePlan = initPositivePlan(ctx);
-      return positivePlan;
+      return initPositivePlan(ctx);
     } else {
-      OScriptExecutionPlan negativePlan = initNegativePlan(ctx);
-      if (negativePlan != null) {
-        return negativePlan;
-      }
+      return initNegativePlan(ctx);
     }
-    return null;
   }
 
   public OScriptExecutionPlan initPositivePlan(OCommandContext ctx) {
@@ -48,7 +41,7 @@ public class IfStep extends AbstractExecutionStep {
     subCtx1.setParent(ctx);
     OScriptExecutionPlan positivePlan = new OScriptExecutionPlan();
     for (OStatement stm : positiveStatements) {
-      positivePlan.chain(stm, profilingEnabled, subCtx1);
+      positivePlan.chain(stm);
     }
     return positivePlan;
   }
@@ -60,7 +53,7 @@ public class IfStep extends AbstractExecutionStep {
         subCtx2.setParent(ctx);
         OScriptExecutionPlan negativePlan = new OScriptExecutionPlan();
         for (OStatement stm : negativeStatements) {
-          negativePlan.chain(stm, profilingEnabled, subCtx2);
+          negativePlan.chain(stm);
         }
         return negativePlan;
       }
@@ -74,37 +67,5 @@ public class IfStep extends AbstractExecutionStep {
 
   public void setCondition(OBooleanExpression condition) {
     this.condition = condition;
-  }
-
-  public boolean containsReturn() {
-    if (positiveStatements != null) {
-      for (OStatement stm : positiveStatements) {
-        if (containsReturn(stm)) {
-          return true;
-        }
-      }
-    }
-    if (negativeStatements != null) {
-      for (OStatement stm : negativeStatements) {
-        if (containsReturn(stm)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  private boolean containsReturn(OStatement stm) {
-    if (stm instanceof OReturnStatement) {
-      return true;
-    }
-    if (stm instanceof OIfStatement) {
-      for (OStatement o : ((OIfStatement) stm).getStatements()) {
-        if (containsReturn(o)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 }

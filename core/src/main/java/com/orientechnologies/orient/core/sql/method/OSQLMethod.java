@@ -66,6 +66,4 @@ public interface OSQLMethod extends Comparable<OSQLMethod> {
       OCommandContext iContext,
       Object ioResult,
       Object[] iParams);
-
-  boolean evaluateParameters();
 }

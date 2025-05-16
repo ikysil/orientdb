@@ -19,7 +19,7 @@
  */
 package com.orientechnologies.orient.stresstest;
 
-import com.orientechnologies.orient.client.remote.OStorageRemote;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
 import com.orientechnologies.orient.stresstest.workload.OWorkload;
 import java.io.Console;
 import java.io.File;
@@ -160,7 +160,7 @@ public class OStressTesterCommandLineParser {
     settings.checkDatabase = Boolean.parseBoolean(options.get(OPTION_CHECK_DATABASE));
     if (options.get(OPTION_LOAD_BALANCING) != null)
       settings.loadBalancing =
-          OStorageRemote.CONNECTION_STRATEGY.valueOf(
+          ORemoteClient.CONNECTION_STRATEGY.valueOf(
               options.get(OPTION_LOAD_BALANCING).toUpperCase(Locale.ENGLISH));
 
     if (settings.plocalPath != null) {
@@ -243,9 +243,7 @@ public class OStressTesterCommandLineParser {
 
     final List<OWorkload> workloads = parseWorkloads(settings.workloadCfg);
 
-    final ODatabaseIdentifier databaseIdentifier = new ODatabaseIdentifier(settings);
-
-    return new OStressTester(workloads, databaseIdentifier, settings);
+    return new OStressTester(workloads, settings);
   }
 
   private static List<OWorkload> parseWorkloads(final String workloadConfig) {

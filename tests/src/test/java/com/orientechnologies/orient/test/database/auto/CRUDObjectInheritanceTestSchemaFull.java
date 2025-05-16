@@ -15,12 +15,10 @@
  */
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.orient.client.db.ODatabaseHelper;
 import com.orientechnologies.orient.client.remote.ODatabaseImportRemote;
-import com.orientechnologies.orient.client.remote.OEngineRemote;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.db.tool.ODatabaseExport;
 import com.orientechnologies.orient.core.db.tool.ODatabaseImport;
 import com.orientechnologies.orient.core.hook.ORecordHook;
@@ -28,7 +26,6 @@ import com.orientechnologies.orient.core.iterator.object.OObjectIteratorClassInt
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.object.db.OObjectDatabaseTx;
 import com.orientechnologies.orient.object.enhancement.OObjectEntitySerializer;
 import com.orientechnologies.orient.test.domain.base.IdObject;
 import com.orientechnologies.orient.test.domain.base.Instrument;
@@ -67,22 +64,24 @@ public class CRUDObjectInheritanceTestSchemaFull extends ObjectDBBaseTest {
 
   @Parameters(value = "url")
   public CRUDObjectInheritanceTestSchemaFull(@Optional String url) {
-    super(url);
+    super(url, "_objectschema");
   }
 
   @BeforeClass
   public void beforeClass() throws Exception {
     super.beforeClass();
 
-    database.close();
+    if (database != null) {
+      database.close();
+    }
 
-    database = new OObjectDatabaseTx(url + "_objectschema");
-    ODatabaseHelper.dropDatabase(database, getStorageType());
-    ODatabaseHelper.createDatabase(database, url + "_objectschema", getStorageType());
+    dropAndCreateDatabase(data.getDbName());
+    database = session(data.getDbName(), "admin", "admin");
+    database.close();
 
     try {
       ODatabaseDocumentInternal exportDatabase =
-          (ODatabaseDocumentInternal) rawSession("admin", "admin");
+          (ODatabaseDocumentInternal) rawSession("demo", "admin", "admin");
 
       OCommandOutputListener listener =
           new OCommandOutputListener() {
@@ -93,14 +92,18 @@ public class CRUDObjectInheritanceTestSchemaFull extends ObjectDBBaseTest {
       export.exportDatabase();
       export.close();
       exportDatabase.close();
-      ODatabaseDocumentInternal importDatabase = new ODatabaseDocumentTx(url + "_objectschema");
 
+      String user;
+      String password;
       if (url.startsWith("remote")) {
-        importDatabase.open("root", ODatabaseHelper.getServerRootPassword());
+        user = "root";
+        password = "root";
       } else {
-        importDatabase.open("admin", "admin");
+        user = "admin";
+        password = "admin";
       }
-
+      ODatabaseDocumentInternal importDatabase =
+          (ODatabaseDocumentInternal) rawSession(data.getDbName(), user, password);
       if (importDatabase.isRemote()) {
         ODatabaseImportRemote impor =
             new ODatabaseImportRemote(importDatabase, EXPORT_DIR, listener);
@@ -158,13 +161,13 @@ public class CRUDObjectInheritanceTestSchemaFull extends ObjectDBBaseTest {
     database
         .getEntityManager()
         .registerEntityClasses("com.orientechnologies.orient.test.domain.business");
-    if (url.startsWith(OEngineRemote.NAME)) {
+    if (url.startsWith(ORemoteClient.TYPE)) {
       database.getMetadata().reload();
     }
     database
         .getEntityManager()
         .registerEntityClasses("com.orientechnologies.orient.test.domain.base");
-    if (url.startsWith(OEngineRemote.NAME)) {
+    if (url.startsWith(ORemoteClient.TYPE)) {
       database.getMetadata().reload();
     }
     startRecordNumber = database.countClass("Company");
@@ -308,7 +311,7 @@ public class CRUDObjectInheritanceTestSchemaFull extends ObjectDBBaseTest {
         .getMetadata()
         .getSchema()
         .generateSchema("com.orientechnologies.orient.test.domain.base");
-    if (url.startsWith(OEngineRemote.NAME)) {
+    if (url.startsWith(ORemoteClient.TYPE)) {
       database.getMetadata().reload();
     }
     OClass musicianClass = database.getMetadata().getSchema().getClass(Musician.class);
@@ -328,7 +331,7 @@ public class CRUDObjectInheritanceTestSchemaFull extends ObjectDBBaseTest {
     database
         .getEntityManager()
         .registerEntityClasses("com.orientechnologies.orient.test.domain.schemageneration");
-    if (url.startsWith(OEngineRemote.NAME)) {
+    if (url.startsWith(ORemoteClient.TYPE)) {
       database.getMetadata().reload();
     }
     OClass testSchemaClass =
@@ -392,7 +395,7 @@ public class CRUDObjectInheritanceTestSchemaFull extends ObjectDBBaseTest {
       database.getMetadata().getSchema().generateSchema(Musician.class);
       database.getMetadata().getSchema().generateSchema(JavaTestSchemaGeneration.class);
       database.getMetadata().getSchema().generateSchema(TestSchemaGenerationChild.class);
-      if (url.startsWith(OEngineRemote.NAME)) {
+      if (url.startsWith(ORemoteClient.TYPE)) {
         database.getMetadata().reload();
       }
     } catch (Exception e) {

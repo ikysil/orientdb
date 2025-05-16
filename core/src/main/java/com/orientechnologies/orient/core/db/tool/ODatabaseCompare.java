@@ -32,7 +32,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.index.OIndexInternal;
 import com.orientechnologies.orient.core.index.OIndexManagerAbstract;
-import com.orientechnologies.orient.core.metadata.OMetadataDefault;
+import com.orientechnologies.orient.core.metadata.OSessionMetadata;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
@@ -88,8 +88,8 @@ public class ODatabaseCompare extends ODatabaseImpExpAbstract {
 
     // exclude automatically generated clusters
     excludeClusters.add("orids");
-    excludeClusters.add(OMetadataDefault.CLUSTER_INDEX_NAME);
-    excludeClusters.add(OMetadataDefault.CLUSTER_MANUAL_INDEX_NAME);
+    excludeClusters.add(OSessionMetadata.CLUSTER_INDEX_NAME);
+    excludeClusters.add(OSessionMetadata.CLUSTER_MANUAL_INDEX_NAME);
 
     excludeIndexes.add(ODatabaseImport.EXPORT_IMPORT_INDEX_NAME);
 
@@ -889,18 +889,9 @@ public class ODatabaseCompare extends ODatabaseImpExpAbstract {
             }
 
             final ORawBuffer buffer1 =
-                makeDbCall(
-                    databaseOne,
-                    database ->
-                        database.getStorage().readRecord(rid, null, true, false, null).getResult());
+                makeDbCall(databaseOne, database -> database.getStorage().readRecord(rid));
             final ORawBuffer buffer2 =
-                makeDbCall(
-                    databaseTwo,
-                    database ->
-                        database
-                            .getStorage()
-                            .readRecord(rid2, null, true, false, null)
-                            .getResult());
+                makeDbCall(databaseTwo, database -> database.getStorage().readRecord(rid2));
 
             //noinspection StatementWithEmptyBody
             if (buffer1 == null && buffer2 == null) {

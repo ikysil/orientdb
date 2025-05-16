@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Optional;
 
 /** @author Luigi Dell'Aquila (l.dellaquila-(at)-orientdb.com) */
@@ -12,9 +12,8 @@ public class CreateRecordStep extends AbstractExecutionStep {
   private int total = 0;
   private Optional<String> cl;
 
-  public CreateRecordStep(
-      OCommandContext ctx, int total, boolean profilingEnabled, Optional<String> cl) {
-    super(ctx, profilingEnabled);
+  public CreateRecordStep(int total, Optional<String> cl) {
+    super();
     this.total = total;
     this.cl = cl;
   }
@@ -33,13 +32,13 @@ public class CreateRecordStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ CREATE EMPTY RECORDS");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     result.append("\n");
     result.append(spaces);

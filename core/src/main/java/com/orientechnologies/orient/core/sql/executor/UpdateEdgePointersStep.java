@@ -7,7 +7,7 @@ import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Collection;
 
 /**
@@ -16,8 +16,8 @@ import java.util.Collection;
  */
 public class UpdateEdgePointersStep extends AbstractExecutionStep {
 
-  public UpdateEdgePointersStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public UpdateEdgePointersStep() {
+    super();
   }
 
   @Override
@@ -28,14 +28,14 @@ public class UpdateEdgePointersStep extends AbstractExecutionStep {
 
   private OResult mapResult(OResult result, OCommandContext ctx) {
     if (result instanceof OResultInternal) {
-      handleUpdateEdge((ODocument) result.getElement().get().getRecord());
+      handleUpdateEdge((ODocument) result.getElement().get().getRecord(), ctx);
     }
     return result;
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ UPDATE EDGE POINTERS");
@@ -46,8 +46,9 @@ public class UpdateEdgePointersStep extends AbstractExecutionStep {
    * handles vertex consistency after an UPDATE EDGE
    *
    * @param record the edge record
+   * @param ctx
    */
-  private void handleUpdateEdge(ODocument record) {
+  private void handleUpdateEdge(ODocument record, OCommandContext ctx) {
     Object currentOut = record.field("out");
     Object currentIn = record.field("in");
 
@@ -66,8 +67,9 @@ public class UpdateEdgePointersStep extends AbstractExecutionStep {
 
     validateOutInForEdge(record, currentOut, currentIn);
 
-    changeVertexEdgePointer(record, (OIdentifiable) prevIn, (OIdentifiable) currentIn, "in");
-    changeVertexEdgePointer(record, (OIdentifiable) prevOut, (OIdentifiable) currentOut, "out");
+    changeVertexEdgePointer(record, (OIdentifiable) prevIn, (OIdentifiable) currentIn, "in", ctx);
+    changeVertexEdgePointer(
+        record, (OIdentifiable) prevOut, (OIdentifiable) currentOut, "out", ctx);
   }
 
   /**
@@ -77,9 +79,14 @@ public class UpdateEdgePointersStep extends AbstractExecutionStep {
    * @param prevVertex the previously connected vertex
    * @param currentVertex the currently connected vertex
    * @param direction the direction ("out" or "in")
+   * @param ctx
    */
   private void changeVertexEdgePointer(
-      ODocument edge, OIdentifiable prevVertex, OIdentifiable currentVertex, String direction) {
+      ODocument edge,
+      OIdentifiable prevVertex,
+      OIdentifiable currentVertex,
+      String direction,
+      OCommandContext ctx) {
     if (prevVertex != null && !prevVertex.equals(currentVertex)) {
       String edgeClassName = edge.getClassName();
       if (edgeClassName.equalsIgnoreCase("E")) {
@@ -90,7 +97,7 @@ public class UpdateEdgePointersStep extends AbstractExecutionStep {
       ORidBag prevBag = prevOutDoc.field(vertexFieldName);
       if (prevBag != null) {
         prevBag.remove(edge);
-        prevOutDoc.save();
+        ctx.getDatabase().save(prevOutDoc);
       }
 
       ODocument currentVertexDoc = ((OIdentifiable) currentVertex).getRecord();

@@ -1,14 +1,21 @@
 package com.orientechnologies.orient.core.sql.executor.metadata;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
+import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.index.OIndexDefinition;
+import com.orientechnologies.orient.core.metadata.OMetadataInternal;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
+import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class OClassIndexFinder implements OIndexFinder {
 
@@ -26,6 +33,21 @@ public class OClassIndexFinder implements OIndexFinder {
     String last;
   }
 
+  protected OClass findClass(OCommandContext ctx) {
+
+    OSchema schema =
+        ((OMetadataInternal) ctx.getDatabase().getMetadata()).getImmutableSchemaSnapshot();
+
+    OClass clazz = schema.getClass(this.clazz);
+    if (clazz == null) {
+      clazz = schema.getView(this.clazz);
+    }
+    if (clazz == null) {
+      throw new OCommandExecutionException("Cannot find class " + clazz);
+    }
+    return clazz;
+  }
+
   private PrePath findPrePath(OPath path, OCommandContext ctx) {
     List<String> rawPath = path.getPath();
     String lastP = rawPath.remove(rawPath.size() - 1);
@@ -33,7 +55,7 @@ public class OClassIndexFinder implements OIndexFinder {
         new PrePath() {
           {
             chain = Optional.empty();
-            this.cl = ctx.getDatabase().getClass(OClassIndexFinder.this.clazz);
+            this.cl = OClassIndexFinder.this.findClass(ctx);
             valid = true;
             last = lastP;
           }
@@ -76,35 +98,94 @@ public class OClassIndexFinder implements OIndexFinder {
   }
 
   @Override
-  public Optional<OIndexCandidate> findExactIndex(OPath path, Object value, OCommandContext ctx) {
-    PrePath pre = findPrePath(path, ctx);
-    if (!pre.valid) {
-      return Optional.empty();
-    }
-    OClass cl = pre.cl;
-    Optional<OIndexCandidate> cand = pre.chain;
-    String last = pre.last;
-
-    OProperty prop = cl.getProperty(last);
-    if (prop != null) {
-      Collection<OIndex> indexes = prop.getAllIndexes();
-      for (OIndex index : indexes) {
-        if (index.getInternal().canBeUsedInEqualityOperators()) {
-          if (cand.isPresent()) {
-            ((OIndexCandidateChain) cand.get()).add(index.getName());
-            ((OIndexCandidateChain) cand.get()).setOperation(Operation.Eq);
-            return cand;
-          } else {
-            return Optional.of(new OIndexCandidateImpl(index.getName(), Operation.Eq, prop));
-          }
-        }
-      }
-    }
-    return Optional.empty();
+  public Optional<OIndexCandidate> findAny(OPath path, OIndexKeySource value, OCommandContext ctx) {
+    return findExact(path, value, ctx, true);
   }
 
   @Override
-  public Optional<OIndexCandidate> findByKeyIndex(OPath path, Object value, OCommandContext ctx) {
+  public Optional<OIndexCandidate> findExact(
+      OPath path, OIndexKeySource value, OCommandContext ctx) {
+    return findExact(path, value, ctx, false);
+  }
+
+  public Optional<OIndexCandidate> findExact(
+      OPath path, OIndexKeySource value, OCommandContext ctx, boolean requireDistinct) {
+    PrePath pre = findPrePath(path, ctx);
+    if (!pre.valid) {
+      return Optional.empty();
+    }
+    OClass cl = pre.cl;
+    Optional<OIndexCandidate> cand = pre.chain;
+    String last = pre.last;
+
+    Collection<OIndex> indexes = findIndexes(cl, last);
+    List<OIndexCandidate> candidates = new ArrayList<>();
+    for (OIndex index : indexes) {
+      if (index.getInternal().canBeUsedInEqualityOperators()
+              && index.getDefinition().getFields().size() == 1
+          || !index.getDefinition().isNullValuesIgnored()) {
+        OIndexCandidate candidate = newCandidate(value, last, Operation.Eq, index, requireDistinct);
+        if (cand.isPresent()) {
+          OIndexCandidateChain candC = (OIndexCandidateChain) cand.get();
+          candC.add(index.getName());
+          candC.setOperation(Operation.Eq);
+          candidates.add(candC);
+        } else {
+          candidates.add(candidate);
+        }
+      }
+    }
+    return returnCandidate(candidates);
+  }
+
+  protected OIndexCandidate newCandidate(
+      OIndexKeySource value,
+      String prop,
+      Operation operation,
+      OIndex index,
+      boolean requireDistinct) {
+    return new OIndexCandidateOne(index.getName(), operation, prop, value, requireDistinct);
+  }
+
+  @Override
+  public Optional<OIndexCandidate> findNull(OPath path, OCommandContext ctx) {
+    PrePath pre = findPrePath(path, ctx);
+    if (!pre.valid) {
+      return Optional.empty();
+    }
+    OClass cl = pre.cl;
+    Optional<OIndexCandidate> cand = pre.chain;
+    String last = pre.last;
+
+    Collection<OIndex> indexes = findIndexes(cl, last);
+    List<OIndexCandidate> candidates = new ArrayList<>();
+    for (OIndex index : indexes) {
+      if (!index.getDefinition().isNullValuesIgnored()) {
+        OIndexCandidate candidate =
+            newCandidate(
+                (c, asc) -> {
+                  return Collections.singleton(null);
+                },
+                last,
+                Operation.Eq,
+                index,
+                false);
+        if (cand.isPresent()) {
+          OIndexCandidateChain candC = (OIndexCandidateChain) cand.get();
+          candC.add(index.getName());
+          candC.setOperation(Operation.Eq);
+          candidates.add(candC);
+        } else {
+          candidates.add(candidate);
+        }
+      }
+    }
+    return returnCandidate(candidates);
+  }
+
+  @Override
+  public Optional<OIndexCandidate> findByKey(
+      OPath path, OIndexKeySource value, OCommandContext ctx) {
     PrePath pre = findPrePath(path, ctx);
     if (!pre.valid) {
       return Optional.empty();
@@ -114,20 +195,23 @@ public class OClassIndexFinder implements OIndexFinder {
     String last = pre.last;
 
     OProperty prop = cl.getProperty(last);
+    List<OIndexCandidate> candidates = new ArrayList<>();
     if (prop != null) {
       if (prop.getType() == OType.EMBEDDEDMAP) {
-        Collection<OIndex> indexes = prop.getAllIndexes();
+        Collection<OIndex> indexes = cl.getClassInvolvedIndexes(last);
         for (OIndex index : indexes) {
           if (index.getInternal().canBeUsedInEqualityOperators()) {
             OIndexDefinition def = index.getDefinition();
             for (String o : def.getFieldsToIndex()) {
               if (o.equalsIgnoreCase(last + " by key")) {
                 if (cand.isPresent()) {
-                  ((OIndexCandidateChain) cand.get()).add(index.getName());
-                  ((OIndexCandidateChain) cand.get()).setOperation(Operation.Eq);
-                  return cand;
+                  OIndexCandidateChain candC = (OIndexCandidateChain) cand.get();
+                  candC.add(index.getName());
+                  candC.setOperation(Operation.Eq);
+                  candidates.add(candC);
                 } else {
-                  return Optional.of(new OIndexCandidateImpl(index.getName(), Operation.Eq, prop));
+                  OIndexCandidate candidate = newCandidate(value, last, Operation.Eq, index, false);
+                  candidates.add(candidate);
                 }
               }
             }
@@ -135,12 +219,12 @@ public class OClassIndexFinder implements OIndexFinder {
         }
       }
     }
-    return Optional.empty();
+    return returnCandidate(candidates);
   }
 
   @Override
-  public Optional<OIndexCandidate> findAllowRangeIndex(
-      OPath path, Operation op, Object value, OCommandContext ctx) {
+  public Optional<OIndexCandidate> findAllowRange(
+      OPath path, Operation op, OIndexKeySource value, OCommandContext ctx) {
     PrePath pre = findPrePath(path, ctx);
     if (!pre.valid) {
       return Optional.empty();
@@ -149,27 +233,73 @@ public class OClassIndexFinder implements OIndexFinder {
     Optional<OIndexCandidate> cand = pre.chain;
     String last = pre.last;
 
-    OProperty prop = cl.getProperty(last);
-    if (prop != null) {
-      Collection<OIndex> indexes = prop.getAllIndexes();
-      for (OIndex index : indexes) {
-        if (index.getInternal().canBeUsedInEqualityOperators()
-            && index.supportsOrderedIterations()) {
-          if (cand.isPresent()) {
-            ((OIndexCandidateChain) cand.get()).add(index.getName());
-            ((OIndexCandidateChain) cand.get()).setOperation(op);
-            return cand;
-          } else {
-            return Optional.of(new OIndexCandidateImpl(index.getName(), op, prop));
-          }
+    Collection<OIndex> indexes = findIndexes(cl, last);
+    List<OIndexCandidate> candidates = new ArrayList<>();
+    for (OIndex index : indexes) {
+      if (index.getInternal().canBeUsedInEqualityOperators() && index.supportsOrderedIterations()) {
+        OIndexCandidate candidate = newCandidate(value, last, op, index, false);
+        if (cand.isPresent()) {
+          OIndexCandidateChain candC = (OIndexCandidateChain) cand.get();
+          candC.add(index.getName());
+          candC.setOperation(op);
+          candidates.add(candC);
+        } else {
+          candidates.add(candidate);
         }
       }
     }
-    return Optional.empty();
+    return returnCandidate(candidates);
   }
 
   @Override
-  public Optional<OIndexCandidate> findByValueIndex(OPath path, Object value, OCommandContext ctx) {
+  public Optional<OIndexCandidate> findRange(
+      OPath path, OIndexKeySource first, OIndexKeySource second, OCommandContext ctx) {
+    PrePath pre = findPrePath(path, ctx);
+    if (!pre.valid) {
+      return Optional.empty();
+    }
+    OClass cl = pre.cl;
+    Optional<OIndexCandidate> cand = pre.chain;
+    String last = pre.last;
+    Collection<OIndex> indexes = findIndexes(cl, last);
+    List<OIndexCandidate> candidates = new ArrayList<>();
+    for (OIndex index : indexes) {
+      if (index.getInternal().canBeUsedInEqualityOperators() && index.supportsOrderedIterations()) {
+        OProperty prop = cl.getProperty(last);
+        if (cand.isPresent()) {
+          OIndexCandidateChain candC = (OIndexCandidateChain) cand.get();
+          candC.add(index.getName());
+          candC.setOperation(Operation.Range);
+          candidates.add(candC);
+        } else {
+          candidates.add(
+              new OIndexCandidateOne(
+                  index.getName(),
+                  prop.getName(),
+                  Operation.Ge,
+                  first,
+                  Operation.Le,
+                  second,
+                  false));
+        }
+      }
+    }
+    return returnCandidate(candidates);
+  }
+
+  protected Optional<OIndexCandidate> returnCandidate(List<OIndexCandidate> candidates) {
+    if (candidates.isEmpty()) {
+      return Optional.empty();
+    } else if (candidates.size() == 1) {
+      return Optional.of(candidates.get(0));
+    } else {
+      return Optional.of(new OIndexCanditateAny(candidates));
+    }
+  }
+
+  @Override
+  public Optional<OIndexCandidate> findByValue(
+      OPath path, OIndexKeySource value, OCommandContext ctx) {
     PrePath pre = findPrePath(path, ctx);
     if (!pre.valid) {
       return Optional.empty();
@@ -179,20 +309,23 @@ public class OClassIndexFinder implements OIndexFinder {
     String last = pre.last;
 
     OProperty prop = cl.getProperty(last);
+    List<OIndexCandidate> candidates = new ArrayList<>();
     if (prop != null) {
       if (prop.getType() == OType.EMBEDDEDMAP) {
-        Collection<OIndex> indexes = prop.getAllIndexes();
+        Collection<OIndex> indexes = cl.getClassInvolvedIndexes(last);
         for (OIndex index : indexes) {
           OIndexDefinition def = index.getDefinition();
           if (index.getInternal().canBeUsedInEqualityOperators()) {
             for (String o : def.getFieldsToIndex()) {
               if (o.equalsIgnoreCase(last + " by value")) {
                 if (cand.isPresent()) {
-                  ((OIndexCandidateChain) cand.get()).add(index.getName());
-                  ((OIndexCandidateChain) cand.get()).setOperation(Operation.Eq);
-                  return cand;
+                  OIndexCandidateChain candC = (OIndexCandidateChain) cand.get();
+                  candC.add(index.getName());
+                  candC.setOperation(Operation.Eq);
+                  candidates.add(candC);
                 } else {
-                  return Optional.of(new OIndexCandidateImpl(index.getName(), Operation.Eq, prop));
+                  OIndexCandidate candidate = newCandidate(value, last, Operation.Eq, index, false);
+                  candidates.add(candidate);
                 }
               }
             }
@@ -200,12 +333,12 @@ public class OClassIndexFinder implements OIndexFinder {
         }
       }
     }
-    return Optional.empty();
+    return returnCandidate(candidates);
   }
 
   @Override
-  public Optional<OIndexCandidate> findFullTextIndex(
-      OPath path, Object value, OCommandContext ctx) {
+  public Optional<OIndexCandidate> findFullText(
+      OPath path, OIndexKeySource value, OCommandContext ctx) {
     PrePath pre = findPrePath(path, ctx);
     if (!pre.valid) {
       return Optional.empty();
@@ -214,22 +347,52 @@ public class OClassIndexFinder implements OIndexFinder {
     Optional<OIndexCandidate> cand = pre.chain;
     String last = pre.last;
 
-    OProperty prop = cl.getProperty(last);
-    if (prop != null) {
-      Collection<OIndex> indexes = prop.getAllIndexes();
-      for (OIndex index : indexes) {
+    Collection<OIndex> indexes = findIndexesFullText(cl, last);
+    List<OIndexCandidate> candidates = new ArrayList<>();
+    for (OIndex index : indexes) {
+
+      OProperty prop = cl.getProperty(last);
+      if (cand.isPresent()) {
+        OIndexCandidateChain candC = (OIndexCandidateChain) cand.get();
+        candC.add(index.getName());
+        candC.setOperation(Operation.FuzzyEq);
+        candidates.add(candC);
+      } else {
+        candidates.add(
+            new OIndexCandidateOne(
+                index.getName(), Operation.FuzzyEq, prop.getName(), value, false));
+      }
+    }
+    return returnCandidate(candidates);
+  }
+
+  protected Collection<OIndex> findIndexesFullText(OClass cl, String field) {
+    // Move this logic to a custom method of the schema snapshot, computed at snapshot
+    Collection<OIndex> indexes = cl.getIndexes();
+    Set<OIndex> selected = new HashSet<OIndex>();
+    for (OIndex index : indexes) {
+      if (index.getDefinition().getFields().contains(field)) {
         if (OClass.INDEX_TYPE.FULLTEXT.name().equalsIgnoreCase(index.getType())
             && !index.getAlgorithm().equalsIgnoreCase("LUCENE")) {
-          if (cand.isPresent()) {
-            ((OIndexCandidateChain) cand.get()).add(index.getName());
-            ((OIndexCandidateChain) cand.get()).setOperation(Operation.FuzzyEq);
-            return cand;
-          } else {
-            return Optional.of(new OIndexCandidateImpl(index.getName(), Operation.FuzzyEq, prop));
-          }
+          selected.add(index);
         }
       }
     }
-    return Optional.empty();
+    return selected;
+  }
+
+  protected Collection<OIndex> findIndexes(OClass cl, String field) {
+    // Move this logic to a custom method of the schema snapshot, computed at snapshot
+    Collection<OIndex> indexes = cl.getIndexes();
+    Set<OIndex> selected = new HashSet<OIndex>();
+    for (OIndex index : indexes) {
+      if (index.getDefinition().getFields().contains(field)) {
+        if (!OClass.INDEX_TYPE.FULLTEXT.name().equalsIgnoreCase(index.getType())
+            && !index.getAlgorithm().equalsIgnoreCase("LUCENE")) {
+          selected.add(index);
+        }
+      }
+    }
+    return selected;
   }
 }

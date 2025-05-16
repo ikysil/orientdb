@@ -126,9 +126,7 @@ public class OCreateViewStatementExecutionTest extends BaseMemoryDatabase {
     Thread.sleep(1000);
 
     OResultSet result = db.query("SELECT FROM " + viewName + " WHERE name = 'name4'");
-    Assert.assertTrue(
-        result.getExecutionPlan().get().getSteps().stream()
-            .anyMatch(x -> x instanceof FetchFromIndexStep));
+    Assert.assertTrue(result.getExecutionPlan().get().getIndexes().size() > 0);
     Assert.assertTrue(result.hasNext());
     result.next();
     Assert.assertFalse(result.hasNext());
@@ -160,9 +158,7 @@ public class OCreateViewStatementExecutionTest extends BaseMemoryDatabase {
     Thread.sleep(1000);
 
     OResultSet result = db.query("SELECT FROM " + viewName + " WHERE data = 22");
-    Assert.assertTrue(
-        result.getExecutionPlan().get().getSteps().stream()
-            .anyMatch(x -> x instanceof FetchFromIndexStep));
+    Assert.assertTrue(result.getExecutionPlan().get().getIndexes().size() > 0);
     Assert.assertTrue(result.hasNext());
     result.next();
     Assert.assertFalse(result.hasNext());

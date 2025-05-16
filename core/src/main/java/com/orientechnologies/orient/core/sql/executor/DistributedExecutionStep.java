@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /** Created by luigidellaquila on 08/05/17. */
 public class DistributedExecutionStep extends AbstractExecutionStep {
@@ -11,12 +11,8 @@ public class DistributedExecutionStep extends AbstractExecutionStep {
   private final OSelectExecutionPlan subExecuitonPlan;
   private final String nodeName;
 
-  public DistributedExecutionStep(
-      OSelectExecutionPlan subExecutionPlan,
-      String nodeName,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public DistributedExecutionStep(OSelectExecutionPlan subExecutionPlan, String nodeName) {
+    super();
     this.subExecuitonPlan = subExecutionPlan;
     this.nodeName = nodeName;
   }
@@ -29,23 +25,20 @@ public class DistributedExecutionStep extends AbstractExecutionStep {
   }
 
   private OExecutionStream sendSerializedExecutionPlan(
-      String nodeName, OExecutionPlan serializedExecutionPlan, OCommandContext ctx) {
+      String nodeName, OInternalExecutionPlan serializedExecutionPlan, OCommandContext ctx) {
     ODatabaseDocumentInternal db = (ODatabaseDocumentInternal) ctx.getDatabase();
     return db.queryOnNode(nodeName, serializedExecutionPlan, ctx.getInputParameters());
   }
 
   @Override
-  public void close() {
-    super.close();
-  }
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder builder = new StringBuilder();
-    String ind = OExecutionStepInternal.getIndent(depth, indent);
+    String ind = OExecutionStepInternal.getIndent(ctx);
     builder.append(ind);
     builder.append("+ EXECUTE ON NODE " + nodeName + "----------- \n");
-    builder.append(subExecuitonPlan.prettyPrint(depth + 1, indent));
+    ctx.incDepth();
+    builder.append(subExecuitonPlan.prettyPrint(ctx));
+    ctx.decDepth();
     builder.append("  ------------------------------------------- \n");
     builder.append("   |\n");
     builder.append("   V\n");

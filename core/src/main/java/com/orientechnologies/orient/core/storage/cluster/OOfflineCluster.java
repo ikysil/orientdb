@@ -99,11 +99,6 @@ public class OOfflineCluster implements OCluster {
   }
 
   @Override
-  public long getTombstonesCount() {
-    return 0;
-  }
-
-  @Override
   public OPhysicalPosition allocatePosition(byte recordType, OAtomicOperation atomicOperation)
       throws IOException {
     throw new OOfflineClusterException(
@@ -137,7 +132,7 @@ public class OOfflineCluster implements OCluster {
   }
 
   @Override
-  public ORawBuffer readRecord(long clusterPosition, boolean prefetchRecords) {
+  public ORawBuffer readRecord(long clusterPosition) {
     throw OException.wrapException(
         new ORecordNotFoundException(
             new ORecordId(id, clusterPosition),

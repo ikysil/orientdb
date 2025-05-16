@@ -8,7 +8,7 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.iterator.ORecordIteratorCluster;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OBinaryCompareOperator;
 import com.orientechnologies.orient.core.sql.parser.OBinaryCondition;
 import com.orientechnologies.orient.core.sql.parser.OBooleanExpression;
@@ -29,17 +29,12 @@ public class FetchFromClusterExecutionStep extends AbstractExecutionStep {
   private int clusterId;
   private Object order;
 
-  public FetchFromClusterExecutionStep(
-      int clusterId, OCommandContext ctx, boolean profilingEnabled) {
-    this(clusterId, null, ctx, profilingEnabled);
+  public FetchFromClusterExecutionStep(int clusterId) {
+    this(clusterId, null);
   }
 
-  public FetchFromClusterExecutionStep(
-      int clusterId,
-      QueryPlanningInfo queryPlanning,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FetchFromClusterExecutionStep(int clusterId, QueryPlanningInfo queryPlanning) {
+    super();
     this.clusterId = clusterId;
     this.queryPlanning = queryPlanning;
   }
@@ -48,7 +43,7 @@ public class FetchFromClusterExecutionStep extends AbstractExecutionStep {
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
     getPrev().ifPresent(x -> x.start(ctx).close(ctx));
     long minClusterPosition = calculateMinClusterPosition();
-    long maxClusterPosition = calculateMaxClusterPosition();
+    long maxClusterPosition = calculateMaxClusterPosition(ctx);
     ORecordIteratorCluster iterator =
         new ORecordIteratorCluster(
             (ODatabaseDocumentInternal) ctx.getDatabase(),
@@ -96,7 +91,7 @@ public class FetchFromClusterExecutionStep extends AbstractExecutionStep {
     return maxValue;
   }
 
-  private long calculateMaxClusterPosition() {
+  private long calculateMaxClusterPosition(OCommandContext ctx) {
     if (queryPlanning == null
         || queryPlanning.ridRangeConditions == null
         || queryPlanning.ridRangeConditions.isEmpty()) {
@@ -137,26 +132,16 @@ public class FetchFromClusterExecutionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public void sendTimeout() {
-    super.sendTimeout();
-  }
-
-  @Override
-  public void close() {
-    super.close();
-  }
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     String orderString = ORDER_DESC.equals(order) ? "DESC" : "ASC";
     String result =
-        OExecutionStepInternal.getIndent(depth, indent)
+        OExecutionStepInternal.getIndent(ctx)
             + "+ FETCH FROM CLUSTER "
             + clusterId
             + " "
             + orderString;
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }
@@ -193,13 +178,10 @@ public class FetchFromClusterExecutionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
+  public OExecutionStepInternal copy(OCommandContext ctx) {
     FetchFromClusterExecutionStep result =
         new FetchFromClusterExecutionStep(
-            this.clusterId,
-            this.queryPlanning == null ? null : this.queryPlanning.copy(),
-            ctx,
-            profilingEnabled);
+            this.clusterId, this.queryPlanning == null ? null : this.queryPlanning.copy());
     return result;
   }
 }

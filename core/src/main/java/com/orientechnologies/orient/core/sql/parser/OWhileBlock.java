@@ -2,14 +2,10 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
-import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.sql.executor.OForEachExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.executor.OUpdateExecutionPlan;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,55 +30,9 @@ public class OWhileBlock extends OStatement {
     this.statements.add(statement);
   }
 
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Object[] args, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    Map<Object, Object> params = new HashMap<>();
-    if (args != null) {
-      for (int i = 0; i < args.length; i++) {
-        params.put(i, args[i]);
-      }
-    }
-    ctx.setInputParameters(params);
-
-    OUpdateExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OUpdateExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Map params, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    ctx.setInputParameters(params);
-
-    OUpdateExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OUpdateExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  public OUpdateExecutionPlan createExecutionPlan(OCommandContext ctx, boolean enableProfiling) {
+  public OUpdateExecutionPlan createExecutionPlan(OCommandContext ctx) {
     OForEachExecutionPlan plan = new OForEachExecutionPlan();
-    plan.chain(new WhileStep(condition, statements, ctx, enableProfiling));
+    plan.chain(new WhileStep(condition, statements));
     return plan;
   }
 
@@ -92,24 +42,6 @@ public class OWhileBlock extends OStatement {
     result.condition = condition.copy();
     result.statements = statements.stream().map(x -> x.copy()).collect(Collectors.toList());
     return result;
-  }
-
-  public boolean containsReturn() {
-    for (OStatement stm : this.statements) {
-      if (stm instanceof OReturnStatement) {
-        return true;
-      }
-      if (stm instanceof OForEachBlock && ((OForEachBlock) stm).containsReturn()) {
-        return true;
-      }
-      if (stm instanceof OIfStatement && ((OIfStatement) stm).containsReturn()) {
-        return true;
-      }
-      if (stm instanceof OWhileBlock && ((OWhileBlock) stm).containsReturn()) {
-        return true;
-      }
-    }
-    return false;
   }
 
   @Override

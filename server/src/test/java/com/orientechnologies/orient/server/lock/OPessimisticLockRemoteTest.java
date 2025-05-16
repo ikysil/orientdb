@@ -1,6 +1,5 @@
 package com.orientechnologies.orient.server.lock;
 
-import static com.orientechnologies.orient.core.config.OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY;
 import static com.orientechnologies.orient.core.config.OGlobalConfiguration.STORAGE_PESSIMISTIC_LOCKING;
 import static com.orientechnologies.orient.core.db.OrientDBConfig.LOCK_TYPE_READWRITE;
 
@@ -28,7 +27,6 @@ public class OPessimisticLockRemoteTest {
 
   @Before
   public void before() throws Exception {
-    SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     OGlobalConfiguration.CLASS_MINIMUM_CLUSTERS.setValue(1);
     STORAGE_PESSIMISTIC_LOCKING.setValue(LOCK_TYPE_READWRITE);
     server = new OServer(false);

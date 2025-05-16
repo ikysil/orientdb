@@ -5,7 +5,7 @@ import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -46,9 +46,9 @@ public class CheckSafeDeleteStepTest extends TestUtilsFixture {
         break;
     }
 
-    CheckSafeDeleteStep step = new CheckSafeDeleteStep(context, false);
+    CheckSafeDeleteStep step = new CheckSafeDeleteStep();
     AbstractExecutionStep previous =
-        new AbstractExecutionStep(context, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -62,7 +62,7 @@ public class CheckSafeDeleteStepTest extends TestUtilsFixture {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 
@@ -76,9 +76,9 @@ public class CheckSafeDeleteStepTest extends TestUtilsFixture {
   @Test
   public void shouldSafelyDeleteRecord() {
     OCommandContext context = new OBasicCommandContext(db);
-    CheckSafeDeleteStep step = new CheckSafeDeleteStep(context, false);
+    CheckSafeDeleteStep step = new CheckSafeDeleteStep();
     AbstractExecutionStep previous =
-        new AbstractExecutionStep(context, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -91,7 +91,7 @@ public class CheckSafeDeleteStepTest extends TestUtilsFixture {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 

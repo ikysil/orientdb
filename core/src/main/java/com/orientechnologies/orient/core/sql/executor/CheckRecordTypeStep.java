@@ -5,7 +5,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Optional;
 
 /**
@@ -15,8 +15,8 @@ import java.util.Optional;
 public class CheckRecordTypeStep extends AbstractExecutionStep {
   private final String clazz;
 
-  public CheckRecordTypeStep(OCommandContext ctx, String className, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CheckRecordTypeStep(String className) {
+    super();
     this.clazz = className;
   }
 
@@ -43,12 +43,12 @@ public class CheckRecordTypeStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String result = OExecutionStepInternal.getIndent(depth, indent) + "+ CHECK RECORD TYPE";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+  public String prettyPrint(OPrintContext ctx) {
+    String result = OExecutionStepInternal.getIndent(ctx) + "+ CHECK RECORD TYPE";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
-    result += (OExecutionStepInternal.getIndent(depth, indent) + "  " + clazz);
+    result += (OExecutionStepInternal.getIndent(ctx) + "  " + clazz);
     return result;
   }
 }

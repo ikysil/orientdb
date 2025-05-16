@@ -23,7 +23,6 @@ import com.orientechnologies.common.collection.OMultiCollectionIterator;
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -54,10 +53,6 @@ public class OSQLFunctionUnionAll extends OSQLFunctionMultiValueAbstract<Collect
       Object value = iParams[0];
       if (value != null) {
 
-        if (value instanceof OSQLFilterItemVariable)
-          value =
-              ((OSQLFilterItemVariable) value).getValue(iCurrentRecord, iCurrentResult, iContext);
-
         if (context == null) context = new ArrayList<Object>();
 
         OMultiValue.add(context, value);
@@ -70,10 +65,6 @@ public class OSQLFunctionUnionAll extends OSQLFunctionMultiValueAbstract<Collect
           new OMultiCollectionIterator<OIdentifiable>();
       for (Object value : iParams) {
         if (value != null) {
-          if (value instanceof OSQLFilterItemVariable)
-            value =
-                ((OSQLFilterItemVariable) value).getValue(iCurrentRecord, iCurrentResult, iContext);
-
           result.add(value);
         }
       }

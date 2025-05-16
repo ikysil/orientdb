@@ -5,7 +5,7 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OBinaryCondition;
 import com.orientechnologies.orient.core.sql.parser.OFromClause;
 import java.util.Iterator;
@@ -15,12 +15,8 @@ public class FetchFromIndexedFunctionStep extends AbstractExecutionStep {
   private OBinaryCondition functionCondition;
   private OFromClause queryTarget;
 
-  public FetchFromIndexedFunctionStep(
-      OBinaryCondition functionCondition,
-      OFromClause queryTarget,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FetchFromIndexedFunctionStep(OBinaryCondition functionCondition, OFromClause queryTarget) {
+    super();
     this.functionCondition = functionCondition;
     this.queryTarget = queryTarget;
   }
@@ -37,19 +33,16 @@ public class FetchFromIndexedFunctionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     String result =
-        OExecutionStepInternal.getIndent(depth, indent)
+        OExecutionStepInternal.getIndent(ctx)
             + "+ FETCH FROM INDEXED FUNCTION "
             + functionCondition.toString();
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }
-
-  @Override
-  public void reset() {}
 
   @Override
   public OResult serialize() {

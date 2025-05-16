@@ -17,7 +17,7 @@ package com.orientechnologies.orient.test.database.auto;
 
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
-import com.orientechnologies.orient.client.remote.OEngineRemote;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.object.OLazyObjectSetInterface;
 import com.orientechnologies.orient.core.db.record.ORecordLazyList;
@@ -105,7 +105,6 @@ public class CRUDObjectPhysicalTestSchemaFull extends ObjectDBBaseTest {
   public void afterClass() throws Exception {
     database.close();
 
-    database = createDatabaseInstance(url);
     super.afterClass();
   }
 
@@ -117,20 +116,20 @@ public class CRUDObjectPhysicalTestSchemaFull extends ObjectDBBaseTest {
     database
         .getEntityManager()
         .registerEntityClasses("com.orientechnologies.orient.test.domain.business");
-    if (url.startsWith(OEngineRemote.NAME)) {
+    if (url.startsWith(ORemoteClient.TYPE)) {
       database.getMetadata().reload();
     }
     database
         .getEntityManager()
         .registerEntityClasses("com.orientechnologies.orient.test.domain.base");
-    if (url.startsWith(OEngineRemote.NAME)) {
+    if (url.startsWith(ORemoteClient.TYPE)) {
       database.getMetadata().reload();
     }
     database.setAutomaticSchemaGeneration(false);
     database
         .getEntityManager()
         .registerEntityClasses("com.orientechnologies.orient.test.domain.whiz");
-    if (url.startsWith(OEngineRemote.NAME)) {
+    if (url.startsWith(ORemoteClient.TYPE)) {
       database.getMetadata().reload();
     }
 
@@ -147,12 +146,7 @@ public class CRUDObjectPhysicalTestSchemaFull extends ObjectDBBaseTest {
     }
   }
 
-  @Test(dependsOnMethods = "create", expectedExceptions = UnsupportedOperationException.class)
-  public void testReleasedPoolDatabase() {
-    database.open("admin", "admin");
-  }
-
-  @Test(dependsOnMethods = "testReleasedPoolDatabase")
+  @Test(dependsOnMethods = "create")
   public void testCreate() {
     Assert.assertEquals(database.countClusterElements("Account") - startRecordNumber, TOT_RECORDS);
   }

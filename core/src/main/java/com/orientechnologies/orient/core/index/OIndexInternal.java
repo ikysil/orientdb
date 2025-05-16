@@ -92,13 +92,6 @@ public interface OIndexInternal extends OIndex {
    */
   OIndex removeCluster(final String iClusterName);
 
-  /**
-   * Indicates whether given index can be used to calculate result of {@link
-   * com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquality} operators.
-   *
-   * @return {@code true} if given index can be used to calculate result of {@link
-   *     com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquality} operators.
-   */
   boolean canBeUsedInEqualityOperators();
 
   boolean hasRangeQuerySupport();

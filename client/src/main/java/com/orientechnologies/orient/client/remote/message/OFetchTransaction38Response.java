@@ -1,7 +1,7 @@
 package com.orientechnologies.orient.client.remote.message;
 
 import com.orientechnologies.orient.client.remote.OBinaryResponse;
-import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
+import com.orientechnologies.orient.client.remote.ORemoteClientSession;
 import com.orientechnologies.orient.client.remote.message.tx.IndexChange;
 import com.orientechnologies.orient.client.remote.message.tx.ORecordOperation38Response;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
@@ -15,7 +15,6 @@ import com.orientechnologies.orient.core.serialization.serializer.record.binary.
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkV37;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkV37Client;
 import com.orientechnologies.orient.core.storage.ORawBuffer;
-import com.orientechnologies.orient.core.storage.OStorageOperationResult;
 import com.orientechnologies.orient.core.tx.OTransactionIndexChanges;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataInput;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataOutput;
@@ -59,10 +58,9 @@ public class OFetchTransaction38Response implements OBinaryResponse {
       request.setRecordType(ORecordInternal.getRecordType(txEntry.getRecord()));
       if (txEntry.type == ORecordOperation.UPDATED && txEntry.getRecord() instanceof ODocument) {
         ODocument doc = (ODocument) txEntry.getRecord();
-        OStorageOperationResult<ORawBuffer> result =
-            database.getStorage().readRecord((ORecordId) doc.getIdentity(), "", false, false, null);
+        ORawBuffer result = database.getStorage().readRecord((ORecordId) doc.getIdentity());
         ODocument docFromPersistence = new ODocument(doc.getIdentity());
-        docFromPersistence.fromStream(result.getResult().getBuffer());
+        docFromPersistence.fromStream(result.getBuffer());
         request.setOriginal(
             ORecordSerializerNetworkV37Client.INSTANCE.toStream(docFromPersistence));
         ODocumentSerializerDelta delta = ODocumentSerializerDelta.instance();
@@ -128,7 +126,7 @@ public class OFetchTransaction38Response implements OBinaryResponse {
   }
 
   @Override
-  public void read(OChannelDataInput network, OStorageRemoteSession session) throws IOException {
+  public void read(OChannelDataInput network, ORemoteClientSession session) throws IOException {
     ORecordSerializerNetworkV37Client serializer = ORecordSerializerNetworkV37Client.INSTANCE;
     txId = network.readInt();
     operations = new ArrayList<>();

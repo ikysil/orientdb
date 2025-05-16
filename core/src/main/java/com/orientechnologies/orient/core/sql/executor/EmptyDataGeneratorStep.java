@@ -2,15 +2,15 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /** Created by luigidellaquila on 08/07/16. */
 public class EmptyDataGeneratorStep extends AbstractExecutionStep {
 
   private int size;
 
-  public EmptyDataGeneratorStep(int size, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public EmptyDataGeneratorStep(int size) {
+    super();
     this.size = size;
   }
 
@@ -22,16 +22,16 @@ public class EmptyDataGeneratorStep extends AbstractExecutionStep {
 
   private OResult create(OCommandContext ctx) {
     OResultInternal result = new OResultInternal();
-    ctx.setVariable("$current", result);
+    ctx.setCurrent(result);
     return result;
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     String result = spaces + "+ GENERATE " + size + " EMPTY " + (size == 1 ? "RECORD" : "RECORDS");
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }

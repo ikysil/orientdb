@@ -110,7 +110,7 @@ public class OClusterRemote implements OCluster {
   }
 
   @Override
-  public ORawBuffer readRecord(long clusterPosition, boolean prefetchRecords) {
+  public ORawBuffer readRecord(long clusterPosition) {
     throw new UnsupportedOperationException("readRecord");
   }
 
@@ -157,11 +157,6 @@ public class OClusterRemote implements OCluster {
 
   public long getEntries() {
     return 0;
-  }
-
-  @Override
-  public long getTombstonesCount() {
-    throw new UnsupportedOperationException("getTombstonesCount()");
   }
 
   @Override

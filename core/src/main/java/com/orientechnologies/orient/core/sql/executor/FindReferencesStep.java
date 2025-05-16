@@ -14,7 +14,7 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OCluster;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import java.util.ArrayList;
@@ -35,12 +35,8 @@ public class FindReferencesStep extends AbstractExecutionStep {
   private final List<OIdentifier> classes;
   private final List<OCluster> clusters;
 
-  public FindReferencesStep(
-      List<OIdentifier> classes,
-      List<OCluster> clusters,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FindReferencesStep(List<OIdentifier> classes, List<OCluster> clusters) {
+    super();
     this.classes = classes;
     this.clusters = clusters;
   }
@@ -224,8 +220,8 @@ public class FindReferencesStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ FIND REFERENCES\n");

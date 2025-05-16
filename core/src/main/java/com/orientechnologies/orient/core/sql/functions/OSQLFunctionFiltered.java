@@ -22,6 +22,7 @@ package com.orientechnologies.orient.core.sql.functions;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 
 /** @author Luigi Dell'Aquila (l.dellaquila-(at)-orientdb.com) */
 public interface OSQLFunctionFiltered extends OSQLFunction {
@@ -30,7 +31,7 @@ public interface OSQLFunctionFiltered extends OSQLFunction {
    * Process a record.
    *
    * @param iThis
-   * @param iCurrentRecord : current record
+   * @param current : current record
    * @param iCurrentResult TODO
    * @param iParams : function parameters, number is ensured to be within minParams and maxParams.
    * @param iPossibleResults : a set of possible results (the function will return, as a result,
@@ -41,7 +42,7 @@ public interface OSQLFunctionFiltered extends OSQLFunction {
    */
   public Object execute(
       Object iThis,
-      OIdentifiable iCurrentRecord,
+      OResult current,
       Object iCurrentResult,
       Object[] iParams,
       Iterable<OIdentifiable> iPossibleResults,

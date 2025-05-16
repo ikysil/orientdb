@@ -4,7 +4,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OOrderBy;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,18 +16,12 @@ public class OrderByStep extends AbstractExecutionStep {
   private final long timeoutMillis;
   private Integer maxResults;
 
-  public OrderByStep(
-      OOrderBy orderBy, OCommandContext ctx, long timeoutMillis, boolean profilingEnabled) {
-    this(orderBy, null, ctx, timeoutMillis, profilingEnabled);
+  public OrderByStep(OOrderBy orderBy, long timeoutMillis) {
+    this(orderBy, null, timeoutMillis);
   }
 
-  public OrderByStep(
-      OOrderBy orderBy,
-      Integer maxResults,
-      OCommandContext ctx,
-      long timeoutMillis,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public OrderByStep(OOrderBy orderBy, Integer maxResults, long timeoutMillis) {
+    super();
     this.orderBy = orderBy;
     this.maxResults = maxResults;
     if (this.maxResults != null && this.maxResults < 0) {
@@ -44,21 +38,19 @@ public class OrderByStep extends AbstractExecutionStep {
     } else {
       results = Collections.emptyList();
     }
-    return OExecutionStream.resultIterator(results.iterator());
+    return OExecutionStream.resultCollection(results);
   }
 
   private List<OResult> init(OExecutionStepInternal p, OCommandContext ctx) {
-    long timeoutBegin = System.currentTimeMillis();
     List<OResult> cachedResult = new ArrayList<>();
     final long maxElementsAllowed =
         OGlobalConfiguration.QUERY_MAX_HEAP_ELEMENTS_ALLOWED_PER_OP.getValueAsLong();
     boolean sorted = true;
     OExecutionStream lastBatch = p.start(ctx);
+    if (timeoutMillis > 0) {
+      lastBatch = lastBatch.timeout(timeoutMillis, this::fail);
+    }
     while (lastBatch.hasNext(ctx)) {
-      if (timeoutMillis > 0 && timeoutBegin + timeoutMillis < System.currentTimeMillis()) {
-        sendTimeout();
-      }
-
       OResult item = lastBatch.next(ctx);
       cachedResult.add(item);
       if (maxElementsAllowed >= 0 && maxElementsAllowed < cachedResult.size()) {
@@ -93,11 +85,15 @@ public class OrderByStep extends AbstractExecutionStep {
     return cachedResult;
   }
 
+  private void fail() {
+    throw new OTimeoutException("Timeout expired");
+  }
+
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String result = OExecutionStepInternal.getIndent(depth, indent) + "+ " + orderBy;
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+  public String prettyPrint(OPrintContext ctx) {
+    String result = OExecutionStepInternal.getIndent(ctx) + "+ " + orderBy;
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     result += (maxResults != null ? "\n  (buffer size: " + maxResults + ")" : "");
     return result;

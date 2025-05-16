@@ -19,7 +19,7 @@ import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -64,7 +64,7 @@ public class OCreateLinkStatement extends OSimpleExecStatement {
   /** Execute the CREATE LINK. */
   private Object execute(OCommandContext ctx) {
 
-    final ODatabaseDocumentInternal database = getDatabase();
+    final ODatabaseDocumentInternal database = (ODatabaseDocumentInternal) ctx.getDatabase();
     if (!(database.getDatabaseOwner() instanceof ODatabaseDocument))
       throw new OCommandSQLParsingException(
           "This command supports only the database type ODatabaseDocumentTx and type '"
@@ -188,12 +188,12 @@ public class OCreateLinkStatement extends OSimpleExecStatement {
 
                 target.setProperty(linkName, value);
               }
-              target.save();
+              database.save(target);
 
             } else {
               // SET THE REFERENCE
               doc.setProperty(linkName, value);
-              doc.save();
+              database.save(doc);
             }
 
             total++;

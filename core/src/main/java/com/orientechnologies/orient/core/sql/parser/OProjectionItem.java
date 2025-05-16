@@ -15,7 +15,7 @@ import com.orientechnologies.orient.core.sql.executor.AggregationContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSetReady;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -129,19 +129,6 @@ public class OProjectionItem extends SimpleNode {
         alias.toGenericStatement(builder);
       }
     }
-  }
-
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    Object result;
-    if (all) {
-      result = iCurrentRecord;
-    } else {
-      result = expression.execute(iCurrentRecord, ctx);
-    }
-    if (nestedProjection != null) {
-      result = nestedProjection.apply(expression, result, ctx);
-    }
-    return convert(result, ctx);
   }
 
   public static Object convert(Object value, OCommandContext context) {

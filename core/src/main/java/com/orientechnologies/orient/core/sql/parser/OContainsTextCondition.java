@@ -3,12 +3,12 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,20 +25,6 @@ public class OContainsTextCondition extends OBooleanExpression {
 
   public OContainsTextCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (leftValue == null || !(leftValue instanceof String)) {
-      return false;
-    }
-    Object rightValue = right.execute(currentRecord, ctx);
-    if (rightValue == null || !(rightValue instanceof String)) {
-      return false;
-    }
-
-    return ((String) leftValue).indexOf((String) rightValue) > -1;
   }
 
   @Override
@@ -238,47 +224,15 @@ public class OContainsTextCondition extends OBooleanExpression {
     Optional<OPath> path = left.getPath();
     if (path.isPresent()) {
       if (right != null && right.isEarlyCalculated(ctx)) {
-        Object value = right.execute((OResult) null, ctx);
-        return info.findFullTextIndex(path.get(), value, ctx);
+        return info.findFullText(path.get(), this::rightValue, ctx);
       }
     }
 
     return Optional.empty();
   }
 
-  @Override
-  public boolean isFullTextIndexAware(String indexField) {
-    if (left.isBaseIdentifier()) {
-      String fieldName = left.getDefaultAlias().getStringValue();
-      if (indexField.equals(fieldName)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @Override
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    if (getRight() != null) {
-      return getRight();
-    } else {
-      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
-  }
-
-  @Override
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    return getRight();
-  }
-
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    return true;
-  }
-
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    return true;
+  public Collection<Object> rightValue(OCommandContext ctx, boolean asc) {
+    return right.getIndexKey(ctx);
   }
 }
 /* JavaCC - OriginalChecksum=b588492ba2cbd0f932055f1f64bbbecd (do not edit this line) */

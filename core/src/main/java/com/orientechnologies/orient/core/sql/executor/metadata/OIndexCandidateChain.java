@@ -1,7 +1,6 @@
 package com.orientechnologies.orient.core.sql.executor.metadata;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder.Operation;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,11 +18,7 @@ public class OIndexCandidateChain implements OIndexCandidate {
 
   @Override
   public String getName() {
-    String name = "";
-    for (String index : indexes) {
-      name += index + "->";
-    }
-    return name;
+    return String.join("->", indexes);
   }
 
   @Override
@@ -58,7 +53,33 @@ public class OIndexCandidateChain implements OIndexCandidate {
   }
 
   @Override
-  public List<OProperty> properties() {
+  public List<String> properties() {
     return Collections.emptyList();
+  }
+
+  public boolean requiresDistinctStep(OCommandContext ctx) {
+    // TODO: this should check all the chain of index for duplicate multi values,
+    return true;
+  }
+
+  @Override
+  public boolean fullySorted(List<String> properties, OCommandContext ctx) {
+    // TODO  this should check all the chain of index for duplicate multi values,
+    return false;
+  }
+
+  @Override
+  public List<PropertyValue> values() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<PropertyValue> toValues() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean isDirectIndex() {
+    return false;
   }
 }

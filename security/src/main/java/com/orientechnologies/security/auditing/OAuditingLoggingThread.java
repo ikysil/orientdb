@@ -36,14 +36,13 @@ public class OAuditingLoggingThread extends Thread {
   private volatile boolean running = true;
   private volatile boolean waitForAllLogs = true;
   private OrientDBInternal context;
-  private static final Object onceAtime = new Object();
 
   private String className;
   private OSecuritySystem security;
 
   public OAuditingLoggingThread(
       final String iDatabaseName,
-      final BlockingQueue auditingQueue,
+      final BlockingQueue<ODocument> auditingQueue,
       final OrientDBInternal context,
       OSecuritySystem security) {
     super(
@@ -61,13 +60,11 @@ public class OAuditingLoggingThread extends Thread {
   }
 
   private Void createAuditingClass(ODatabaseSession iArgument) {
-    synchronized (onceAtime) {
-      OSchema schema = iArgument.getMetadata().getSchema();
-      if (!schema.existsClass(className)) {
-        OClass clazz = schema.getClass(ODefaultAuditing.AUDITING_LOG_CLASSNAME);
-        OClass cls = schema.createClass(className, clazz);
-        cls.createIndex(className + ".date", OClass.INDEX_TYPE.NOTUNIQUE, new String[] {"date"});
-      }
+    OSchema schema = iArgument.getMetadata().getSchema();
+    OClass clazz = schema.getClass(ODefaultAuditing.AUDITING_LOG_CLASSNAME);
+    if (schema.createClassIfNotExists(className, clazz)) {
+      OClass cls = schema.getClass(className);
+      cls.createIndex(className + ".date", OClass.INDEX_TYPE.NOTUNIQUE, new String[] {"date"});
     }
     return null;
   }

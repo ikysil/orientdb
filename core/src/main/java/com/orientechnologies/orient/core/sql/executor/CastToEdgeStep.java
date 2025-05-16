@@ -4,13 +4,13 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.OEdge;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /** Created by luigidellaquila on 20/02/17. */
 public class CastToEdgeStep extends AbstractExecutionStep {
 
-  public CastToEdgeStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CastToEdgeStep() {
+    super();
   }
 
   @Override
@@ -36,17 +36,17 @@ public class CastToEdgeStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String result = OExecutionStepInternal.getIndent(depth, indent) + "+ CAST TO EDGE";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+  public String prettyPrint(OPrintContext ctx) {
+    String result = OExecutionStepInternal.getIndent(ctx) + "+ CAST TO EDGE";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new CastToEdgeStep(ctx, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new CastToEdgeStep();
   }
 
   @Override

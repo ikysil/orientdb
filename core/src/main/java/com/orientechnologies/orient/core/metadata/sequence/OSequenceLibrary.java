@@ -38,13 +38,4 @@ public interface OSequenceLibrary {
   OSequence getSequence(String iName);
 
   void dropSequence(String iName) throws ODatabaseException;
-
-  @Deprecated
-  void create();
-
-  @Deprecated
-  void close();
-
-  @Deprecated
-  void load();
 }

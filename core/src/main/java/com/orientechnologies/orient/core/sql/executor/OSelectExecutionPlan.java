@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,21 +23,16 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
   public OSelectExecutionPlan() {}
 
   @Override
-  public void close() {
-    lastStep.close();
-  }
-
-  @Override
   public OExecutionStream start(OCommandContext ctx) {
     return lastStep.start(ctx);
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder result = new StringBuilder();
     for (int i = 0; i < steps.size(); i++) {
       OExecutionStepInternal step = steps.get(i);
-      result.append(step.prettyPrint(depth, indent));
+      result.append(step.prettyPrint(ctx));
       if (i < steps.size() - 1) {
         result.append("\n");
       }
@@ -45,14 +40,8 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
     return result.toString();
   }
 
-  @Override
-  public void reset(OCommandContext ctx) {
-    steps.forEach(OExecutionStepInternal::reset);
-  }
-
   public void chain(OExecutionStepInternal nextStep) {
     if (lastStep != null) {
-      lastStep.setNext(nextStep);
       nextStep.setPrevious(lastStep);
     }
     lastStep = nextStep;
@@ -60,9 +49,9 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
   }
 
   @Override
-  public List<OExecutionStep> getSteps() {
+  public List<OExecutionStepInternal> getSteps() {
     // TODO do a copy of the steps
-    return (List) steps;
+    return steps;
   }
 
   public void setSteps(List<OExecutionStepInternal> steps) {
@@ -74,16 +63,19 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
     }
   }
 
-  @Override
-  public OResult toResult() {
+  public OResult toResult(OToResultContext ctx) {
     OResultInternal result = new OResultInternal();
     result.setProperty("type", "QueryExecutionPlan");
     result.setProperty(JAVA_TYPE, getClass().getName());
     result.setProperty("cost", getCost());
-    result.setProperty("prettyPrint", prettyPrint(0, 2));
+    result.setProperty("prettyPrint", prettyPrint(new OPrintContexImpl(ctx.getContext(), 0, 2)));
+    result.setProperty("stmText", getStatement());
+    result.setProperty("genericStm", getGenericStatement());
     result.setProperty(
         "steps",
-        steps == null ? null : steps.stream().map(x -> x.toResult()).collect(Collectors.toList()));
+        steps == null
+            ? null
+            : steps.stream().map(x -> x.toResult(ctx)).collect(Collectors.toList()));
     return result;
   }
 
@@ -97,7 +89,7 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
     result.setProperty("type", "QueryExecutionPlan");
     result.setProperty(JAVA_TYPE, getClass().getName());
     result.setProperty("cost", getCost());
-    result.setProperty("prettyPrint", prettyPrint(0, 2));
+    result.setProperty("prettyPrint", prettyPrint(new OPrintContexImpl(null, 0, 2)));
     result.setProperty(
         "steps",
         steps == null ? null : steps.stream().map(x -> x.serialize()).collect(Collectors.toList()));
@@ -110,7 +102,8 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
       try {
         String className = serializedStep.getProperty(JAVA_TYPE);
         OExecutionStepInternal step =
-            (OExecutionStepInternal) Class.forName(className).newInstance();
+            (OExecutionStepInternal)
+                Class.forName(className).getDeclaredConstructor().newInstance();
         step.deserialize(serializedStep);
         chain(step);
       } catch (Exception e) {
@@ -129,14 +122,11 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
   }
 
   protected void copyOn(OSelectExecutionPlan copy, OCommandContext ctx) {
-    OExecutionStep lastStep = null;
-    for (OExecutionStep step : this.steps) {
+    OExecutionStepInternal lastStep = null;
+    for (OExecutionStepInternal step : this.steps) {
       OExecutionStepInternal newStep =
           (OExecutionStepInternal) ((OExecutionStepInternal) step).copy(ctx);
       newStep.setPrevious((OExecutionStepInternal) lastStep);
-      if (lastStep != null) {
-        ((OExecutionStepInternal) lastStep).setNext(newStep);
-      }
       lastStep = newStep;
       copy.getSteps().add(newStep);
     }
@@ -177,7 +167,7 @@ public class OSelectExecutionPlan implements OInternalExecutionPlan {
   @Override
   public Set<String> getIndexes() {
     Set<String> indexes = new HashSet<>();
-    for (OExecutionStep chilStep : steps) {
+    for (OExecutionStepInternal chilStep : steps) {
       OExecutionStepInternal.fillIndexes(chilStep, indexes);
     }
     return indexes;

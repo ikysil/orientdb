@@ -34,12 +34,11 @@ import com.orientechnologies.orient.core.exception.OSchemaException;
 import com.orientechnologies.orient.core.exception.OSchemaNotCreatedException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.metadata.OMetadataDefault;
+import com.orientechnologies.orient.core.metadata.OSessionMetadata;
 import com.orientechnologies.orient.core.metadata.schema.clusterselection.OClusterSelectionFactory;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.ORule;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -197,10 +196,15 @@ public abstract class OSchemaShared implements OCloseable {
 
   /** Callback invoked when the schema is loaded, after all the initializations. */
   public void onPostIndexManagement() {
-    for (OClass c : classes.values()) {
-      if (c instanceof OClassImpl) ((OClassImpl) c).onPostIndexManagement();
+    List<OClass> checkClassesAndViews;
+    try {
+      acquireSchemaReadLock();
+      checkClassesAndViews = new ArrayList(classes.values());
+      checkClassesAndViews.addAll(views.values());
+    } finally {
+      releaseSchemaReadLock();
     }
-    for (OClass c : views.values()) {
+    for (OClass c : checkClassesAndViews) {
       if (c instanceof OClassImpl) ((OClassImpl) c).onPostIndexManagement();
     }
   }
@@ -271,6 +275,12 @@ public abstract class OSchemaShared implements OCloseable {
       final String viewName,
       String statement,
       Map<String, Object> metadata);
+
+  public abstract boolean createClassIfNotExists(
+      ODatabaseDocumentInternal session, String className);
+
+  public abstract boolean createClassIfNotExists(
+      ODatabaseDocumentInternal session, String className, OClass... superclasses);
 
   public abstract OView createView(ODatabaseDocumentInternal database, OViewConfig cfg);
 
@@ -658,7 +668,7 @@ public abstract class OSchemaShared implements OCloseable {
 
       if (!hasGlobalProperties) {
         ODatabaseDocumentInternal database = ODatabaseRecordThreadLocal.instance().get();
-        if (database.getStorage() instanceof OAbstractPaginatedStorage) saveInternal(database);
+        if (!database.isRemote()) saveInternal(database);
       }
 
     } finally {
@@ -815,7 +825,7 @@ public abstract class OSchemaShared implements OCloseable {
   public void create(final ODatabaseDocumentInternal database) {
     lock.writeLock().lock();
     try {
-      ODocument document = database.save(new ODocument(), OMetadataDefault.CLUSTER_INTERNAL_NAME);
+      ODocument document = database.save(new ODocument(), OSessionMetadata.CLUSTER_INTERNAL_NAME);
       this.identity = document.getIdentity();
       database.getStorage().setSchemaRecordId(document.getIdentity().toString());
       snapshot = new OImmutableSchema(this, database);
@@ -827,7 +837,6 @@ public abstract class OSchemaShared implements OCloseable {
   @Override
   public void close() {}
 
-  @Deprecated
   public int getVersion() {
     return version;
   }
@@ -894,7 +903,7 @@ public abstract class OSchemaShared implements OCloseable {
           @Override
           public Object call() {
             ODocument document = toStream();
-            database.save(document, OMetadataDefault.CLUSTER_INTERNAL_NAME);
+            database.save(document, OSessionMetadata.CLUSTER_INTERNAL_NAME);
             return null;
           }
         });

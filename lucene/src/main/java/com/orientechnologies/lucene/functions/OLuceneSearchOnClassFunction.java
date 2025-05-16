@@ -85,7 +85,7 @@ public class OLuceneSearchOnClassFunction extends OLuceneSearchFunctionTemplate 
             .map(s -> element.getProperty(s))
             .collect(Collectors.toList());
 
-    for (IndexableField field : index.buildDocument(key).getFields()) {
+    for (IndexableField field : index.buildDocument(key, iCurrentRecord).getFields()) {
       memoryIndex.addField(field, index.indexAnalyzer());
     }
 
@@ -127,7 +127,7 @@ public class OLuceneSearchOnClassFunction extends OLuceneSearchFunctionTemplate 
     OLuceneFullTextIndex index = searchForIndex(target, ctx);
 
     OExpression expression = args[0];
-    String query = (String) expression.execute((OIdentifiable) null, ctx);
+    String query = (String) expression.execute((OResult) null, ctx);
 
     if (index != null) {
 

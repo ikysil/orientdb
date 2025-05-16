@@ -1,8 +1,7 @@
 package com.orientechnologies.orient.core.sql.executor;
 
-/** Created by luigidellaquila on 08/08/16. */
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -12,18 +11,10 @@ import java.util.Set;
 public class OIfExecutionPlan implements OInternalExecutionPlan {
 
   protected IfStep step;
+  private String genericStatement;
+  private String statement;
 
   public OIfExecutionPlan() {}
-
-  @Override
-  public void reset(OCommandContext ctx) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void close() {
-    step.close();
-  }
 
   @Override
   public OExecutionStream start(OCommandContext ctx) {
@@ -31,9 +22,9 @@ public class OIfExecutionPlan implements OInternalExecutionPlan {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder result = new StringBuilder();
-    result.append(step.prettyPrint(depth, indent));
+    result.append(step.prettyPrint(ctx));
     return result.toString();
   }
 
@@ -42,7 +33,7 @@ public class OIfExecutionPlan implements OInternalExecutionPlan {
   }
 
   @Override
-  public List<OExecutionStep> getSteps() {
+  public List<OExecutionStepInternal> getSteps() {
     // TODO do a copy of the steps
     return Collections.singletonList(step);
   }
@@ -52,13 +43,15 @@ public class OIfExecutionPlan implements OInternalExecutionPlan {
   }
 
   @Override
-  public OResult toResult() {
+  public OResult toResult(OToResultContext ctx) {
     OResultInternal result = new OResultInternal();
     result.setProperty("type", "IfExecutionPlan");
     result.setProperty("javaType", getClass().getName());
     result.setProperty("cost", getCost());
-    result.setProperty("prettyPrint", prettyPrint(0, 2));
-    result.setProperty("steps", Collections.singletonList(step.toResult()));
+    result.setProperty("prettyPrint", prettyPrint(new OPrintContexImpl(ctx.getContext(), 0, 2)));
+    result.setProperty("stmText", getStatement());
+    result.setProperty("genericStm", getGenericStatement());
+    result.setProperty("steps", Collections.singletonList(step.toResult(ctx)));
     return result;
   }
 
@@ -72,23 +65,30 @@ public class OIfExecutionPlan implements OInternalExecutionPlan {
     return false;
   }
 
-  public OExecutionStepInternal executeUntilReturn(OCommandContext ctx) {
-    OScriptExecutionPlan plan = step.producePlan(ctx);
-    if (plan != null) {
-      return plan.executeUntilReturn(ctx);
-    } else {
-      return null;
-    }
-  }
-
-  public boolean containsReturn() {
-    return step.containsReturn();
-  }
-
   @Override
   public Set<String> getIndexes() {
     Set<String> indexes = new HashSet<>();
     OExecutionStepInternal.fillIndexes(step, indexes);
     return indexes;
+  }
+
+  @Override
+  public void setGenericStatement(String stm) {
+    this.genericStatement = stm;
+  }
+
+  @Override
+  public String getGenericStatement() {
+    return this.genericStatement;
+  }
+
+  @Override
+  public void setStatement(String stm) {
+    this.statement = stm;
+  }
+
+  @Override
+  public String getStatement() {
+    return statement;
   }
 }

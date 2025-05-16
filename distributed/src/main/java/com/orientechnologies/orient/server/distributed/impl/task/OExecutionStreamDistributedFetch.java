@@ -2,8 +2,8 @@ package com.orientechnologies.orient.server.distributed.impl.task;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStreamProducer;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStreamProducer;
 import com.orientechnologies.orient.server.distributed.ODistributedResponse;
 import com.orientechnologies.orient.server.distributed.impl.ODatabaseDocumentDistributed;
 import java.util.List;
@@ -42,7 +42,7 @@ public final class OExecutionStreamDistributedFetch implements OExecutionStreamP
     } else {
       OFetchQueryPageTask task = new OFetchQueryPageTask(queryId);
       ODistributedResponse result = db.executeTaskOnNode(task, nodeName);
-      current = OExecutionStream.resultIterator(((List<OResult>) result.getPayload()).iterator());
+      current = OExecutionStream.resultCollection(((List<OResult>) result.getPayload()));
       return current.hasNext(ctx);
     }
   }

@@ -7,7 +7,7 @@ import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.index.OIndex;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import com.orientechnologies.orient.core.sql.parser.OIndexIdentifier;
@@ -21,12 +21,8 @@ public class InsertIntoIndexStep extends AbstractExecutionStep {
   private final OIndexIdentifier targetIndex;
   private final OInsertBody body;
 
-  public InsertIntoIndexStep(
-      OIndexIdentifier targetIndex,
-      OInsertBody insertBody,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public InsertIntoIndexStep(OIndexIdentifier targetIndex, OInsertBody insertBody) {
+    super();
     this.targetIndex = targetIndex;
     this.body = insertBody;
   }

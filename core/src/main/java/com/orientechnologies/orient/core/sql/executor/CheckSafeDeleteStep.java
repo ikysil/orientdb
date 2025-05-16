@@ -8,7 +8,7 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /**
  * Checks if a record can be safely deleted (throws OCommandExecutionException in case). A record
@@ -24,8 +24,8 @@ import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream
  */
 public class CheckSafeDeleteStep extends AbstractExecutionStep {
 
-  public CheckSafeDeleteStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CheckSafeDeleteStep() {
+    super();
   }
 
   @Override
@@ -57,13 +57,13 @@ public class CheckSafeDeleteStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ CHECK SAFE DELETE");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     return result.toString();
   }

@@ -10,7 +10,7 @@ import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.OVertex;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OBatch;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import java.util.ArrayList;
@@ -41,10 +41,8 @@ public class CreateEdgesStep extends AbstractExecutionStep {
       OIdentifier toAlias,
       Number wait,
       Number retry,
-      OBatch batch,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+      OBatch batch) {
+    super();
     this.targetClass = targetClass;
     this.targetCluster = targetClusterName;
     this.uniqueIndexName = uniqueIndex;
@@ -59,9 +57,9 @@ public class CreateEdgesStep extends AbstractExecutionStep {
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
     getPrev().ifPresent(x -> x.start(ctx).close(ctx));
 
-    Iterator fromIter = fetchFroms();
-    List<Object> toList = fetchTo();
-    OIndex uniqueIndex = findIndex(this.uniqueIndexName);
+    Iterator fromIter = fetchFroms(ctx);
+    List<Object> toList = fetchTo(ctx);
+    OIndex uniqueIndex = findIndex(this.uniqueIndexName, ctx);
     Stream<OResult> stream =
         StreamSupport.stream(Spliterators.spliteratorUnknownSize(fromIter, 0), false)
             .map(this::asVertex)
@@ -72,7 +70,7 @@ public class CreateEdgesStep extends AbstractExecutionStep {
     return OExecutionStream.resultIterator(stream.iterator());
   }
 
-  private OIndex findIndex(String uniqueIndexName) {
+  private OIndex findIndex(String uniqueIndexName, OCommandContext ctx) {
     if (uniqueIndexName != null) {
       final ODatabaseDocumentInternal database = (ODatabaseDocumentInternal) ctx.getDatabase();
       OIndex uniqueIndex =
@@ -85,7 +83,7 @@ public class CreateEdgesStep extends AbstractExecutionStep {
     return null;
   }
 
-  private List<Object> fetchTo() {
+  private List<Object> fetchTo(OCommandContext ctx) {
     Object toValues = ctx.getVariable(toAlias.getStringValue());
     if (toValues instanceof Iterable && !(toValues instanceof OIdentifiable)) {
       toValues = ((Iterable) toValues).iterator();
@@ -111,7 +109,7 @@ public class CreateEdgesStep extends AbstractExecutionStep {
     return toList;
   }
 
-  private Iterator fetchFroms() {
+  private Iterator fetchFroms(OCommandContext ctx) {
     Object fromValues = ctx.getVariable(fromAlias.getStringValue());
     if (fromValues instanceof Iterable && !(fromValues instanceof OIdentifiable)) {
       fromValues = ((Iterable) fromValues).iterator();
@@ -200,13 +198,13 @@ public class CreateEdgesStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     String result = spaces + "+ FOR EACH x in " + fromAlias + "\n";
     result += spaces + "    FOR EACH y in " + toAlias + "\n";
     result += spaces + "       CREATE EDGE " + targetClass + " FROM x TO y";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     if (targetCluster != null) {
       result += "\n" + spaces + "       (target cluster " + targetCluster + ")";
@@ -220,7 +218,7 @@ public class CreateEdgesStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
+  public OExecutionStepInternal copy(OCommandContext ctx) {
     return new CreateEdgesStep(
         targetClass == null ? null : targetClass.copy(),
         targetCluster == null ? null : targetCluster.copy(),
@@ -229,8 +227,6 @@ public class CreateEdgesStep extends AbstractExecutionStep {
         toAlias == null ? null : toAlias.copy(),
         wait,
         retry,
-        batch == null ? null : batch.copy(),
-        ctx,
-        profilingEnabled);
+        batch == null ? null : batch.copy());
   }
 }

@@ -39,6 +39,10 @@ public class OResultInternal implements OResult, Comparable<OResultInternal> {
     content = new LinkedHashMap<>();
   }
 
+  public OResultInternal(Map<String, Object> c) {
+    content = c;
+  }
+
   public OResultInternal(OIdentifiable ident) {
     setElement(ident);
   }

@@ -13,7 +13,7 @@ public class ODatabaseDocumentRemotePooled extends ODatabaseDocumentRemote {
   private ODatabasePoolInternal pool;
 
   public ODatabaseDocumentRemotePooled(
-      ODatabasePoolInternal pool, OStorageRemote storage, OSharedContext sharedContext) {
+      ODatabasePoolInternal pool, ORemoteClient storage, OSharedContext sharedContext) {
     super(storage, sharedContext);
     this.pool = pool;
   }

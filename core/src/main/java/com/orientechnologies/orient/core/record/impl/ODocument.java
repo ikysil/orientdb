@@ -27,6 +27,7 @@ import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OCommonConst;
+import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
@@ -78,15 +79,14 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.ORecordAbstract;
 import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.record.ORecordSchemaAware;
-import com.orientechnologies.orient.core.record.ORecordVersionHelper;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetwork;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.OSQLHelper;
 import com.orientechnologies.orient.core.sql.executor.OResult;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import java.io.ByteArrayOutputStream;
 import java.io.Externalizable;
@@ -893,7 +893,7 @@ public class ODocument extends ORecordAbstract
       }
     }
 
-    if (p.isReadonly() && !ORecordVersionHelper.isTombstone(iRecord.getVersion())) {
+    if (p.isReadonly()) {
       if (entry != null && (entry.isChanged() || entry.isTrackedModified()) && !entry.isCreated()) {
         // check if the field is actually changed by equal.
         // this is due to a limitation in the merge algorithm used server side marking all non
@@ -1352,7 +1352,7 @@ public class ODocument extends ORecordAbstract
     }
 
     // NOT FOUND, PARSE THE FIELD NAME
-    return ODocumentHelper.getFieldValue(this, iFieldName);
+    return (RET) eval(iFieldName, null);
   }
 
   /**
@@ -1378,8 +1378,11 @@ public class ODocument extends ORecordAbstract
    * @return The result of expression
    * @throws OQueryParsingException in case the expression is not valid
    */
-  public Object eval(final String iExpression, final OCommandContext iContext) {
-    return new OSQLPredicate(iExpression).evaluate(this, null, iContext);
+  public Object eval(final String iExpression, OCommandContext context) {
+    if (context == null) {
+      context = new OBasicCommandContext();
+    }
+    return OSQLEngine.eval(iExpression, this, context);
   }
 
   /**
@@ -2427,14 +2430,7 @@ public class ODocument extends ORecordAbstract
   @Override
   @Deprecated(forRemoval = true)
   public ORecordAbstract save(final String iClusterName, final boolean forceCreate) {
-    return getDatabase()
-        .save(
-            this,
-            iClusterName,
-            ODatabaseSession.OPERATION_MODE.SYNCHRONOUS,
-            forceCreate,
-            null,
-            null);
+    return getDatabase().save(this, iClusterName, forceCreate);
   }
 
   /*
@@ -3541,11 +3537,18 @@ public class ODocument extends ORecordAbstract
         }
       } else {
         String defValue = prop.getDefaultValue();
-        if (defValue != null && /*defValue.length() > 0 && */ !containsField(prop.getName())) {
-          Object curFieldValue = OSQLHelper.parseDefaultValue(this, defValue);
-          Object fieldValue =
-              ODocumentHelper.convertField(
-                  this, prop.getName(), prop.getType(), null, curFieldValue);
+        if (defValue != null && !containsField(prop.getName())) {
+          Object fieldValue;
+          try {
+            fieldValue =
+                ODocumentHelper.convertField(this, prop.getName(), prop.getType(), null, defValue);
+          } catch (Exception e) {
+            Object curFieldValue = OSQLHelper.parseDefaultValue(this, defValue);
+            fieldValue =
+                ODocumentHelper.convertField(
+                    this, prop.getName(), prop.getType(), null, curFieldValue);
+          }
+
           rawField(prop.getName(), fieldValue, prop.getType());
         }
       }

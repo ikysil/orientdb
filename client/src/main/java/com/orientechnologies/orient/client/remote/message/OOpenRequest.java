@@ -3,8 +3,8 @@ package com.orientechnologies.orient.client.remote.message;
 import com.orientechnologies.orient.client.binary.OBinaryRequestExecutor;
 import com.orientechnologies.orient.client.remote.OBinaryRequest;
 import com.orientechnologies.orient.client.remote.OBinaryResponse;
-import com.orientechnologies.orient.client.remote.OStorageRemote;
-import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
+import com.orientechnologies.orient.client.remote.ORemoteClientSession;
 import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetwork;
@@ -14,7 +14,7 @@ import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataOutput
 import java.io.IOException;
 
 public class OOpenRequest implements OBinaryRequest<OOpenResponse> {
-  private String driverName = OStorageRemote.DRIVER_NAME;
+  private String driverName = ORemoteClient.DRIVER_NAME;
   private String driverVersion = OConstants.getRawVersion();
   private short protocolVersion = OChannelBinaryProtocol.CURRENT_PROTOCOL_VERSION;
   private String clientId = null;
@@ -36,7 +36,7 @@ public class OOpenRequest implements OBinaryRequest<OOpenResponse> {
   public OOpenRequest() {}
 
   @Override
-  public void write(OChannelDataOutput network, OStorageRemoteSession session) throws IOException {
+  public void write(OChannelDataOutput network, ORemoteClientSession session) throws IOException {
     network.writeString(driverName);
     network.writeString(driverVersion);
     network.writeShort((short) protocolVersion);

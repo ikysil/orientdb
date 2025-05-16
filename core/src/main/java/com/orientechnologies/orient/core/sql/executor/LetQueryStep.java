@@ -4,9 +4,8 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
-import com.orientechnologies.orient.core.sql.parser.OLocalResultSet;
 import com.orientechnologies.orient.core.sql.parser.OStatement;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,9 +16,8 @@ public class LetQueryStep extends AbstractExecutionStep {
   private final OIdentifier varName;
   private final OStatement query;
 
-  public LetQueryStep(
-      OIdentifier varName, OStatement query, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public LetQueryStep(OIdentifier varName, OStatement query) {
+    super();
     this.varName = varName;
     this.query = query;
   }
@@ -28,24 +26,21 @@ public class LetQueryStep extends AbstractExecutionStep {
     OBasicCommandContext subCtx = new OBasicCommandContext(ctx.getDatabase());
     subCtx.setParentWithoutOverridingChild(ctx);
     OInternalExecutionPlan subExecutionPlan;
-    if (query.toString().contains("?")) {
-      // with positional parameters, you cannot know if a parameter has the same ordinal as the
-      // one cached
-      subExecutionPlan = query.createExecutionPlanNoCache(subCtx, profilingEnabled);
-    } else {
-      subExecutionPlan = query.createExecutionPlan(subCtx, profilingEnabled);
-    }
-    result.setMetadata(
-        varName.getStringValue(), toList(new OLocalResultSet(subExecutionPlan, ctx)));
+    // with positional parameters, you cannot know if a parameter has the same ordinal as the
+    // one cached
+    boolean useCache = !query.toString().contains("?");
+    subExecutionPlan = query.resolvePlan(useCache, subCtx);
+    result.setMetadata(varName.getStringValue(), toList(subExecutionPlan, ctx));
     return result;
   }
 
-  private List<OResult> toList(OLocalResultSet oLocalResultSet) {
+  private List<OResult> toList(OInternalExecutionPlan plan, OCommandContext ctx) {
+    OExecutionStream stream = plan.start(ctx);
     List<OResult> result = new ArrayList<>();
-    while (oLocalResultSet.hasNext()) {
-      result.add(oLocalResultSet.next());
+    while (stream.hasNext(ctx)) {
+      result.add(stream.next(ctx));
     }
-    oLocalResultSet.close();
+    stream.close(ctx);
     return result;
   }
 
@@ -63,8 +58,8 @@ public class LetQueryStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ LET (for each record)\n" + spaces + "  " + varName + " = (" + query + ")";
   }
 }

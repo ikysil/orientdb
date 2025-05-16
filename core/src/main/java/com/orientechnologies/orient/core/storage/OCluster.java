@@ -58,8 +58,6 @@ public interface OCluster {
 
   String encryption();
 
-  long getTombstonesCount();
-
   /**
    * Allocates a physical position pointer on the storage for generate an id without a content.
    *
@@ -95,7 +93,7 @@ public interface OCluster {
       byte recordType,
       OAtomicOperation atomicOperation);
 
-  ORawBuffer readRecord(long clusterPosition, boolean prefetchRecords) throws IOException;
+  ORawBuffer readRecord(long clusterPosition) throws IOException;
 
   ORawBuffer readRecordIfVersionIsNotLatest(long clusterPosition, int recordVersion)
       throws IOException, ORecordNotFoundException;

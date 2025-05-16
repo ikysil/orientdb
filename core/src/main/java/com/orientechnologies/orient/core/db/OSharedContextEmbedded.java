@@ -8,7 +8,7 @@ import com.orientechnologies.orient.core.index.OIndexException;
 import com.orientechnologies.orient.core.index.OIndexFactory;
 import com.orientechnologies.orient.core.index.OIndexManagerShared;
 import com.orientechnologies.orient.core.index.OIndexes;
-import com.orientechnologies.orient.core.metadata.OMetadataDefault;
+import com.orientechnologies.orient.core.metadata.OSessionMetadata;
 import com.orientechnologies.orient.core.metadata.function.OFunctionLibraryImpl;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchemaEmbedded;
@@ -23,7 +23,6 @@ import com.orientechnologies.orient.core.sql.executor.OQueryStats;
 import com.orientechnologies.orient.core.sql.parser.OExecutionPlanCache;
 import com.orientechnologies.orient.core.sql.parser.OStatementCache;
 import com.orientechnologies.orient.core.storage.OStorage;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -71,13 +70,12 @@ public class OSharedContextEmbedded extends OSharedContext {
 
     queryStats = new OQueryStats();
     activeDistributedQueries = new HashMap<>();
-    ((OAbstractPaginatedStorage) storage)
-        .setStorageConfigurationUpdateListener(
-            update -> {
-              for (OMetadataUpdateListener listener : browseListeners()) {
-                listener.onStorageConfigurationUpdate(storage.getName(), update);
-              }
-            });
+    storage.setStorageConfigurationUpdateListener(
+        update -> {
+          for (OMetadataUpdateListener listener : browseListeners()) {
+            listener.onStorageConfigurationUpdate(storage.getName(), update);
+          }
+        });
 
     this.viewManager = new ViewManager(orientDB, storage.getName());
   }
@@ -176,12 +174,11 @@ public class OSharedContextEmbedded extends OSharedContext {
     return viewManager;
   }
 
-  public synchronized void reInit(
-      OAbstractPaginatedStorage storage2, ODatabaseDocumentInternal database) {
+  public synchronized void reInit(OStorage storage, ODatabaseDocumentInternal database) {
     this.close();
-    this.storage = storage2;
-    this.init(storage2);
-    ((OMetadataDefault) database.getMetadata()).init(this);
+    this.storage = storage;
+    this.init(storage);
+    ((OSessionMetadata) database.getMetadata()).init(this);
     this.load(database);
   }
 

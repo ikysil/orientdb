@@ -58,7 +58,6 @@
     <test name="Index">
         <classes>
             <class name="com.orientechnologies.orient.test.database.auto.DateIndexTest"/>
-            <class name="com.orientechnologies.orient.test.database.auto.SQLEscapingTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.SQLSelectHashIndexReuseTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.IndexTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.IndexClusterTest"/>
@@ -94,7 +93,6 @@
         <classes>
             <class name="com.orientechnologies.orient.test.database.auto.WrongQueryTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.FetchPlanComplexNestedLevelsTest"/>
-            <class name="com.orientechnologies.orient.test.database.auto.LiveQueryTest"/>
         </classes>
     </test>
     <test name="Graph">
@@ -150,11 +148,9 @@
             <class name="com.orientechnologies.orient.test.database.auto.MultipleDBTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.ConcurrentUpdatesTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.ConcurrentQueriesTest"/>
-            <class name="com.orientechnologies.orient.test.database.auto.DatabaseThreadFactoryTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.CollateTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.OEmbeddedRidBagTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.OSBTreeRidBagTest"/>
-            <class name="com.orientechnologies.orient.test.database.auto.PoolTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.RemoteProtocolCommandsTest"/>
             <class name="com.orientechnologies.orient.test.database.auto.RecordReloadTest"/>
         </classes>

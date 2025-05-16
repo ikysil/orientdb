@@ -148,6 +148,16 @@ public class OImmutableSchema implements OSchema {
   }
 
   @Override
+  public boolean createClassIfNotExists(String className) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean createClassIfNotExists(String iClassName, OClass... superClasses) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public OClass createAbstractClass(String iClassName) {
     throw new UnsupportedOperationException();
   }
@@ -219,16 +229,6 @@ public class OImmutableSchema implements OSchema {
   public Collection<OView> getViews() {
     getDatabase().checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_READ);
     return new HashSet<OView>(views.values());
-  }
-
-  @Override
-  public void create() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public int getVersion() {
-    return version;
   }
 
   @Override
@@ -329,5 +329,10 @@ public class OImmutableSchema implements OSchema {
   @Override
   public void dropView(String name) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getVersion() {
+    return version;
   }
 }

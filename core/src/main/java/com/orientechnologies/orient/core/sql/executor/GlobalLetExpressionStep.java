@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 
@@ -11,11 +11,8 @@ public class GlobalLetExpressionStep extends AbstractExecutionStep {
   private final OIdentifier varname;
   private final OExpression expression;
 
-  private boolean executed = false;
-
-  public GlobalLetExpressionStep(
-      OIdentifier varName, OExpression expression, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public GlobalLetExpressionStep(OIdentifier varName, OExpression expression) {
+    super();
     this.varname = varName;
     this.expression = expression;
   }
@@ -23,28 +20,20 @@ public class GlobalLetExpressionStep extends AbstractExecutionStep {
   @Override
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
     getPrev().ifPresent(x -> x.start(ctx).close(ctx));
-    calculate(ctx);
+    Object value = expression.execute((OResult) null, ctx);
+    ctx.setVariable(varname.getStringValue(), value);
     return OExecutionStream.empty();
   }
 
-  private void calculate(OCommandContext ctx) {
-    if (executed) {
-      return;
-    }
-    Object value = expression.execute((OResult) null, ctx);
-    ctx.setVariable(varname.getStringValue(), value);
-    executed = true;
-  }
-
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ LET (once)\n" + spaces + "  " + varname + " = " + expression;
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new GlobalLetExpressionStep(varname.copy(), expression.copy(), ctx, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new GlobalLetExpressionStep(varname.copy(), expression.copy());
   }
 
   @Override

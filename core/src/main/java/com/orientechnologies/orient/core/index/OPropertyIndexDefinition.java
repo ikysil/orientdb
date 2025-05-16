@@ -23,7 +23,6 @@ import com.orientechnologies.orient.core.collate.ODefaultCollate;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.OCommandExecutorSQLCreateIndex;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -194,8 +193,7 @@ public class OPropertyIndexDefinition extends OAbstractIndexDefinition {
     ddl.append(" ) ");
     ddl.append(indexType);
 
-    if (engine != null)
-      ddl.append(' ').append(OCommandExecutorSQLCreateIndex.KEYWORD_ENGINE + " " + engine);
+    if (engine != null) ddl.append(" engine " + engine);
     return ddl;
   }
 

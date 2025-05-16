@@ -13,6 +13,8 @@ import com.orientechnologies.orient.core.sql.executor.AggregationContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,48 +51,6 @@ public class OExpression extends SimpleNode {
 
   public OExpression(ORecordAttribute attr, OModifier modifier) {
     mathExpression = new OBaseExpression(attr, modifier);
-  }
-
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    if (isNull) {
-      return null;
-    }
-    if (rid != null) {
-      return rid.toRecordId(iCurrentRecord, ctx);
-    }
-    if (mathExpression != null) {
-      return mathExpression.execute(iCurrentRecord, ctx);
-    }
-    if (arrayConcatExpression != null) {
-      return arrayConcatExpression.execute(iCurrentRecord, ctx);
-    }
-    if (json != null) {
-      return json.toObjectDetermineType(iCurrentRecord, ctx);
-    }
-    if (booleanValue != null) {
-      return booleanValue;
-    }
-    if (value instanceof ONumber) {
-      return ((ONumber) value).getValue(); // only for old executor (manually replaced params)
-    }
-
-    // from here it's old stuff, only for the old executor
-    if (value instanceof ORid) {
-      ORid v = (ORid) value;
-      return new ORecordId(v.cluster.getValue().intValue(), v.position.getValue().longValue());
-    } else if (value instanceof OMathExpression) {
-      return ((OMathExpression) value).execute(iCurrentRecord, ctx);
-    } else if (value instanceof OArrayConcatExpression) {
-      return ((OArrayConcatExpression) value).execute(iCurrentRecord, ctx);
-    } else if (value instanceof OJson) {
-      return ((OJson) value).toMap(iCurrentRecord, ctx);
-    } else if (value instanceof String) {
-      return value;
-    } else if (value instanceof Number) {
-      return value;
-    }
-
-    return value;
   }
 
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
@@ -133,6 +93,29 @@ public class OExpression extends SimpleNode {
     }
 
     return value;
+  }
+
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
+    if (isNull) {
+      return null;
+    }
+    if (rid != null) {
+      return Collections.singletonList(rid.toRecordId(null, ctx));
+    }
+    if (mathExpression != null) {
+      return mathExpression.getIndexKey(ctx);
+    }
+    if (arrayConcatExpression != null) {
+      return arrayConcatExpression.getIndexKey(ctx);
+    }
+    if (json != null) {
+      return Collections.singletonList(json.toObjectDetermineType(null, ctx));
+    }
+    if (booleanValue != null) {
+      return Collections.singletonList(booleanValue);
+    }
+
+    return Collections.singletonList(value);
   }
 
   public boolean isBaseIdentifier() {

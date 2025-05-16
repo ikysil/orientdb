@@ -34,13 +34,13 @@ import com.orientechnologies.common.listener.OProgressListener;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.client.remote.ODatabaseImportRemote;
-import com.orientechnologies.orient.client.remote.OServerAdmin;
-import com.orientechnologies.orient.client.remote.OStorageRemote;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
 import com.orientechnologies.orient.client.remote.OrientDBRemote;
 import com.orientechnologies.orient.client.remote.db.document.ODatabaseDocumentRemote;
 import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.OSignalHandler;
 import com.orientechnologies.orient.core.Orient;
+import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.config.OStorageConfiguration;
@@ -52,7 +52,6 @@ import com.orientechnologies.orient.core.db.OrientDBConfig;
 import com.orientechnologies.orient.core.db.OrientDBConfigBuilder;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
-import com.orientechnologies.orient.core.db.document.SimpleRecordReader;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.tool.OBonsaiTreeRepair;
 import com.orientechnologies.orient.core.db.tool.ODatabaseCompare;
@@ -83,11 +82,11 @@ import com.orientechnologies.orient.core.serialization.serializer.OStringSeriali
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerStringAbstract;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.storage.OStorage;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import com.orientechnologies.orient.core.util.OURLConnection;
 import com.orientechnologies.orient.core.util.OURLHelper;
 import com.orientechnologies.orient.server.config.OServerConfigurationManager;
@@ -951,11 +950,8 @@ public class OConsoleDatabaseApp extends OConsoleApplication
     final String dbName = currentDatabase.getName();
 
     if (currentDatabase.isRemote()) {
-      if (storageType == null) storageType = "plocal";
-
-      new OServerAdmin(currentDatabase.getURL())
-          .connect(currentDatabaseUserName, currentDatabaseUserPassword)
-          .freezeDatabase(storageType);
+      OrientDBRemote internal = (OrientDBRemote) OrientDBInternal.extract(orientDB);
+      internal.freezeDatabase(dbName, currentDatabaseUserName, currentDatabaseUserPassword);
     } else {
       // LOCAL CONNECTION
       currentDatabase.freeze();
@@ -980,10 +976,8 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     if (currentDatabase.isRemote()) {
       if (storageType == null) storageType = "plocal";
-
-      new OServerAdmin(currentDatabase.getURL())
-          .connect(currentDatabaseUserName, currentDatabaseUserPassword)
-          .releaseDatabase(storageType);
+      OrientDBRemote internal = (OrientDBRemote) OrientDBInternal.extract(orientDB);
+      internal.releaseDatabase(dbName, currentDatabaseUserName, currentDatabaseUserPassword);
     } else {
       // LOCAL CONNECTION
       currentDatabase.release();
@@ -1271,7 +1265,9 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     if (currentRecord == null) return;
 
-    final Object result = new OSQLPredicate(iText).evaluate(currentRecord, null, null);
+    final Object result =
+        OSQLEngine.parseExpression(iText)
+            .execute(new OResultInternal(currentRecord), new OBasicCommandContext(currentDatabase));
 
     if (result != null) {
       if (result instanceof OIdentifiable) {
@@ -1298,7 +1294,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     if (currentRecord == null) return;
 
-    final Object result = new OSQLPredicate(iText).evaluate(currentRecord, null, null);
+    final Object result = OSQLEngine.eval(iText, currentRecord, new OBasicCommandContext());
     if (result != null) out.println("\n" + result);
   }
 
@@ -2429,7 +2425,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
 
     message("\nChecking storage.");
     try {
-      ((OAbstractPaginatedStorage) currentDatabase.getStorage()).check(verbose, this);
+      currentDatabase.getStorage().check(verbose, this);
     } catch (ODatabaseImportException e) {
       printError(e);
     }
@@ -3062,17 +3058,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
   public void reloadRecordInternal(String iRecordId, String iFetchPlan) {
     checkForDatabase();
 
-    currentRecord =
-        currentDatabase.executeReadRecord(
-            new ORecordId(iRecordId),
-            null,
-            -1,
-            iFetchPlan,
-            true,
-            false,
-            false,
-            OStorage.LOCKING_STRATEGY.NONE,
-            new SimpleRecordReader(false));
+    currentRecord = currentDatabase.load(new ORecordId(iRecordId), iFetchPlan, true);
     displayRecord(null);
 
     message("\nOK");
@@ -3291,7 +3277,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
     if (currentDatabase == null) return;
 
     if (currentDatabase.isRemote()) {
-      final OStorageRemote stg = ((ODatabaseDocumentRemote) currentDatabase).getStorageRemote();
+      final ORemoteClient stg = ((ODatabaseDocumentRemote) currentDatabase).getRemoteClient();
       final ODocument distributedCfg = stg.getClusterConfiguration();
       if (distributedCfg != null && !distributedCfg.isEmpty()) {
         message("\n\nDISTRIBUTED CONFIGURATION:\n" + distributedCfg.toJSON("prettyPrint"));
@@ -3303,7 +3289,7 @@ public class OConsoleDatabaseApp extends OConsoleApplication
   protected ODocument getDistributedConfiguration() {
     if (currentDatabase != null) {
       final OStorage stg = currentDatabase.getStorage();
-      if (stg instanceof OStorageRemote) return ((OStorageRemote) stg).getClusterConfiguration();
+      if (stg instanceof ORemoteClient) return ((ORemoteClient) stg).getClusterConfiguration();
     }
     return null;
   }

@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.List;
 
 /** Created by luigidellaquila on 20/09/16. */
@@ -10,25 +10,14 @@ public class MatchFirstStep extends AbstractExecutionStep {
   private final PatternNode node;
   private OInternalExecutionPlan executionPlan;
 
-  public MatchFirstStep(OCommandContext context, PatternNode node, boolean profilingEnabled) {
-    this(context, node, null, profilingEnabled);
+  public MatchFirstStep(OCommandContext context, PatternNode node) {
+    this(node, null);
   }
 
-  public MatchFirstStep(
-      OCommandContext context,
-      PatternNode node,
-      OInternalExecutionPlan subPlan,
-      boolean profilingEnabled) {
-    super(context, profilingEnabled);
+  public MatchFirstStep(PatternNode node, OInternalExecutionPlan subPlan) {
+    super();
     this.node = node;
     this.executionPlan = subPlan;
-  }
-
-  @Override
-  public void reset() {
-    if (executionPlan != null) {
-      executionPlan.reset(this.getContext());
-    }
   }
 
   @Override
@@ -39,7 +28,7 @@ public class MatchFirstStep extends AbstractExecutionStep {
     List<OResult> matchedNodes =
         (List<OResult>) ctx.getVariable(MatchPrefetchStep.PREFETCHED_MATCH_ALIAS_PREFIX + alias);
     if (matchedNodes != null) {
-      data = OExecutionStream.resultIterator(matchedNodes.iterator());
+      data = OExecutionStream.resultCollection(matchedNodes);
     } else {
       data = executionPlan.start(ctx);
     }
@@ -54,8 +43,8 @@ public class MatchFirstStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ SET \n");
@@ -66,7 +55,9 @@ public class MatchFirstStep extends AbstractExecutionStep {
       result.append("\n");
       result.append(spaces);
       result.append("  AS\n");
-      result.append(executionPlan.prettyPrint(depth + 1, indent));
+      ctx.incDepth();
+      result.append(executionPlan.prettyPrint(ctx));
+      ctx.decDepth();
     }
 
     return result.toString();

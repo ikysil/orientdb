@@ -21,7 +21,8 @@ package com.orientechnologies.orient.core.command;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
-import com.orientechnologies.orient.core.sql.executor.OExecutionStep;
+import com.orientechnologies.orient.core.sql.executor.OExecutionStepInternal;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.Map;
 
 /**
@@ -95,9 +96,17 @@ public interface OCommandContext {
 
   boolean isScriptVariableDeclared(String varName);
 
-  void startProfiling(OExecutionStep step);
+  boolean isProfiling();
 
-  void endProfiling(OExecutionStep step);
+  void startProfiling(OExecutionStepInternal step);
 
-  OStepStats getStats(OExecutionStep step);
+  void endProfiling(OExecutionStepInternal step);
+
+  OStepStats getStats(OExecutionStepInternal step);
+
+  OResult getCurrent();
+
+  void setCurrent(OResult result);
+
+  void setCurrentIfMissing(OResult result);
 }

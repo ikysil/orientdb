@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OMatchFilter;
 import com.orientechnologies.orient.core.sql.parser.OMatchPathItem;
 import com.orientechnologies.orient.core.sql.parser.OMatchPathItemFirst;
@@ -26,18 +26,6 @@ public class MatchMultiEdgeTraverser extends MatchEdgeTraverser {
       OIdentifiable startingPoint, OCommandContext iCommandContext) {
 
     Iterable possibleResults = null;
-    //    if (this.edge.edge.item.getFilter() != null) {
-    //      String alias = this.edge.edge.item.getFilter().getAlias();
-    //      Object matchedNodes =
-    // iCommandContext.getVariable(MatchPrefetchStep.PREFETCHED_MATCH_ALIAS_PREFIX + alias);
-    //      if (matchedNodes != null) {
-    //        if (matchedNodes instanceof Iterable) {
-    //          possibleResults = (Iterable) matchedNodes;
-    //        } else {
-    //          possibleResults = Collections.singleton(matchedNodes);
-    //        }
-    //      }
-    //    }
 
     OMultiMatchPathItem item = (OMultiMatchPathItem) this.item;
     List<OResult> result = new ArrayList<>();
@@ -45,7 +33,7 @@ public class MatchMultiEdgeTraverser extends MatchEdgeTraverser {
     List<Object> nextStep = new ArrayList<>();
     nextStep.add(startingPoint);
 
-    Object oldCurrent = iCommandContext.getVariable("$current");
+    OResult oldCurrent = iCommandContext.getCurrent();
     for (OMatchPathItem sub : item.getItems()) {
       List<OResult> rightSide = new ArrayList<>();
       for (Object o : nextStep) {
@@ -70,7 +58,11 @@ public class MatchMultiEdgeTraverser extends MatchEdgeTraverser {
           }
 
         } else {
-          iCommandContext.setVariable("$current", o);
+          if (o instanceof OIdentifiable) {
+            iCommandContext.setCurrent(new OResultInternal((OIdentifiable) o));
+          } else {
+            iCommandContext.setCurrent((OResult) o);
+          }
           Object nextSteps = method.execute(o, possibleResults, iCommandContext);
           if (nextSteps instanceof Collection) {
             ((Collection) nextSteps)
@@ -114,10 +106,8 @@ public class MatchMultiEdgeTraverser extends MatchEdgeTraverser {
       result = rightSide;
     }
 
-    iCommandContext.setVariable("$current", oldCurrent);
-    //    return (qR instanceof Iterable) ? (Iterable) qR : Collections.singleton((OIdentifiable)
-    // qR);
-    return OExecutionStream.resultIterator(result.iterator());
+    iCommandContext.setCurrent(oldCurrent);
+    return OExecutionStream.resultCollection(result);
   }
 
   private boolean matchesCondition(OResultInternal x, OMatchFilter filter, OCommandContext ctx) {

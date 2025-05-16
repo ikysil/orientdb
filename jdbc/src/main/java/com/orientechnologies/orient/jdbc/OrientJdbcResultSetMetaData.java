@@ -15,6 +15,7 @@
  */
 package com.orientechnologies.orient.jdbc;
 
+import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ORecordLazyList;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
@@ -122,10 +123,10 @@ public class OrientJdbcResultSetMetaData implements ResultSetMetaData {
 
     OType otype =
         currentRecord
-            .toElement()
-            .getSchemaType()
-            .map(st -> st.getProperty(fieldName))
-            .map(op -> op.getType())
+            .getElement()
+            .flatMap(
+                (e) ->
+                    e.getSchemaType().map(st -> st.getProperty(fieldName)).map(op -> op.getType()))
             .orElse(null);
 
     if (otype == null) {
@@ -218,11 +219,13 @@ public class OrientJdbcResultSetMetaData implements ResultSetMetaData {
     String columnLabel = fieldNames[column - 1];
 
     return currentRecord
-        .toElement()
-        .getSchemaType()
-        .map(st -> st.getProperty(columnLabel))
-        .map(p -> p.getType())
-        .map(t -> t.toString())
+        .getElement()
+        .flatMap(
+            (e) ->
+                e.getSchemaType()
+                    .map(st -> st.getProperty(columnLabel))
+                    .map(p -> p.getType())
+                    .map(t -> t.toString()))
         .orElse(null);
   }
 
@@ -235,9 +238,7 @@ public class OrientJdbcResultSetMetaData implements ResultSetMetaData {
   }
 
   public String getSchemaName(final int column) throws SQLException {
-    final OResult currentRecord = getCurrentRecord();
-    if (currentRecord == null) return "";
-    else return currentRecord.toElement().getDatabase().getName();
+    return ODatabaseRecordThreadLocal.instance().get().getName();
   }
 
   public String getTableName(final int column) throws SQLException {
@@ -281,9 +282,10 @@ public class OrientJdbcResultSetMetaData implements ResultSetMetaData {
     final OResult currentRecord = getCurrentRecord();
     OType otype =
         currentRecord
-            .toElement()
-            .getSchemaType()
-            .map(st -> st.getProperty(fieldNames[column - 1]).getType())
+            .getElement()
+            .flatMap(
+                (e) ->
+                    e.getSchemaType().map(st -> st.getProperty(fieldNames[column - 1]).getType()))
             .orElse(null);
 
     return this.isANumericColumn(otype);
@@ -315,9 +317,8 @@ public class OrientJdbcResultSetMetaData implements ResultSetMetaData {
     String fieldName = getColumnName(column);
 
     return getCurrentRecord()
-        .toElement()
-        .getSchemaType()
-        .map(st -> st.getProperty(fieldName))
+        .getElement()
+        .flatMap((e) -> e.getSchemaType().map(st -> st.getProperty(fieldName)))
         .orElse(null);
   }
 }

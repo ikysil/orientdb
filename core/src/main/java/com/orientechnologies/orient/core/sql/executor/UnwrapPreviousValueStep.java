@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /**
  * for UPDATE, unwraps the current result set to return the previous value
@@ -12,8 +12,8 @@ import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream
  */
 public class UnwrapPreviousValueStep extends AbstractExecutionStep {
 
-  public UnwrapPreviousValueStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public UnwrapPreviousValueStep() {
+    super();
   }
 
   @Override
@@ -36,10 +36,10 @@ public class UnwrapPreviousValueStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String result = OExecutionStepInternal.getIndent(depth, indent) + "+ UNWRAP PREVIOUS VALUE";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+  public String prettyPrint(OPrintContext ctx) {
+    String result = OExecutionStepInternal.getIndent(ctx) + "+ UNWRAP PREVIOUS VALUE";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }

@@ -22,10 +22,13 @@ package com.orientechnologies.orient.core.db;
 
 import com.orientechnologies.orient.core.enterprise.OEnterpriseEndpoint;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
-import com.orientechnologies.orient.core.metadata.security.OToken;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.OStorageInfo;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimerTask;
 
 public interface ODatabaseInternal<T> extends ODatabase<T> {
 
@@ -72,16 +75,6 @@ public interface ODatabaseInternal<T> extends ODatabase<T> {
 
   /** Internal method. Don't call it directly unless you're building an internal component. */
   void setInternal(ATTRIBUTES attribute, Object iValue);
-
-  /**
-   * Opens a database using an authentication token received as an argument.
-   *
-   * @param iToken Authentication token
-   * @return The Database instance itself giving a "fluent interface". Useful to call multiple
-   *     methods in chain.
-   */
-  @Deprecated
-  <DB extends ODatabase> DB open(final OToken iToken);
 
   OSharedContext getSharedContext();
 
@@ -140,4 +133,16 @@ public interface ODatabaseInternal<T> extends ODatabase<T> {
   default TimerTask createInterruptTimerTask() {
     return null;
   }
+
+  /**
+   * Saves an entity in the specified cluster specifying the mode. If the entity is not dirty, then
+   * the operation will be ignored. For custom entity implementations assure to set the entity as
+   * dirty. If the cluster does not exist, an error will be thrown.
+   *
+   * @param iObject The entity to save
+   * @param iClusterName Name of the cluster where to save
+   * @param iForceCreate Flag that indicates that record should be created. If record with current
+   *     rid already exists, exception is thrown
+   */
+  <RET extends T> RET save(T iObject, String iClusterName, boolean forceCreate);
 }

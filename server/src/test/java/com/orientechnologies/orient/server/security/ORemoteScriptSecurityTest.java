@@ -1,6 +1,5 @@
 package com.orientechnologies.orient.server.security;
 
-import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.OrientDB;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
@@ -33,7 +32,6 @@ public class ORemoteScriptSecurityTest {
           NotCompliantMBeanException,
           ClassNotFoundException,
           MalformedObjectNameException {
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     server = OServer.startFromClasspathConfig("abstract-orientdb-server-config.xml");
 
     OrientDB orientDB =

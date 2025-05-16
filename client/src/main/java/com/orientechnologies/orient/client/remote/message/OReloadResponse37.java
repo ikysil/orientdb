@@ -20,7 +20,7 @@
 package com.orientechnologies.orient.client.remote.message;
 
 import com.orientechnologies.orient.client.remote.OBinaryResponse;
-import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
+import com.orientechnologies.orient.client.remote.ORemoteClientSession;
 import com.orientechnologies.orient.client.remote.message.push.OStorageConfigurationPayload;
 import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
@@ -41,7 +41,7 @@ public class OReloadResponse37 implements OBinaryResponse {
   }
 
   @Override
-  public void read(OChannelDataInput network, OStorageRemoteSession session) throws IOException {
+  public void read(OChannelDataInput network, ORemoteClientSession session) throws IOException {
     payload.read(network);
   }
 

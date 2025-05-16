@@ -68,7 +68,12 @@ public class OLuceneSearchOnFieldsFunction extends OLuceneSearchFunctionTemplate
 
     if (index == null) return false;
 
-    String query = (String) params[1];
+    String query;
+    if (params[1] == null) {
+      query = null;
+    } else {
+      query = (String) params[1].toString();
+    }
 
     MemoryIndex memoryIndex = getOrCreateMemoryIndex(ctx);
 
@@ -77,7 +82,7 @@ public class OLuceneSearchOnFieldsFunction extends OLuceneSearchFunctionTemplate
             .map(s -> element.getProperty(s))
             .collect(Collectors.toList());
 
-    for (IndexableField field : index.buildDocument(key).getFields()) {
+    for (IndexableField field : index.buildDocument(key, iCurrentRecord).getFields()) {
       memoryIndex.addField(field, index.indexAnalyzer());
     }
 
@@ -114,7 +119,7 @@ public class OLuceneSearchOnFieldsFunction extends OLuceneSearchFunctionTemplate
     OLuceneFullTextIndex index = searchForIndex(target, ctx, args);
 
     OExpression expression = args[1];
-    Object query = expression.execute((OIdentifiable) null, ctx);
+    Object query = expression.execute((OResult) null, ctx);
     if (index != null) {
 
       ODocument meta = getMetadata(args, ctx);
@@ -143,7 +148,7 @@ public class OLuceneSearchOnFieldsFunction extends OLuceneSearchFunctionTemplate
   @Override
   protected OLuceneFullTextIndex searchForIndex(
       OFromClause target, OCommandContext ctx, OExpression... args) {
-    List<String> fieldNames = (List<String>) args[0].execute((OIdentifiable) null, ctx);
+    List<String> fieldNames = (List<String>) args[0].execute((OResult) null, ctx);
     OFromItem item = target.getItem();
     String className = item.getIdentifier().getStringValue();
 

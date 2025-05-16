@@ -138,7 +138,7 @@ public class OSecurityRemote implements OSecurityInternal {
       final ODatabaseSession session,
       final String iUserName,
       final String iUserPassword,
-      final String... iRoles) {
+      final String[] iRoles) {
     final OUser user = new OUser(iUserName, iUserPassword);
 
     if (iRoles != null)
@@ -146,7 +146,7 @@ public class OSecurityRemote implements OSecurityInternal {
         user.addRole(r);
       }
 
-    return user.save();
+    return user.save(session);
   }
 
   @Override
@@ -154,7 +154,7 @@ public class OSecurityRemote implements OSecurityInternal {
       final ODatabaseSession session,
       final String userName,
       final String userPassword,
-      final ORole... roles) {
+      final ORole[] roles) {
     final OUser user = new OUser(userName, userPassword);
 
     if (roles != null)
@@ -162,7 +162,7 @@ public class OSecurityRemote implements OSecurityInternal {
         user.addRole(r);
       }
 
-    return user.save();
+    return user.save(session);
   }
 
   @Override
@@ -183,7 +183,7 @@ public class OSecurityRemote implements OSecurityInternal {
       final ORole iParent,
       final ORole.ALLOW_MODES iAllowMode) {
     final ORole role = new ORole(iRoleName, iParent, iAllowMode);
-    return role.save();
+    return role.save(session);
   }
 
   @Override

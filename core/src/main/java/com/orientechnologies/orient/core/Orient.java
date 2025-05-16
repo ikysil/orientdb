@@ -76,8 +76,6 @@ public class Orient extends OListenerManger<OOrientListener> {
   private static volatile Orient instance;
   private static final Lock initLock = new ReentrantLock();
 
-  private static volatile boolean registerDatabaseByPath = false;
-
   private final ConcurrentMap<String, OEngine> engines = new ConcurrentHashMap<String, OEngine>();
 
   private final Map<ODatabaseLifecycleListener, ODatabaseLifecycleListener.PRIORITY>
@@ -174,7 +172,6 @@ public class Orient extends OListenerManger<OOrientListener> {
     this.insideWebContainer = insideWebContainer;
     this.os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
     threadGroup = new ThreadGroup("OrientDB");
-    threadGroup.setDaemon(false);
   }
 
   public boolean isInsideWebContainer() {
@@ -219,24 +216,6 @@ public class Orient extends OListenerManger<OOrientListener> {
 
   public static String getTempPath() {
     return OFileUtils.getPath(System.getProperty("java.io.tmpdir") + "/orientdb/");
-  }
-
-  /**
-   * Tells if to register database by path. Default is false. Setting to true allows to have
-   * multiple databases in different path with the same name.
-   *
-   * @see #setRegisterDatabaseByPath(boolean)
-   */
-  public static boolean isRegisterDatabaseByPath() {
-    return registerDatabaseByPath;
-  }
-
-  /**
-   * Register database by path. Default is false. Setting to true allows to have multiple databases
-   * in different path with the same name.
-   */
-  public static void setRegisterDatabaseByPath(final boolean iValue) {
-    registerDatabaseByPath = iValue;
   }
 
   public ORecordConflictStrategyFactory getRecordConflictStrategy() {

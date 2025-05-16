@@ -5,7 +5,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /**
  * takes a normal result set and transforms it in another result set made of OUpdatableRecord
@@ -17,8 +17,8 @@ import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream
  */
 public class ConvertToUpdatableResultStep extends AbstractExecutionStep {
 
-  public ConvertToUpdatableResultStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public ConvertToUpdatableResultStep() {
+    super();
   }
 
   @Override
@@ -53,10 +53,10 @@ public class ConvertToUpdatableResultStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String result = OExecutionStepInternal.getIndent(depth, indent) + "+ CONVERT TO UPDATABLE ITEM";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+  public String prettyPrint(OPrintContext ctx) {
+    String result = OExecutionStepInternal.getIndent(ctx) + "+ CONVERT TO UPDATABLE ITEM";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }

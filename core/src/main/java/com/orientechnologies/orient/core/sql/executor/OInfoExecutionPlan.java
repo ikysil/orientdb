@@ -14,6 +14,8 @@ public class OInfoExecutionPlan implements OExecutionPlan {
   private String javaType;
   private Integer cost;
   private String stmText;
+  private String genericStatement;
+  private OResult result;
 
   @Override
   public List<OExecutionStep> getSteps() {
@@ -25,9 +27,13 @@ public class OInfoExecutionPlan implements OExecutionPlan {
     return prettyPrint;
   }
 
+  public String prettyPrint() {
+    return prettyPrint;
+  }
+
   @Override
   public OResult toResult() {
-    return null;
+    return result;
   }
 
   public void setSteps(List<OExecutionStep> steps) {
@@ -83,8 +89,42 @@ public class OInfoExecutionPlan implements OExecutionPlan {
   public Set<String> getIndexes() {
     Set<String> indexes = new HashSet<>();
     for (OExecutionStep chilStep : steps) {
-      OExecutionStepInternal.fillIndexes(chilStep, indexes);
+      fillIndexes(chilStep, indexes);
     }
     return indexes;
+  }
+
+  static void fillIndexes(OExecutionStep step, Set<String> indexes) {
+    for (OExecutionStep chilStep : step.getSubSteps()) {
+      fillIndexes(chilStep, indexes);
+    }
+    String index = step.toResult().getProperty("index");
+    if (index != null) {
+      indexes.add(index);
+    }
+  }
+
+  public String getGenericStatement() {
+    return genericStatement;
+  }
+
+  public void setGenericStatement(String genericStatement) {
+    this.genericStatement = genericStatement;
+  }
+
+  public static OInfoExecutionPlan fromResult(OResult read) {
+    OInfoExecutionPlan result = new OInfoExecutionPlan();
+    result.result = read;
+    result.setCost(((Number) read.getProperty("cost")).intValue());
+    result.setType(read.getProperty("type"));
+    result.setJavaType(read.getProperty("javaType"));
+    result.setPrettyPrint(read.getProperty("prettyPrint"));
+    result.setStmText(read.getProperty("stmText"));
+    result.setGenericStatement(read.getProperty("genericStm"));
+    List<OResult> subSteps = read.getProperty("steps");
+    if (subSteps != null) {
+      subSteps.forEach(x -> result.getSteps().add(OInfoExecutionStep.fromResult(x)));
+    }
+    return result;
   }
 }

@@ -4,7 +4,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -14,14 +14,11 @@ public class GetValueFromIndexEntryStep extends AbstractExecutionStep {
   private final int[] filterClusterIds;
 
   /**
-   * @param ctx the execution context
    * @param filterClusterIds only extract values from these clusters. Pass null if no filtering is
    *     needed
-   * @param profilingEnabled enable profiling
    */
-  public GetValueFromIndexEntryStep(
-      OCommandContext ctx, int[] filterClusterIds, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public GetValueFromIndexEntryStep(int[] filterClusterIds) {
+    super();
     this.filterClusterIds = filterClusterIds;
     if (this.filterClusterIds != null) {
       Arrays.sort(this.filterClusterIds);
@@ -60,11 +57,11 @@ public class GetValueFromIndexEntryStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     String result = spaces + "+ EXTRACT VALUE FROM INDEX ENTRY";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     if (filterClusterIds != null) {
       result += "\n";
@@ -83,7 +80,7 @@ public class GetValueFromIndexEntryStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new GetValueFromIndexEntryStep(ctx, this.filterClusterIds, this.profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new GetValueFromIndexEntryStep(this.filterClusterIds);
   }
 }

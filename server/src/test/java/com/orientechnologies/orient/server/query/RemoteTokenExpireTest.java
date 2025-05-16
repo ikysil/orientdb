@@ -3,7 +3,7 @@ package com.orientechnologies.orient.server.query;
 import static com.orientechnologies.orient.core.config.OGlobalConfiguration.QUERY_REMOTE_RESULTSET_PAGE_SIZE;
 
 import com.orientechnologies.common.io.OFileUtils;
-import com.orientechnologies.orient.client.remote.OStorageRemote;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabasePool;
@@ -215,7 +215,7 @@ public class RemoteTokenExpireTest {
             OrientDBConfig.builder()
                 .addConfig(
                     OGlobalConfiguration.CLIENT_CONNECTION_STRATEGY,
-                    OStorageRemote.CONNECTION_STRATEGY.ROUND_ROBIN_CONNECT)
+                    ORemoteClient.CONNECTION_STRATEGY.ROUND_ROBIN_CONNECT)
                 .build());
 
     ODatabaseSession session = pool.acquire();

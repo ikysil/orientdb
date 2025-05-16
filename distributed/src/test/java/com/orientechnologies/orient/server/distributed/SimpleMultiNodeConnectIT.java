@@ -2,7 +2,6 @@ package com.orientechnologies.orient.server.distributed;
 
 import static org.junit.Assert.assertEquals;
 
-import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.OrientDB;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
@@ -25,7 +24,6 @@ public class SimpleMultiNodeConnectIT {
 
   @Before
   public void before() throws Exception {
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     config = new SimpleDServerConfig();
     server0 = SimpleDServerConfig.SERVER0;
     server1 = SimpleDServerConfig.SERVER1;

@@ -2,16 +2,15 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.OStorage.LOCKING_STRATEGY;
 
 public class UnlockRecordStep extends AbstractExecutionStep {
   private final OStorage.LOCKING_STRATEGY lockStrategy;
 
-  public UnlockRecordStep(
-      OStorage.LOCKING_STRATEGY lockStrategy, OCommandContext ctx, boolean enableProfiling) {
-    super(ctx, enableProfiling);
+  public UnlockRecordStep(OStorage.LOCKING_STRATEGY lockStrategy) {
+    super();
     this.lockStrategy = lockStrategy;
   }
 
@@ -29,8 +28,8 @@ public class UnlockRecordStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ UNLOCK RECORD");

@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 
 /** @author Luigi Dell'Aquila (l.dellaquila-(at)-orientdb.com) */
@@ -10,13 +10,13 @@ public class SaveElementStep extends AbstractExecutionStep {
 
   private final OIdentifier cluster;
 
-  public SaveElementStep(OCommandContext ctx, OIdentifier cluster, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public SaveElementStep(OIdentifier cluster) {
+    super();
     this.cluster = cluster;
   }
 
-  public SaveElementStep(OCommandContext ctx, boolean profilingEnabled) {
-    this(ctx, null, profilingEnabled);
+  public SaveElementStep() {
+    this(null);
   }
 
   @Override
@@ -37,8 +37,8 @@ public class SaveElementStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ SAVE RECORD");
@@ -56,7 +56,7 @@ public class SaveElementStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new SaveElementStep(ctx, cluster == null ? null : cluster.copy(), profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new SaveElementStep(cluster == null ? null : cluster.copy());
   }
 }

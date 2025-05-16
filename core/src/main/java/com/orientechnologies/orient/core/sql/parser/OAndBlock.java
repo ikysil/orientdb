@@ -8,8 +8,8 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
+import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCanditateAny;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
-import com.orientechnologies.orient.core.sql.executor.metadata.OMultipleIndexCanditate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,20 +25,6 @@ public class OAndBlock extends OBooleanExpression {
 
   public OAndBlock(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    if (getSubBlocks() == null) {
-      return true;
-    }
-
-    for (OBooleanExpression block : subBlocks) {
-      if (!block.evaluate(currentRecord, ctx)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   @Override
@@ -285,10 +271,10 @@ public class OAndBlock extends OBooleanExpression {
       Optional<OIndexCandidate> singleResult = exp.findIndex(info, ctx);
       if (singleResult.isPresent()) {
         if (result.isPresent()) {
-          if (result.get() instanceof OMultipleIndexCanditate) {
-            ((OMultipleIndexCanditate) result.get()).addCanditate(singleResult.get());
+          if (result.get() instanceof OIndexCanditateAny) {
+            ((OIndexCanditateAny) result.get()).addCanditate(singleResult.get());
           } else {
-            OMultipleIndexCanditate mult = new OMultipleIndexCanditate();
+            OIndexCanditateAny mult = new OIndexCanditateAny();
             mult.addCanditate(result.get());
             mult.addCanditate(singleResult.get());
             result = Optional.of(mult);
@@ -299,6 +285,32 @@ public class OAndBlock extends OBooleanExpression {
       }
     }
     return result;
+  }
+
+  public boolean allEqualities() {
+    for (OBooleanExpression exp : getSubBlocks()) {
+      if (exp instanceof OBinaryCondition) {
+        if (!(((OBinaryCondition) exp).getOperator() instanceof OEqualsCompareOperator)
+            && !(((OBinaryCondition) exp).getOperator() instanceof OContainsKeyOperator)
+            && !(((OBinaryCondition) exp).getOperator() instanceof OContainsValueOperator)) {
+          return false;
+        }
+      } else if (!(exp instanceof OInCondition)
+          && !(exp instanceof OContainsValueCondition)
+          && !(exp instanceof OContainsCondition)) {
+        return false;
+      } // OK
+    }
+    return true;
+  }
+
+  public boolean allNullCheck() {
+    for (OBooleanExpression exp : getSubBlocks()) {
+      if (!(exp instanceof OIsNullCondition)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -312,6 +324,68 @@ public class OAndBlock extends OBooleanExpression {
       }
     }
     return true;
+  }
+
+  @Override
+  public OAndBlock extractRidRanges(OCommandContext ctx) {
+    OAndBlock result = new OAndBlock(-1);
+
+    for (OBooleanExpression booleanExpression : getSubBlocks()) {
+      if (booleanExpression instanceof ONotBlock && !((ONotBlock) booleanExpression).isNegate()) {
+        booleanExpression = ((ONotBlock) booleanExpression).getSub();
+      }
+      if (isRidRange(booleanExpression, ctx)) {
+        result.getSubBlocks().add(booleanExpression.copy());
+      }
+    }
+
+    return result;
+  }
+
+  private boolean isRidRange(OBooleanExpression booleanExpression, OCommandContext ctx) {
+    if (booleanExpression instanceof OBinaryCondition) {
+      OBinaryCondition cond = ((OBinaryCondition) booleanExpression);
+      OBinaryCompareOperator operator = cond.getOperator();
+      if (operator.isRange() && cond.getLeft().toString().equalsIgnoreCase("@rid")) {
+        Object obj;
+        if (cond.getRight().getRid() != null) {
+          obj = cond.getRight().getRid().toRecordId((OResult) null, ctx);
+        } else {
+          obj = cond.getRight().execute((OResult) null, ctx);
+        }
+        return obj instanceof OIdentifiable;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public int conditionsCount() {
+    int count = 0;
+    for (OBooleanExpression exp : getSubBlocks()) {
+      count += exp.conditionsCount();
+    }
+    return count;
+  }
+
+  @Override
+  public OBooleanExpression getIndexKeyCondition() {
+    if (getSubBlocks().size() == 1) {
+      for (OBooleanExpression exp : getSubBlocks()) {
+        return exp.getIndexKeyCondition();
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public OBooleanExpression getIndexRidCondition() {
+    if (getSubBlocks().size() == 1) {
+      for (OBooleanExpression exp : getSubBlocks()) {
+        return exp.getIndexRidCondition();
+      }
+    }
+    return null;
   }
 }
 /* JavaCC - OriginalChecksum=cf1f66cc86cfc93d357f9fcdfa4a4604 (do not edit this line) */

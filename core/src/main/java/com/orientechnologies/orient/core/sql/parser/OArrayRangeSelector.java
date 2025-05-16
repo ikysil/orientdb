@@ -4,7 +4,6 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
@@ -74,46 +73,6 @@ public class OArrayRangeSelector extends SimpleNode {
     } else {
       toSelector.toGenericStatement(builder);
     }
-  }
-
-  public Object execute(OIdentifiable iCurrentRecord, Object result, OCommandContext ctx) {
-    if (result == null) {
-      return null;
-    }
-    if (!OMultiValue.isMultiValue(result)) {
-      return null;
-    }
-    Integer lFrom = from;
-    if (fromSelector != null) {
-      lFrom = fromSelector.getValue(iCurrentRecord, result, ctx);
-    }
-    if (lFrom == null) {
-      lFrom = 0;
-    }
-    Integer lTo = to;
-    if (toSelector != null) {
-      lTo = toSelector.getValue(iCurrentRecord, result, ctx);
-    }
-    if (included) {
-      lTo++;
-    }
-    if (lFrom > lTo) {
-      return null;
-    }
-    Object[] arrayResult = OMultiValue.array(result);
-
-    if (arrayResult == null || arrayResult.length == 0) {
-      return arrayResult;
-    }
-    lFrom = Math.max(lFrom, 0);
-    if (arrayResult.length < lFrom) {
-      return null;
-    }
-    lFrom = Math.min(lFrom, arrayResult.length - 1);
-
-    lTo = Math.min(lTo, arrayResult.length);
-
-    return Arrays.asList(Arrays.copyOfRange(arrayResult, lFrom, lTo));
   }
 
   public Object execute(OResult iCurrentRecord, Object result, OCommandContext ctx) {

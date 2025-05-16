@@ -2,17 +2,15 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OProjectionItem;
-import java.util.Collections;
 
 public class GuaranteeEmptyCountStep extends AbstractExecutionStep {
 
   private final OProjectionItem item;
 
-  public GuaranteeEmptyCountStep(
-      OProjectionItem oProjectionItem, OCommandContext ctx, boolean enableProfiling) {
-    super(ctx, enableProfiling);
+  public GuaranteeEmptyCountStep(OProjectionItem oProjectionItem) {
+    super();
     this.item = oProjectionItem;
   }
 
@@ -27,13 +25,13 @@ public class GuaranteeEmptyCountStep extends AbstractExecutionStep {
     } else {
       OResultInternal result = new OResultInternal();
       result.setProperty(item.getProjectionAliasAsString(), 0L);
-      return OExecutionStream.resultIterator(Collections.singleton((OResult) result).iterator());
+      return OExecutionStream.singleton(result);
     }
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new GuaranteeEmptyCountStep(item.copy(), ctx, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new GuaranteeEmptyCountStep(item.copy());
   }
 
   public boolean canBeCached() {
@@ -41,9 +39,9 @@ public class GuaranteeEmptyCountStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder result = new StringBuilder();
-    result.append(OExecutionStepInternal.getIndent(depth, indent) + "+ GUARANTEE FOR ZERO COUNT ");
+    result.append(OExecutionStepInternal.getIndent(ctx) + "+ GUARANTEE FOR ZERO COUNT ");
     return result.toString();
   }
 }

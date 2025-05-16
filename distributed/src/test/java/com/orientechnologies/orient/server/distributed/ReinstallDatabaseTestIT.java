@@ -32,7 +32,6 @@ public class ReinstallDatabaseTestIT {
 
   @Before
   public void before() throws Exception {
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     OGlobalConfiguration.DISTRIBUTED_DB_WORKERTHREADS.setValue(2);
     config = new SimpleDServerConfig();
     server0 = SimpleDServerConfig.SERVER0;

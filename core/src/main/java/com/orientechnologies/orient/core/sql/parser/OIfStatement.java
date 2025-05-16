@@ -2,18 +2,10 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
-import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.ODatabaseSession;
-import com.orientechnologies.orient.core.sql.executor.EmptyStep;
 import com.orientechnologies.orient.core.sql.executor.IfStep;
-import com.orientechnologies.orient.core.sql.executor.OExecutionStepInternal;
 import com.orientechnologies.orient.core.sql.executor.OIfExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.executor.OSelectExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.OUpdateExecutionPlan;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -62,86 +54,18 @@ public class OIfStatement extends OStatement {
   }
 
   @Override
-  public OResultSet execute(
-      ODatabaseSession db, Object[] args, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    Map<Object, Object> params = new HashMap<>();
-    if (args != null) {
-      for (int i = 0; i < args.length; i++) {
-        params.put(i, args[i]);
-      }
-    }
-    ctx.setInputParameters(params);
-
-    OIfExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OIfExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-
-    OExecutionStepInternal last = executionPlan.executeUntilReturn(ctx);
-    if (last == null) {
-      last = new EmptyStep(ctx, false);
-    }
-    if (isIdempotent()) {
-      OSelectExecutionPlan finalPlan = new OSelectExecutionPlan();
-      finalPlan.chain(last);
-      return new OLocalResultSet(finalPlan, ctx);
-    } else {
-      OUpdateExecutionPlan finalPlan = new OUpdateExecutionPlan();
-      finalPlan.chain(last);
-      finalPlan.executeInternal(ctx);
-      return new OLocalResultSet(finalPlan, ctx);
-    }
-  }
-
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Map params, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    ctx.setInputParameters(params);
-
-    OIfExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OIfExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-
-    OExecutionStepInternal last = executionPlan.executeUntilReturn(ctx);
-    if (last == null) {
-      last = new EmptyStep(ctx, false);
-    }
-    if (isIdempotent()) {
-      OSelectExecutionPlan finalPlan = new OSelectExecutionPlan();
-      finalPlan.chain(last);
-      return new OLocalResultSet(finalPlan, ctx);
-    } else {
-      OUpdateExecutionPlan finalPlan = new OUpdateExecutionPlan();
-      finalPlan.chain(last);
-      finalPlan.executeInternal(ctx);
-      return new OLocalResultSet(finalPlan, ctx);
-    }
-  }
-
-  @Override
-  public OIfExecutionPlan createExecutionPlan(OCommandContext ctx, boolean enableProfiling) {
+  public OIfExecutionPlan createExecutionPlan(OCommandContext ctx) {
 
     OIfExecutionPlan plan = new OIfExecutionPlan();
 
-    IfStep step = new IfStep(ctx, enableProfiling);
+    IfStep step = new IfStep();
     step.setCondition(this.expression);
     plan.chain(step);
 
     step.positiveStatements = statements;
     step.negativeStatements = elseStatements;
+    plan.setStatement(this.originalStatement);
+    plan.setGenericStatement(this.toGenericStatement());
     return plan;
   }
 
@@ -228,35 +152,6 @@ public class OIfStatement extends OStatement {
 
   public List<OStatement> getStatements() {
     return statements;
-  }
-
-  public boolean containsReturn() {
-    for (OStatement stm : this.statements) {
-      if (stm instanceof OReturnStatement) {
-        return true;
-      }
-      if (stm instanceof OForEachBlock && ((OForEachBlock) stm).containsReturn()) {
-        return true;
-      }
-      if (stm instanceof OIfStatement && ((OIfStatement) stm).containsReturn()) {
-        return true;
-      }
-    }
-
-    if (elseStatements != null) {
-      for (OStatement stm : this.elseStatements) {
-        if (stm instanceof OReturnStatement) {
-          return true;
-        }
-        if (stm instanceof OForEachBlock && ((OForEachBlock) stm).containsReturn()) {
-          return true;
-        }
-        if (stm instanceof OIfStatement && ((OIfStatement) stm).containsReturn()) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 }
 /* JavaCC - OriginalChecksum=a8cd4fb832a4f3b6e71bb1a12f8d8819 (do not edit this line) */

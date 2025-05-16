@@ -4,7 +4,7 @@ import static com.orientechnologies.orient.core.config.OGlobalConfiguration.CLIE
 
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
-import com.orientechnologies.orient.client.remote.OStorageRemote.CONNECTION_STRATEGY;
+import com.orientechnologies.orient.client.remote.ORemoteClient.CONNECTION_STRATEGY;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.exception.OConfigurationException;
@@ -105,7 +105,7 @@ public class ORemoteURLs {
       // SHORT FORM
       addresses.add(url);
     } else {
-      for (String host : url.substring(0, dbPos).split(OStorageRemote.ADDRESS_SEPARATOR)) {
+      for (String host : url.substring(0, dbPos).split(ORemoteClient.ADDRESS_SEPARATOR)) {
         addresses.add(host);
       }
     }
@@ -189,7 +189,7 @@ public class ORemoteURLs {
   }
 
   private synchronized String getNextConnectUrl(
-      OStorageRemoteSession session, OContextConfiguration contextConfiguration) {
+      ORemoteClientSession session, OContextConfiguration contextConfiguration) {
     if (serverURLs.isEmpty()) {
       reloadOriginalURLs();
       if (serverURLs.isEmpty())
@@ -213,7 +213,7 @@ public class ORemoteURLs {
 
   public synchronized String getServerURFromList(
       boolean iNextAvailable,
-      OStorageRemoteSession session,
+      ORemoteClientSession session,
       OContextConfiguration contextConfiguration) {
     if (session != null && session.getCurrentUrl() != null && !iNextAvailable) {
       return session.getCurrentUrl();
@@ -248,7 +248,7 @@ public class ORemoteURLs {
 
   public synchronized String getNextAvailableServerURL(
       boolean iIsConnectOperation,
-      OStorageRemoteSession session,
+      ORemoteClientSession session,
       OContextConfiguration contextConfiguration,
       CONNECTION_STRATEGY strategy) {
     String url = null;

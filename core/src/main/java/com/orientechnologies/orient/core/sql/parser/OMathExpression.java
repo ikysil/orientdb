@@ -16,6 +16,8 @@ import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.List;
@@ -52,7 +54,12 @@ public class OMathExpression extends SimpleNode {
     STAR(10) {
       @Override
       public Number apply(Integer left, Integer right) {
-        return left * right;
+        long result = left.longValue() * right.longValue();
+
+        if (result < Integer.MAX_VALUE && result > Integer.MIN_VALUE) {
+          return (int) result;
+        }
+        return result;
       }
 
       @Override
@@ -62,6 +69,11 @@ public class OMathExpression extends SimpleNode {
 
       @Override
       public Number apply(Float left, Float right) {
+        double result = left.doubleValue() * right.doubleValue();
+
+        if (result < Float.MAX_VALUE && result > Float.MIN_VALUE) {
+          return (float) result;
+        }
         return left * right;
       }
 
@@ -631,27 +643,6 @@ public class OMathExpression extends SimpleNode {
     return true;
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    if (childExpressions == null || operators == null) {
-      return null;
-    }
-
-    if (childExpressions.size() == 0) {
-      return null;
-    }
-    if (childExpressions.size() == 1) {
-      return childExpressions.get(0).execute(iCurrentRecord, ctx);
-    }
-
-    if (childExpressions.size() == 2) {
-      Object leftValue = childExpressions.get(0).execute(iCurrentRecord, ctx);
-      Object rightValue = childExpressions.get(1).execute(iCurrentRecord, ctx);
-      return operators.get(0).apply(leftValue, rightValue);
-    }
-
-    return calculateWithOpPriority(iCurrentRecord, ctx);
-  }
-
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     if (childExpressions == null || operators == null) {
       return null;
@@ -670,6 +661,56 @@ public class OMathExpression extends SimpleNode {
     }
 
     return calculateWithOpPriority(iCurrentRecord, ctx);
+  }
+
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
+    if (childExpressions == null || operators == null) {
+      return null;
+    }
+    if (childExpressions.size() == 0) {
+      return null;
+    }
+    if (childExpressions.size() == 1) {
+      return childExpressions.get(0).getIndexKey(ctx);
+    }
+
+    if (childExpressions.size() == 2) {
+      Object leftValue = childExpressions.get(0).execute(null, ctx);
+      Object rightValue = childExpressions.get(1).execute(null, ctx);
+      return Collections.singleton(operators.get(0).apply(leftValue, rightValue));
+    }
+
+    return calculateKeyWithOpPriority(ctx);
+  }
+
+  private Collection<Object> calculateKeyWithOpPriority(OCommandContext ctx) {
+    Deque valuesStack = new ArrayDeque<>();
+    Deque<Operator> operatorsStack = new ArrayDeque<Operator>();
+    if (childExpressions != null && operators != null) {
+      OMathExpression nextExpression = childExpressions.get(0);
+      Object val = nextExpression.execute(null, ctx);
+      valuesStack.push(val == null ? NULL_VALUE : val);
+
+      for (int i = 0; i < operators.size() && i + 1 < childExpressions.size(); i++) {
+        Operator nextOperator = operators.get(i);
+        Object rightValue = childExpressions.get(i + 1).execute(null, ctx);
+
+        if (!operatorsStack.isEmpty()
+            && operatorsStack.peek().getPriority() <= nextOperator.getPriority()) {
+          Object right = valuesStack.poll();
+          right = right == NULL_VALUE ? null : right;
+          Object left = valuesStack.poll();
+          left = left == NULL_VALUE ? null : left;
+          Object calculatedValue = operatorsStack.poll().apply(left, right);
+          valuesStack.push(calculatedValue == null ? NULL_VALUE : calculatedValue);
+        }
+        operatorsStack.push(nextOperator);
+
+        valuesStack.push(rightValue == null ? NULL_VALUE : rightValue);
+      }
+    }
+
+    return Collections.singleton(iterateOnPriorities(valuesStack, operatorsStack));
   }
 
   private Object calculateWithOpPriority(OResult iCurrentRecord, OCommandContext ctx) {
@@ -699,35 +740,6 @@ public class OMathExpression extends SimpleNode {
       }
     }
 
-    return iterateOnPriorities(valuesStack, operatorsStack);
-  }
-
-  private Object calculateWithOpPriority(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    Deque valuesStack = new ArrayDeque<>();
-    Deque<Operator> operatorsStack = new ArrayDeque<Operator>();
-    if (childExpressions != null && operators != null) {
-      OMathExpression nextExpression = childExpressions.get(0);
-      Object val = nextExpression.execute(iCurrentRecord, ctx);
-      valuesStack.push(val == null ? NULL_VALUE : val);
-
-      for (int i = 0; i < operators.size() && i + 1 < childExpressions.size(); i++) {
-        Operator nextOperator = operators.get(i);
-        Object rightValue = childExpressions.get(i + 1).execute(iCurrentRecord, ctx);
-
-        if (!operatorsStack.isEmpty()
-            && operatorsStack.peek().getPriority() <= nextOperator.getPriority()) {
-          Object right = valuesStack.poll();
-          right = right == NULL_VALUE ? null : right;
-          Object left = valuesStack.poll();
-          left = left == NULL_VALUE ? null : left;
-          Object calculatedValue = operatorsStack.poll().apply(left, right);
-          valuesStack.push(calculatedValue == null ? NULL_VALUE : calculatedValue);
-        }
-        operatorsStack.push(nextOperator);
-
-        valuesStack.push(rightValue == null ? NULL_VALUE : rightValue);
-      }
-    }
     return iterateOnPriorities(valuesStack, operatorsStack);
   }
 

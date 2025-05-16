@@ -7,7 +7,7 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OFromItem;
 
 /** Created by luigidellaquila on 22/07/16. */
@@ -15,14 +15,10 @@ public class FetchFromVariableStep extends AbstractExecutionStep {
 
   private OFromItem variableName;
 
-  public FetchFromVariableStep(
-      OFromItem variableName, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FetchFromVariableStep(OFromItem variableName) {
+    super();
     this.variableName = variableName;
-    reset();
   }
-
-  public void reset() {}
 
   @Override
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
@@ -30,7 +26,7 @@ public class FetchFromVariableStep extends AbstractExecutionStep {
     String name = variableName.getIdentifier().getStringValue();
     Object value = ctx.getVariable(name);
     if (variableName.getModifier() != null) {
-      value = variableName.getModifier().execute((OIdentifiable) null, value, ctx);
+      value = variableName.getModifier().execute((OResult) null, value, ctx);
     }
     final Object src = value;
     OExecutionStream source;
@@ -41,7 +37,9 @@ public class FetchFromVariableStep extends AbstractExecutionStep {
           OExecutionStream.resultIterator(((OResultSet) src).stream().iterator())
               .onClose((context) -> ((OResultSet) src).close());
     } else if (src instanceof ORID) {
-      source = OExecutionStream.singleton(new OResultInternal(ctx.getDatabase().load((ORID) src)));
+      source =
+          OExecutionStream.singleton(
+              new OResultInternal((OIdentifiable) ctx.getDatabase().load((ORID) src)));
     } else if (src instanceof OElement) {
       source = OExecutionStream.singleton(new OResultInternal((OElement) src));
     } else if (src instanceof OResult) {
@@ -55,10 +53,10 @@ public class FetchFromVariableStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    return OExecutionStepInternal.getIndent(depth, indent)
+  public String prettyPrint(OPrintContext ctx) {
+    return OExecutionStepInternal.getIndent(ctx)
         + "+ FETCH FROM VARIABLE\n"
-        + OExecutionStepInternal.getIndent(depth, indent)
+        + OExecutionStepInternal.getIndent(ctx)
         + "  "
         + variableName;
   }
@@ -78,7 +76,6 @@ public class FetchFromVariableStep extends AbstractExecutionStep {
         this.variableName = new OFromItem(-1);
         this.variableName.deserialize(fromResult.getProperty("variableName"));
       }
-      reset();
     } catch (Exception e) {
       throw OException.wrapException(new OCommandExecutionException(""), e);
     }

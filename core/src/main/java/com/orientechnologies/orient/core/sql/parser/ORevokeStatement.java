@@ -8,7 +8,7 @@ import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.OSecurityInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Map;
 import java.util.Objects;
 
@@ -29,7 +29,7 @@ public class ORevokeStatement extends OSimpleExecStatement {
 
   @Override
   public OExecutionStream executeSimple(OCommandContext ctx) {
-    ODatabaseDocumentInternal db = getDatabase();
+    ODatabaseDocumentInternal db = (ODatabaseDocumentInternal) ctx.getDatabase();
     ORole role = db.getMetadata().getSecurity().getRole(actor.getStringValue());
     if (role == null)
       throw new OCommandExecutionException("Invalid role: " + actor.getStringValue());
@@ -37,7 +37,7 @@ public class ORevokeStatement extends OSimpleExecStatement {
     String resourcePath = securityResource.toString();
     if (permission != null) {
       role.revoke(resourcePath, toPrivilege(permission.permission));
-      role.save();
+      role.save(db);
     } else {
       OSecurityInternal security = db.getSharedContext().getSecurity();
       security.removeSecurityPolicy(db, role, resourcePath);

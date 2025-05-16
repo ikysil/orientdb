@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.tx;
 
-import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ORecordOperation;
@@ -29,7 +28,6 @@ import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.storage.ORecordCallback;
 import com.orientechnologies.orient.core.storage.OStorage;
 import java.util.List;
 
@@ -79,28 +77,6 @@ public interface OTransaction {
 
   ODatabaseDocument getDatabase();
 
-  @Deprecated
-  void clearRecordEntries();
-
-  @Deprecated
-  ORecord loadRecord(
-      ORID iRid,
-      ORecord iRecord,
-      String iFetchPlan,
-      boolean ignoreCache,
-      boolean loadTombstone,
-      final OStorage.LOCKING_STRATEGY iLockingStrategy);
-
-  @Deprecated
-  ORecord loadRecord(
-      ORID iRid,
-      ORecord iRecord,
-      String iFetchPlan,
-      boolean ignoreCache,
-      boolean iUpdateCache,
-      boolean loadTombstone,
-      final OStorage.LOCKING_STRATEGY iLockingStrategy);
-
   ORecord loadRecord(ORID iRid, ORecord iRecord, String iFetchPlan, boolean ignoreCache);
 
   ORecord reloadRecord(ORID iRid, ORecord iRecord, String iFetchPlan, boolean ignoreCache);
@@ -114,9 +90,6 @@ public interface OTransaction {
 
   TXSTATUS getStatus();
 
-  @Deprecated
-  Iterable<? extends ORecordOperation> getCurrentRecordEntries();
-
   Iterable<? extends ORecordOperation> getRecordOperations();
 
   List<ORecordOperation> getNewRecordEntriesByClass(OClass iClass, boolean iPolymorphic);
@@ -128,26 +101,6 @@ public interface OTransaction {
   List<String> getInvolvedIndexes();
 
   ODocument getIndexChanges();
-
-  @Deprecated
-  void clearIndexEntries();
-
-  boolean isUsingLog();
-
-  /**
-   * If you set this flag to false, you are unable to
-   *
-   * <ol>
-   *   <li>Rollback data changes in case of exception
-   *   <li>Restore data in case of server crash
-   * </ol>
-   *
-   * <p>So you practically unable to work in multithreaded environment and keep data consistent.
-   *
-   * @deprecated This option has no effect
-   */
-  @Deprecated
-  void setUsingLog(boolean useLog);
 
   void close();
 
@@ -184,30 +137,18 @@ public interface OTransaction {
    *
    * @param record the record to save.
    * @param clusterName record's cluster name.
-   * @param operationMode the operation mode.
    * @param forceCreate the force creation flag, {@code true} to force the creation of the record,
    *     {@code false} to allow updates.
-   * @param createdCallback the callback to invoke when the record save operation triggered the
-   *     creation of the record.
-   * @param updatedCallback the callback to invoke when the record save operation triggered the
-   *     update of the record.
    * @return the record saved.
    */
-  ORecord saveRecord(
-      ORecord record,
-      String clusterName,
-      ODatabaseSession.OPERATION_MODE operationMode,
-      boolean forceCreate,
-      ORecordCallback<? extends Number> createdCallback,
-      ORecordCallback<Integer> updatedCallback);
+  ORecord saveRecord(ORecord record, String clusterName, boolean forceCreate);
 
   /**
    * Deletes the given record in this transaction.
    *
    * @param record the record to delete.
-   * @param mode the operation mode.
    */
-  void deleteRecord(ORecord record, ODatabaseSession.OPERATION_MODE mode);
+  void deleteRecord(ORecord record);
 
   /**
    * Resolves a record with the given RID in the context of this transaction.

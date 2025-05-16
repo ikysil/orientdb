@@ -43,7 +43,6 @@ import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodAsSet;
 import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodAsString;
 import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodField;
 import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodFormat;
-import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodFunctionDelegate;
 import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodIndexOf;
 import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodJavaType;
 import com.orientechnologies.orient.core.sql.method.misc.OSQLMethodKeys;
@@ -95,7 +94,6 @@ public class ODefaultSQLMethodFactory implements OSQLMethodFactory {
     register(OSQLMethodField.NAME, new OSQLMethodField());
     register(OSQLMethodFormat.NAME, new OSQLMethodFormat());
     register(OSQLMethodFromJSON.NAME, new OSQLMethodFromJSON());
-    register(OSQLMethodFunctionDelegate.NAME, OSQLMethodFunctionDelegate.class);
     register(OSQLMethodHash.NAME, new OSQLMethodHash());
     register(OSQLMethodInclude.NAME, new OSQLMethodInclude());
     register(OSQLMethodIndexOf.NAME, new OSQLMethodIndexOf());

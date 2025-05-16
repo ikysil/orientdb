@@ -1,14 +1,14 @@
 package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
+import java.util.List;
+import java.util.Set;
 
 /** Created by luigidellaquila on 06/07/16. */
-public interface OInternalExecutionPlan extends OExecutionPlan {
+public interface OInternalExecutionPlan extends OExecutionPlanContextOps {
 
   public static final String JAVA_TYPE = "javaType";
-
-  void close();
 
   /**
    * if the execution can still return N elements, then the result will contain them all. If the
@@ -19,8 +19,6 @@ public interface OInternalExecutionPlan extends OExecutionPlan {
    * @return
    */
   OExecutionStream start(OCommandContext ctx);
-
-  void reset(OCommandContext ctx);
 
   long getCost();
 
@@ -38,15 +36,23 @@ public interface OInternalExecutionPlan extends OExecutionPlan {
 
   boolean canBeCached();
 
-  default String getStatement() {
-    return null;
+  String getStatement();
+
+  void setStatement(String stm);
+
+  String getGenericStatement();
+
+  void setGenericStatement(String stm);
+
+  String prettyPrint(OPrintContext ctx);
+
+  OResult toResult(OToResultContext ctx);
+
+  List<OExecutionStepInternal> getSteps();
+
+  Set<String> getIndexes();
+
+  default boolean isExplain() {
+    return false;
   }
-
-  default void setStatement(String stm) {}
-
-  default String getGenericStatement() {
-    return null;
-  }
-
-  default void setGenericStatement(String stm) {}
 }

@@ -9,7 +9,7 @@ import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.storage.OStorageOperationResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,8 +49,7 @@ public class OTruncateRecordStatement extends OSimpleExecStatement {
     for (ORid rec : recs) {
       try {
         final ORecordId rid = rec.toRecordId((OResult) null, ctx);
-        final OStorageOperationResult<Boolean> result =
-            database.getStorage().deleteRecord(rid, -1, 0, null);
+        final OStorageOperationResult<Boolean> result = database.getStorage().deleteRecord(rid, -1);
         database.getLocalCache().deleteRecord(rid);
 
         if (result.getResult()) {
@@ -65,7 +64,7 @@ public class OTruncateRecordStatement extends OSimpleExecStatement {
       }
     }
 
-    return OExecutionStream.resultIterator(rs.iterator());
+    return OExecutionStream.resultCollection(rs);
   }
 
   @Override

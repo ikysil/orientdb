@@ -408,10 +408,9 @@ public class ODefaultAuditing
       sysdb = context.getSystemDatabase().openSystemDatabase();
 
       OSchema schema = sysdb.getMetadata().getSchema();
-      OClass cls = schema.getClass(AUDITING_LOG_CLASSNAME);
 
-      if (cls == null) {
-        cls = sysdb.getMetadata().getSchema().createClass(AUDITING_LOG_CLASSNAME);
+      if (sysdb.getMetadata().getSchema().createClassIfNotExists(AUDITING_LOG_CLASSNAME)) {
+        OClass cls = schema.getClass(AUDITING_LOG_CLASSNAME);
         cls.createProperty("date", OType.DATETIME);
         cls.createProperty("user", OType.STRING);
         cls.createProperty("operation", OType.BYTE);

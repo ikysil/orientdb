@@ -4,7 +4,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.List;
 /** Created by luigidellaquila on 21/07/16. */
 public class FetchFromClustersExecutionStep extends AbstractExecutionStep {
 
-  private List<OExecutionStep> subSteps;
+  private List<OExecutionStepInternal> subSteps;
   private boolean orderByRidAsc = false;
   private boolean orderByRidDesc = false;
 
@@ -20,12 +20,10 @@ public class FetchFromClustersExecutionStep extends AbstractExecutionStep {
    * iterates over a class and its subclasses
    *
    * @param clusterIds the clusters
-   * @param ctx the query context
    * @param ridOrder true to sort by RID asc, false to sort by RID desc, null for no sort.
    */
-  public FetchFromClustersExecutionStep(
-      int[] clusterIds, OCommandContext ctx, Boolean ridOrder, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FetchFromClustersExecutionStep(int[] clusterIds, Boolean ridOrder) {
+    super();
 
     if (Boolean.TRUE.equals(ridOrder)) {
       orderByRidAsc = true;
@@ -33,11 +31,10 @@ public class FetchFromClustersExecutionStep extends AbstractExecutionStep {
       orderByRidDesc = true;
     }
 
-    subSteps = new ArrayList<OExecutionStep>();
+    subSteps = new ArrayList<>();
     sortClusers(clusterIds);
     for (int i = 0; i < clusterIds.length; i++) {
-      FetchFromClusterExecutionStep step =
-          new FetchFromClusterExecutionStep(clusterIds[i], ctx, profilingEnabled);
+      FetchFromClusterExecutionStep step = new FetchFromClusterExecutionStep(clusterIds[i]);
       if (orderByRidAsc) {
         step.setOrder(FetchFromClusterExecutionStep.ORDER_ASC);
       } else if (orderByRidDesc) {
@@ -65,44 +62,28 @@ public class FetchFromClustersExecutionStep extends AbstractExecutionStep {
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
     getPrev().ifPresent(x -> x.start(ctx).close(ctx));
 
-    List<OExecutionStep> stepsIter = getSubSteps();
+    List<OExecutionStepInternal> stepsIter = getSubSteps();
 
     return OExecutionStream.streamsFromIterator(stepsIter.iterator(), this::startStep);
   }
 
-  private OExecutionStream startStep(OExecutionStep step, OCommandContext context) {
+  private OExecutionStream startStep(OExecutionStepInternal step, OCommandContext context) {
     return ((AbstractExecutionStep) step).start(context);
   }
 
   @Override
-  public void sendTimeout() {
-    for (OExecutionStep step : subSteps) {
-      ((AbstractExecutionStep) step).sendTimeout();
-    }
-    prev.ifPresent(p -> p.sendTimeout());
-  }
-
-  @Override
-  public void close() {
-    for (OExecutionStep step : subSteps) {
-      ((AbstractExecutionStep) step).close();
-    }
-    prev.ifPresent(p -> p.close());
-  }
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder builder = new StringBuilder();
-    String ind = OExecutionStepInternal.getIndent(depth, indent);
+    String ind = OExecutionStepInternal.getIndent(ctx);
     builder.append(ind);
     builder.append("+ FETCH FROM CLUSTERS");
-    if (profilingEnabled) {
-      builder.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      builder.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     builder.append("\n");
     for (int i = 0; i < subSteps.size(); i++) {
       OExecutionStepInternal step = (OExecutionStepInternal) subSteps.get(i);
-      builder.append(step.prettyPrint(depth + 1, indent));
+      builder.append(step.prettyPrint(ctx));
       if (i < subSteps.size() - 1) {
         builder.append("\n");
       }
@@ -111,7 +92,7 @@ public class FetchFromClustersExecutionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public List<OExecutionStep> getSubSteps() {
+  public List<OExecutionStepInternal> getSubSteps() {
     return subSteps;
   }
 

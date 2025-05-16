@@ -30,16 +30,15 @@ public class OFindReferencesExecutionPlanner {
             : statement.getTargets().stream().map(x -> x.copy()).collect(Collectors.toList());
   }
 
-  public OInternalExecutionPlan createExecutionPlan(OCommandContext ctx, boolean enableProfiling) {
+  public OInternalExecutionPlan createExecutionPlan(OCommandContext ctx) {
     OSelectExecutionPlan plan = new OSelectExecutionPlan();
-    handleRidSource(plan, ctx, enableProfiling);
-    handleSubQuerySource(plan, ctx, enableProfiling);
-    handleFindReferences(plan, ctx, enableProfiling);
+    handleRidSource(plan, ctx);
+    handleSubQuerySource(plan, ctx);
+    handleFindReferences(plan);
     return plan;
   }
 
-  private void handleFindReferences(
-      OSelectExecutionPlan plan, OCommandContext ctx, boolean profilingEnabled) {
+  private void handleFindReferences(OSelectExecutionPlan plan) {
     List<OIdentifier> classes = null;
     List<OCluster> clusters = null;
     if (targets != null) {
@@ -55,24 +54,18 @@ public class OFindReferencesExecutionPlanner {
               .collect(Collectors.toList());
     }
 
-    plan.chain(new FindReferencesStep(classes, clusters, ctx, profilingEnabled));
+    plan.chain(new FindReferencesStep(classes, clusters));
   }
 
-  private void handleSubQuerySource(
-      OSelectExecutionPlan plan, OCommandContext ctx, boolean profilingEnabled) {
+  private void handleSubQuerySource(OSelectExecutionPlan plan, OCommandContext ctx) {
     if (subQuery != null) {
-      plan.chain(
-          new SubQueryStep(
-              subQuery.createExecutionPlan(ctx, profilingEnabled), ctx, ctx, profilingEnabled));
+      plan.chain(new SubQueryStep(subQuery.createExecutionPlan(ctx), ctx, ctx));
     }
   }
 
-  private void handleRidSource(
-      OSelectExecutionPlan plan, OCommandContext ctx, boolean profilingEnabled) {
+  private void handleRidSource(OSelectExecutionPlan plan, OCommandContext ctx) {
     if (rid != null) {
-      plan.chain(
-          new FetchFromRidsStep(
-              Collections.singleton(rid.toRecordId((OResult) null, ctx)), ctx, profilingEnabled));
+      plan.chain(new FetchFromRidsStep(Collections.singleton(rid.toRecordId((OResult) null, ctx))));
     }
   }
 }

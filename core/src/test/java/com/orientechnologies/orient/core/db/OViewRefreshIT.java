@@ -3,10 +3,8 @@ package com.orientechnologies.orient.core.db;
 import static org.junit.Assert.assertEquals;
 
 import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.sql.executor.FetchFromIndexStep;
 import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.executor.OSelectExecutionPlan;
 import java.util.List;
 import java.util.Optional;
 import org.junit.After;
@@ -237,9 +235,7 @@ public class OViewRefreshIT {
         Optional<OExecutionPlan> p = result.getExecutionPlan();
         Assert.assertTrue(p.isPresent());
         OExecutionPlan p2 = p.get();
-        Assert.assertTrue(p2 instanceof OSelectExecutionPlan);
-        OSelectExecutionPlan plan = (OSelectExecutionPlan) p2;
-        Assert.assertEquals(FetchFromIndexStep.class, plan.getSteps().get(0).getClass());
+        Assert.assertFalse(p2.getIndexes().isEmpty());
       }
 
       db.command(

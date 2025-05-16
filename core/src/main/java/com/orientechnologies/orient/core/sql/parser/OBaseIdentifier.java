@@ -55,7 +55,7 @@ public class OBaseIdentifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
+  public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     if (levelZero != null) {
       return levelZero.execute(iCurrentRecord, ctx);
     }
@@ -65,12 +65,12 @@ public class OBaseIdentifier extends SimpleNode {
     return null;
   }
 
-  public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
     if (levelZero != null) {
-      return levelZero.execute(iCurrentRecord, ctx);
+      return levelZero.getIndexKey(ctx);
     }
     if (suffix != null) {
-      return suffix.execute(iCurrentRecord, ctx);
+      return suffix.getIndexKey(ctx);
     }
     return null;
   }

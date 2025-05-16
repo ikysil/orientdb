@@ -108,7 +108,7 @@ public abstract class AbstractServerClusterSQLGraphTest extends AbstractServerCl
             e.printStackTrace();
             break;
           } finally {
-            runningWriters.countDown();
+            runningWriters.decrementAndGet();
             graph.activateOnCurrentThread();
             graph.close();
           }

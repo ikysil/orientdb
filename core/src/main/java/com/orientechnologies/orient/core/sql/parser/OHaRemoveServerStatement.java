@@ -4,13 +4,11 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.executor.OResultSetReady;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Map;
 
-public class OHaRemoveServerStatement extends OStatement {
+public class OHaRemoveServerStatement extends OSimpleExecStatement {
 
   public OIdentifier serverName;
 
@@ -35,27 +33,12 @@ public class OHaRemoveServerStatement extends OStatement {
   }
 
   @Override
-  public OResultSet execute(
-      ODatabaseSession db, Object[] args, OCommandContext parentContext, boolean usePlanCache) {
-    ODatabaseDocumentInternal internalDb = (ODatabaseDocumentInternal) db;
+  public OExecutionStream executeSimple(OCommandContext ctx) {
+    ODatabaseDocumentInternal internalDb = (ODatabaseDocumentInternal) ctx.getDatabase();
     boolean res = internalDb.removeHaServer(serverName.getStringValue());
     OResultInternal r = new OResultInternal();
     r.setProperty("result", res);
-    OResultSetReady rs = new OResultSetReady();
-    rs.add(r);
-    return rs;
-  }
-
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Map args, OCommandContext parentContext, boolean usePlanCache) {
-    ODatabaseDocumentInternal internalDb = (ODatabaseDocumentInternal) db;
-    boolean res = internalDb.removeHaServer(serverName.getStringValue());
-    OResultInternal r = new OResultInternal();
-    r.setProperty("result", res);
-    OResultSetReady rs = new OResultSetReady();
-    rs.add(r);
-    return rs;
+    return OExecutionStream.singleton(r);
   }
 }
 /* JavaCC - OriginalChecksum=9c136e8917527d69a67c88582d20ac8f (do not edit this line) */

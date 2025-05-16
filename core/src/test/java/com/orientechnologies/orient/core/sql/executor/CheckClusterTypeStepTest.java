@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -18,8 +18,7 @@ public class CheckClusterTypeStepTest extends TestUtilsFixture {
     OClass clazz = createClassInstance().addCluster(CLASS_CLUSTER_NAME);
     OBasicCommandContext context = new OBasicCommandContext();
     context.setDatabase(db);
-    CheckClusterTypeStep step =
-        new CheckClusterTypeStep(CLASS_CLUSTER_NAME, clazz.getName(), context, false);
+    CheckClusterTypeStep step = new CheckClusterTypeStep(CLASS_CLUSTER_NAME, clazz.getName());
 
     OExecutionStream result = step.start(context);
     Assert.assertEquals(0, result.stream(context).count());
@@ -30,7 +29,7 @@ public class CheckClusterTypeStepTest extends TestUtilsFixture {
     db.addCluster(CLUSTER_NAME);
     OBasicCommandContext context = new OBasicCommandContext(db);
     CheckClusterTypeStep step =
-        new CheckClusterTypeStep(CLUSTER_NAME, createClassInstance().getName(), context, false);
+        new CheckClusterTypeStep(CLUSTER_NAME, createClassInstance().getName());
 
     step.start(context);
   }

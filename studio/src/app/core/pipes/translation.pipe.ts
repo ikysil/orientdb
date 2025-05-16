@@ -1,4 +1,4 @@
-import * as data from "../../translations/hint.json";
+import data = require("../../translations/hint.json");
 import { Pipe } from "@angular/core";
 
 @Pipe({

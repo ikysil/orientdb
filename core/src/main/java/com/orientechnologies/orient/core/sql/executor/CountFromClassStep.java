@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OImmutableSchema;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 
 /**
@@ -22,12 +22,9 @@ public class CountFromClassStep extends AbstractExecutionStep {
   /**
    * @param targetClass An identifier containing the name of the class to count
    * @param alias the name of the property returned in the result-set
-   * @param ctx the query context
-   * @param profilingEnabled true to enable the profiling of the execution (for SQL PROFILE)
    */
-  public CountFromClassStep(
-      OIdentifier targetClass, String alias, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CountFromClassStep(OIdentifier targetClass, String alias) {
+    super();
     this.target = targetClass;
     this.alias = alias;
   }
@@ -56,11 +53,11 @@ public class CountFromClassStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     String result = spaces + "+ CALCULATE CLASS SIZE: " + target;
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }

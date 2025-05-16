@@ -11,7 +11,6 @@ import com.orientechnologies.orient.core.index.OIndexException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.sql.executor.FetchFromIndexStep;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import org.junit.After;
@@ -278,9 +277,7 @@ public class ColumnSecurityTest {
 
     rs = db.query("select from Person where name = 'bar'");
     Assert.assertFalse(rs.hasNext());
-    Assert.assertTrue(
-        rs.getExecutionPlan().get().getSteps().stream()
-            .anyMatch(x -> x instanceof FetchFromIndexStep));
+    Assert.assertTrue(rs.getExecutionPlan().get().getIndexes().size() > 0);
     rs.close();
   }
 

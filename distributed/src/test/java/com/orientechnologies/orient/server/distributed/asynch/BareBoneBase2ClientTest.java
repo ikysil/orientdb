@@ -1,14 +1,11 @@
 package com.orientechnologies.orient.server.distributed.asynch;
 
-import com.orientechnologies.orient.core.Orient;
-
 public abstract class BareBoneBase2ClientTest extends BareBoneBase1ClientTest {
   protected static Object LOCK = new Object();
 
   protected abstract void dbClient2(BareBonesServer[] servers);
 
   public void testReplication() throws Throwable {
-    Orient.setRegisterDatabaseByPath(true);
 
     final BareBonesServer[] servers = new BareBonesServer[1];
     try {

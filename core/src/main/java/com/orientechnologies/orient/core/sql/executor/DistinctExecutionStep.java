@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,8 +15,8 @@ public class DistinctExecutionStep extends AbstractExecutionStep {
 
   private long maxElementsAllowed;
 
-  public DistinctExecutionStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public DistinctExecutionStep(OCommandContext ctx) {
+    super();
     ODatabaseSession db = ctx == null ? null : ctx.getDatabase();
 
     maxElementsAllowed =
@@ -80,18 +80,10 @@ public class DistinctExecutionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public void sendTimeout() {}
-
-  @Override
-  public void close() {
-    prev.ifPresent(x -> x.close());
-  }
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
-    String result = OExecutionStepInternal.getIndent(depth, indent) + "+ DISTINCT";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+  public String prettyPrint(OPrintContext ctx) {
+    String result = OExecutionStepInternal.getIndent(ctx) + "+ DISTINCT";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }

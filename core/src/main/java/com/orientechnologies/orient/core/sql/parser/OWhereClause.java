@@ -2,7 +2,6 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
-import com.orientechnologies.common.collection.OMultiCollectionIterator;
 import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
@@ -19,7 +18,6 @@ import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -28,13 +26,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class OWhereClause extends SimpleNode {
   protected OBooleanExpression baseExpression;
-
-  private List<OAndBlock> flattened;
 
   public OWhereClause(int id) {
     super(id);
@@ -45,10 +40,7 @@ public class OWhereClause extends SimpleNode {
   }
 
   public boolean matchesFilters(OIdentifiable currentRecord, OCommandContext ctx) {
-    if (baseExpression == null) {
-      return true;
-    }
-    return baseExpression.evaluate(currentRecord, ctx);
+    return matchesFilters(new OResultInternal(currentRecord), ctx);
   }
 
   public boolean matchesFilters(OResult currentRecord, OCommandContext ctx) {
@@ -176,80 +168,6 @@ public class OWhereClause extends SimpleNode {
     return Long.MAX_VALUE;
   }
 
-  public Iterable fetchFromIndexes(OClass oClass, OCommandContext ctx) {
-
-    List<OAndBlock> flattenedConditions = flatten();
-    if (flattenedConditions == null || flattenedConditions.size() == 0) {
-      return null;
-    }
-    Set<OIndex> indexes = oClass.getIndexes();
-    List<OIndex> bestIndexes = new ArrayList<>();
-    List<Map<String, Object>> indexConditions = new ArrayList<>();
-    for (OAndBlock condition : flattenedConditions) {
-      Map<String, Object> conditions = getEqualityOperations(condition, ctx);
-      long conditionEstimation = Long.MAX_VALUE;
-      OIndex bestIndex = null;
-      Map<String, Object> bestCondition = null;
-
-      for (OIndex index : indexes) {
-        List<String> indexedFields = index.getDefinition().getFields();
-        int nMatchingKeys = 0;
-        for (String indexedField : indexedFields) {
-          if (conditions.containsKey(indexedField)) {
-            nMatchingKeys++;
-          } else {
-            break;
-          }
-        }
-        if (nMatchingKeys > 0) {
-          long newCount = estimateFromIndex(index, conditions, nMatchingKeys);
-          if (newCount >= 0 && newCount <= conditionEstimation) {
-            conditionEstimation = newCount;
-            bestIndex = index;
-            bestCondition = conditions;
-          }
-        }
-      }
-      if (bestIndex == null) {
-        return null;
-      }
-      bestIndexes.add(bestIndex);
-      indexConditions.add(bestCondition);
-    }
-    OMultiCollectionIterator result = new OMultiCollectionIterator();
-
-    for (int i = 0; i < bestIndexes.size(); i++) {
-      OIndex index = bestIndexes.get(i);
-      Map<String, Object> condition = indexConditions.get(i);
-      result.add(fetchFromIndex(index, indexConditions.get(i)));
-    }
-    return result;
-  }
-
-  private static Iterable fetchFromIndex(OIndex index, Map<String, Object> conditions) {
-    OIndexDefinition definition = index.getDefinition();
-    List<String> definitionFields = definition.getFields();
-    Object key = null;
-    if (definition instanceof OPropertyIndexDefinition) {
-      key = convert(conditions.get(definitionFields.get(0)), definition.getTypes()[0]);
-    } else if (definition instanceof OCompositeIndexDefinition) {
-      key = new OCompositeKey();
-      for (int i = 0; i < definitionFields.size(); i++) {
-        String keyName = definitionFields.get(i);
-        if (!conditions.containsKey(keyName)) {
-          break;
-        }
-        Object keyValue = convert(conditions.get(keyName), definition.getTypes()[i]);
-        ((OCompositeKey) key).addKey(conditions.get(keyName));
-      }
-    }
-    if (key != null) {
-      final Object iteratorKey = key;
-      return () -> index.getInternal().getRids(iteratorKey).iterator();
-    }
-    return null;
-  }
-
   private static Object convert(Object o, OType oType) {
     return OType.convert(o, oType.getDefaultJavaType());
   }
@@ -274,11 +192,7 @@ public class OWhereClause extends SimpleNode {
     if (this.baseExpression == null) {
       return Collections.emptyList();
     }
-    if (flattened == null) {
-      flattened = this.baseExpression.flatten();
-    }
-    // TODO remove false conditions (contraddictions)
-    return flattened;
+    return this.baseExpression.flatten();
   }
 
   public List<OBinaryCondition> getIndexedFunctionConditions(
@@ -300,15 +214,6 @@ public class OWhereClause extends SimpleNode {
   public OWhereClause copy() {
     OWhereClause result = new OWhereClause(-1);
     result.baseExpression = baseExpression.copy();
-    result.flattened =
-        Optional.ofNullable(flattened)
-            .map(
-                oAndBlocks -> {
-                  try (Stream<OAndBlock> stream = oAndBlocks.stream()) {
-                    return stream.map(OAndBlock::copy).collect(Collectors.toList());
-                  }
-                })
-            .orElse(null);
     return result;
   }
 
@@ -319,14 +224,12 @@ public class OWhereClause extends SimpleNode {
 
     OWhereClause that = (OWhereClause) o;
 
-    if (!Objects.equals(baseExpression, that.baseExpression)) return false;
-    return Objects.equals(flattened, that.flattened);
+    return Objects.equals(baseExpression, that.baseExpression);
   }
 
   @Override
   public int hashCode() {
     int result = Optional.ofNullable(baseExpression).map(Object::hashCode).orElse(0);
-    result = 31 * result + (Optional.ofNullable(flattened).map(List::hashCode).orElse(0));
     return result;
   }
 
@@ -334,7 +237,6 @@ public class OWhereClause extends SimpleNode {
     if (baseExpression != null) {
       baseExpression.extractSubQueries(collector);
     }
-    flattened = null;
   }
 
   public boolean refersToParent() {
@@ -345,24 +247,10 @@ public class OWhereClause extends SimpleNode {
     return baseExpression;
   }
 
-  public List<OAndBlock> getFlattened() {
-    return flattened;
-  }
-
-  public void setFlattened(List<OAndBlock> flattened) {
-    this.flattened = flattened;
-  }
-
   public OResult serialize() {
     OResultInternal result = new OResultInternal();
     if (baseExpression != null) {
       result.setProperty("baseExpression", baseExpression.serialize());
-    }
-    if (flattened != null) {
-      try (Stream<OAndBlock> stream = flattened.stream()) {
-        result.setProperty(
-            "flattened", stream.map(OBooleanExpression::serialize).collect(Collectors.toList()));
-      }
     }
     return result;
   }
@@ -372,15 +260,6 @@ public class OWhereClause extends SimpleNode {
       baseExpression =
           OBooleanExpression.deserializeFromOResult(fromResult.getProperty("baseExpression"));
     }
-    if (fromResult.getProperty("flattened") != null) {
-      List<OResult> ser = fromResult.getProperty("flattened");
-      flattened = new ArrayList<>();
-      for (OResult r : ser) {
-        OAndBlock block = new OAndBlock(-1);
-        block.deserialize(r);
-        flattened.add(block);
-      }
-    }
   }
 
   public boolean isCacheable() {
@@ -389,6 +268,26 @@ public class OWhereClause extends SimpleNode {
 
   public Optional<OIndexCandidate> findIndex(OIndexFinder info, OCommandContext ctx) {
     return this.baseExpression.findIndex(info, ctx);
+  }
+
+  public OAndBlock extractRidRanges(OCommandContext ctx) {
+    return this.baseExpression.extractRidRanges(ctx);
+  }
+
+  public boolean isEmpty() {
+    return this.baseExpression.isEmpty();
+  }
+
+  public int conditionsCount() {
+    return this.baseExpression.conditionsCount();
+  }
+
+  public OBooleanExpression getIndexKeyCondition() {
+    return this.baseExpression.getIndexKeyCondition();
+  }
+
+  public OBooleanExpression getIndexRidCondition() {
+    return this.baseExpression.getIndexRidCondition();
   }
 }
 /* JavaCC - OriginalChecksum=e8015d01ce1ab2bc337062e9e3f2603e (do not edit this line) */

@@ -17,6 +17,7 @@ package com.orientechnologies.orient.test.database.auto;
 
 import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.db.ODatabase;
+import com.orientechnologies.orient.core.db.object.ODatabaseObject;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.OTrackedList;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
@@ -414,8 +415,7 @@ public class JSONTest extends DocumentDBBaseTest {
 
   @Test
   public void testFetchedJson() {
-    OObjectDatabaseTx database = new OObjectDatabaseTx(url);
-    database.open("admin", "admin");
+    ODatabaseObject database = new OObjectDatabaseTx(this.database);
     try {
       database
           .getEntityManager()
@@ -725,7 +725,7 @@ public class JSONTest extends DocumentDBBaseTest {
             + " {\"deeper\": { \"k\": \"v\",\"quotes\": \"\\\"\\\",\\\"oops\\\":\\\"123\\\"\","
             + " \"likeJson\": \"[1,2,3]\",\"spaces\": \"value with spaces\"}}}";
     doc.fromJSON(s);
-    Assert.assertEquals(doc.field("deep[deeper][quotes]"), "\"\",\"oops\":\"123\"");
+    Assert.assertEquals(doc.field("deep['deeper']['quotes']"), "\"\",\"oops\":\"123\"");
 
     String res = doc.toJSON();
 

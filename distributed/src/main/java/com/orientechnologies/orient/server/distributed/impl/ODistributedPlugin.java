@@ -61,7 +61,6 @@ import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.metadata.schema.OView;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import com.orientechnologies.orient.core.tx.OTxMetadataHolder;
 import com.orientechnologies.orient.core.tx.OTxMetadataHolderImpl;
 import com.orientechnologies.orient.distributed.db.OrientDBDistributed;
@@ -367,7 +366,7 @@ public class ODistributedPlugin extends OServerPluginAbstract
     OSignalHandler signalHandler = Orient.instance().getSignalHandler();
     if (signalHandler != null) signalHandler.unregisterListener(signalListener);
 
-    logger.warnNode("Shutting down node '%s'...", nodeName);
+    logger.warnNode(nodeName, "Shutting down node '%s'...", nodeName);
     setNodeStatus(NODE_STATUS.SHUTTINGDOWN);
 
     clusterManager.prepareHazelcastPluginShutdown();
@@ -1189,6 +1188,10 @@ public class ODistributedPlugin extends OServerPluginAbstract
     }
   }
 
+  public boolean isSyncronizing(String databaseName) {
+    return this.installingDatabases.contains(databaseName);
+  }
+
   public Boolean internalInstallDatabase(
       final boolean iStartup,
       final String databaseName,
@@ -1364,7 +1367,7 @@ public class ODistributedPlugin extends OServerPluginAbstract
       OTxMetadataHolder metadata;
       try (ODatabaseDocumentInternal inst =
           serverInstance.getDatabases().openNoAuthorization(databaseName)) {
-        Optional<byte[]> read = ((OAbstractPaginatedStorage) inst.getStorage()).getLastMetadata();
+        Optional<byte[]> read = inst.getStorage().getLastMetadata();
         if (read.isPresent()) {
           metadata = OTxMetadataHolderImpl.read(read.get());
         } else {
@@ -2004,7 +2007,7 @@ public class ODistributedPlugin extends OServerPluginAbstract
         context.saveDatabaseConfiguration(database);
 
         try (ODatabaseDocumentInternal inst = context.openNoAuthorization(database)) {
-          Optional<byte[]> read = ((OAbstractPaginatedStorage) inst.getStorage()).getLastMetadata();
+          Optional<byte[]> read = inst.getStorage().getLastMetadata();
           if (read.isPresent()) {
             OTxMetadataHolder metadata = OTxMetadataHolderImpl.read(read.get());
             final OSyncDatabaseNewDeltaTask deployTask =
@@ -2482,7 +2485,8 @@ public class ODistributedPlugin extends OServerPluginAbstract
         installDatabase(false, databaseName, false, true);
       } catch (ODistributedLockException lock) {
         setDatabaseStatus(getLocalNodeName(), databaseName, DB_STATUS.NOT_AVAILABLE);
-        logger.warn(" Failing to acquire lock install database '%s' will retry later ", lock);
+        logger.warn(
+            " Failing to acquire lock install database '%s' will retry later ", lock, databaseName);
       }
     }
   }

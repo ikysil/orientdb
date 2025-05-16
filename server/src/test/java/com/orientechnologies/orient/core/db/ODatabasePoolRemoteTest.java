@@ -22,7 +22,6 @@ public class ODatabasePoolRemoteTest {
 
   @Before
   public void before() throws Exception {
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     server = new OServer(false);
     server.setServerRootDirectory(SERVER_DIRECTORY);
     server.startup(

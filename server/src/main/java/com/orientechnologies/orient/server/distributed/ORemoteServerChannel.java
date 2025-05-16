@@ -133,7 +133,7 @@ public class ORemoteServerChannel {
         });
   }
 
-  public interface OStorageRemoteOperation<T> {
+  public interface ORemoteClientOperation<T> {
     T execute() throws IOException;
   }
 
@@ -162,7 +162,7 @@ public class ORemoteServerChannel {
 
   private <T> void executeNetworkOperation(
       final byte operationId,
-      final OStorageRemoteOperation<T> operation,
+      final ORemoteClientOperation<T> operation,
       final String errorMessage,
       final int maxRetry,
       final boolean autoReconnect) {
@@ -190,7 +190,7 @@ public class ORemoteServerChannel {
   }
 
   public void sendResponse(final ODistributedResponse response) {
-    OStorageRemoteOperation<Object> remoteOperation =
+    ORemoteClientOperation<Object> remoteOperation =
         () -> {
           response.toStream(channel.getDataOutput());
           channel.flush();
@@ -264,7 +264,7 @@ public class ORemoteServerChannel {
 
   protected synchronized <T> T networkOperation(
       final byte operationId,
-      final OStorageRemoteOperation<T> operation,
+      final ORemoteClientOperation<T> operation,
       final String errorMessage,
       final int maxRetry,
       final boolean autoReconnect) {

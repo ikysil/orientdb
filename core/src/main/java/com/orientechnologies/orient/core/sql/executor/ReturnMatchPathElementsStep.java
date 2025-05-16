@@ -9,8 +9,8 @@ import java.util.List;
 /** Created by luigidellaquila on 12/10/16. */
 public class ReturnMatchPathElementsStep extends AbstractUnrollStep {
 
-  public ReturnMatchPathElementsStep(OCommandContext context, boolean profilingEnabled) {
-    super(context, profilingEnabled);
+  public ReturnMatchPathElementsStep(OCommandContext context) {
+    super();
   }
 
   @Override
@@ -31,8 +31,8 @@ public class ReturnMatchPathElementsStep extends AbstractUnrollStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ UNROLL $pathElements";
   }
 }

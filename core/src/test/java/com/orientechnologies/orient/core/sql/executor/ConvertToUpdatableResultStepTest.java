@@ -4,7 +4,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -22,9 +22,9 @@ public class ConvertToUpdatableResultStepTest extends TestUtilsFixture {
   @Test
   public void shouldConvertUpdatableResult() {
     OCommandContext context = new OBasicCommandContext(db);
-    ConvertToUpdatableResultStep step = new ConvertToUpdatableResultStep(context, false);
+    ConvertToUpdatableResultStep step = new ConvertToUpdatableResultStep();
     AbstractExecutionStep previous =
-        new AbstractExecutionStep(context, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -40,7 +40,7 @@ public class ConvertToUpdatableResultStepTest extends TestUtilsFixture {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 

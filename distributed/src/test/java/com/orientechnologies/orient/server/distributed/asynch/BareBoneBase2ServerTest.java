@@ -1,7 +1,6 @@
 package com.orientechnologies.orient.server.distributed.asynch;
 
 import com.orientechnologies.common.io.OFileUtils;
-import com.orientechnologies.orient.core.Orient;
 import java.io.File;
 
 public abstract class BareBoneBase2ServerTest extends BareBoneBase2ClientTest {
@@ -34,7 +33,6 @@ public abstract class BareBoneBase2ServerTest extends BareBoneBase2ClientTest {
   }
 
   public void testReplication() throws Throwable {
-    Orient.setRegisterDatabaseByPath(true);
 
     final BareBonesServer[] servers = new BareBonesServer[2];
     Thread dbServer1 =

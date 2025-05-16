@@ -4,7 +4,6 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.sql.executor.OResult;
@@ -50,38 +49,6 @@ public class OArraySingleValuesSelector extends SimpleNode {
       item.toGenericStatement(builder);
       first = false;
     }
-  }
-
-  public Object execute(OIdentifiable iCurrentRecord, Object iResult, OCommandContext ctx) {
-    List<Object> result = new ArrayList<Object>();
-    for (OArraySelector item : items) {
-      Object index = item.getValue(iCurrentRecord, iResult, ctx);
-      if (index == null) {
-        return null;
-      }
-
-      if (index instanceof Integer) {
-        result.add(OMultiValue.getValue(iResult, ((Integer) index).intValue()));
-      } else {
-        if (iResult instanceof Map) {
-          result.add(((Map) iResult).get(index));
-        } else if (iResult instanceof OElement && index instanceof String) {
-          result.add(((OElement) iResult).getProperty((String) index));
-        } else if (OMultiValue.isMultiValue(iResult)) {
-          Iterator<Object> iter = OMultiValue.getMultiValueIterator(iResult);
-          while (iter.hasNext()) {
-            result.add(calculateValue(iter.next(), index));
-          }
-        } else {
-          result.add(null);
-        }
-      }
-      if (this.items.size() == 1 && result.size() == 1) {
-        //      if (this.items.size() == 1) {
-        return result.get(0);
-      }
-    }
-    return result;
   }
 
   public Object execute(OResult iCurrentRecord, Object iResult, OCommandContext ctx) {

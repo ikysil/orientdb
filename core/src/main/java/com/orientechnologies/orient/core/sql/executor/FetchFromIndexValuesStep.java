@@ -1,25 +1,25 @@
 package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
+import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 
 /** Created by luigidellaquila on 02/08/16. */
 public class FetchFromIndexValuesStep extends FetchFromIndexStep {
 
-  public FetchFromIndexValuesStep(
-      IndexSearchDescriptor desc, boolean orderAsc, OCommandContext ctx, boolean profilingEnabled) {
-    super(desc, orderAsc, ctx, profilingEnabled);
+  public FetchFromIndexValuesStep(OIndexCandidate desc, boolean orderAsc, OCommandContext ctx) {
+    super(desc, orderAsc, ctx);
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     if (isOrderAsc()) {
-      return OExecutionStepInternal.getIndent(depth, indent)
+      return OExecutionStepInternal.getIndent(ctx)
           + "+ FETCH FROM INDEX VAUES ASC "
-          + desc.getIndex().getName();
+          + getIndexName();
     } else {
-      return OExecutionStepInternal.getIndent(depth, indent)
+      return OExecutionStepInternal.getIndent(ctx)
           + "+ FETCH FROM INDEX VAUES DESC "
-          + desc.getIndex().getName();
+          + getIndexName();
     }
   }
 

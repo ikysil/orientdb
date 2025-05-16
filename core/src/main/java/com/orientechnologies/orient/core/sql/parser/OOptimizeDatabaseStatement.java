@@ -11,7 +11,7 @@ import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -43,7 +43,7 @@ public class OOptimizeDatabaseStatement extends OSimpleExecStatement {
     result.setProperty("operation", "optimize databae");
 
     if (isOptimizeEdges()) {
-      String edges = optimizeEdges();
+      String edges = optimizeEdges(ctx);
       result.setProperty("optimizeEdges", edges);
     }
 
@@ -78,8 +78,8 @@ public class OOptimizeDatabaseStatement extends OSimpleExecStatement {
     return result;
   }
 
-  private String optimizeEdges() {
-    final ODatabaseDocumentInternal db = getDatabase();
+  private String optimizeEdges(OCommandContext ctx) {
+    final ODatabaseDocumentInternal db = (ODatabaseDocumentInternal) ctx.getDatabase();
 
     long transformed = 0;
     if (db.getTransaction().isActive()) db.commit();

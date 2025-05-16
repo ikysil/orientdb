@@ -1033,6 +1033,7 @@ public enum OGlobalConfiguration { // ENVIRONMENT
       Boolean.FALSE,
       true),
 
+  @Deprecated
   SERVER_BACKWARD_COMPATIBILITY(
       "server.backwardCompatibility",
       "guarantee that the server use global context for search the database instance",
@@ -1230,6 +1231,13 @@ public enum OGlobalConfiguration { // ENVIRONMENT
           + " transactions commits that can be active at the same time",
       Integer.class,
       1000,
+      false),
+
+  DISTRIBUTED_DATABASE_ONLINE_GRACE_PERIOD(
+      "distributed.databaseOnlineGracePeriod",
+      "Millisecond to wait for a database to become online before to send the offline exception",
+      Long.class,
+      10000,
       false),
 
   DB_DOCUMENT_SERIALIZER(

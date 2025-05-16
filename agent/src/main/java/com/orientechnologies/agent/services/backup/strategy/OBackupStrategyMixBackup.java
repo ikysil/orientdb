@@ -20,13 +20,19 @@ package com.orientechnologies.agent.services.backup.strategy;
 
 import com.orientechnologies.agent.services.backup.OBackupConfig;
 import com.orientechnologies.agent.services.backup.OBackupListener;
-import com.orientechnologies.agent.services.backup.log.*;
+import com.orientechnologies.agent.services.backup.log.OBackupFinishedLog;
+import com.orientechnologies.agent.services.backup.log.OBackupLog;
+import com.orientechnologies.agent.services.backup.log.OBackupLogType;
+import com.orientechnologies.agent.services.backup.log.OBackupLogger;
+import com.orientechnologies.agent.services.backup.log.OBackupScheduledLog;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.core.db.ODatabaseInternal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
+import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.schedule.OCronExpression;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.OEnterpriseLocalPaginatedStorage;
 import com.orientechnologies.orient.server.handler.OAutomaticBackup;
 import java.io.File;
@@ -97,13 +103,14 @@ public class OBackupStrategyMixBackup extends OBackupStrategy {
   public Date scheduleNextExecution(final OBackupListener listener) {
     final OBackupScheduledLog lastBackupSchedule = lastUnfiredSchedule();
     if (lastBackupSchedule == null) {
-      final ODocument full =
-          (ODocument) cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.FULL_BACKUP);
-      final String whenFull = full.field(OBackupConfig.WHEN);
-      final ODocument incremental =
-          (ODocument)
-              cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.INCREMENTAL_BACKUP);
-      final String whenIncremental = incremental.field(OBackupConfig.WHEN);
+      final OElement full =
+          ((OResult) cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.FULL_BACKUP))
+              .toElement();
+      final String whenFull = full.getProperty(OBackupConfig.WHEN);
+      final OElement incremental =
+          ((OResult) cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.INCREMENTAL_BACKUP))
+              .toElement();
+      final String whenIncremental = incremental.getProperty(OBackupConfig.WHEN);
       try {
         final OCronExpression eFull = new OCronExpression(whenFull);
         final OCronExpression eIncremental = new OCronExpression(whenIncremental);

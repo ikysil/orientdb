@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import org.junit.Assert;
 import org.junit.Test;
@@ -23,7 +23,7 @@ public class CountFromClassStepTest extends TestUtilsFixture {
     OIdentifier classIdentifier = new OIdentifier(className);
 
     OBasicCommandContext context = new OBasicCommandContext(db);
-    CountFromClassStep step = new CountFromClassStep(classIdentifier, ALIAS, context, false);
+    CountFromClassStep step = new CountFromClassStep(classIdentifier, ALIAS);
 
     OExecutionStream result = step.start(context);
     Assert.assertEquals(20, (long) result.next(context).getProperty(ALIAS));

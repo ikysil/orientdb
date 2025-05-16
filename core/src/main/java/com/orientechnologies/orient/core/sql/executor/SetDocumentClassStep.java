@@ -4,7 +4,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /**
  * Assigns a class to documents coming from upstream
@@ -14,8 +14,8 @@ import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream
 public class SetDocumentClassStep extends AbstractExecutionStep {
   private final String targetClass;
 
-  public SetDocumentClassStep(String targetClass, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public SetDocumentClassStep(String targetClass) {
+    super();
     this.targetClass = targetClass;
   }
 
@@ -42,8 +42,8 @@ public class SetDocumentClassStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ SET CLASS\n");

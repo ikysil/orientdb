@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OFieldMatchPathItem;
 import com.orientechnologies.orient.core.sql.parser.OMatchPathItem;
 
@@ -18,14 +18,17 @@ public class MatchFieldTraverser extends MatchEdgeTraverser {
   protected OExecutionStream traversePatternEdge(
       OIdentifiable startingPoint, OCommandContext iCommandContext) {
 
-    Object prevCurrent = iCommandContext.getVariable("$current");
-    iCommandContext.setVariable("$current", startingPoint);
+    OResult prevCurrent = iCommandContext.getCurrent();
+    iCommandContext.setCurrent(new OResultInternal(startingPoint));
     Object qR;
     try {
       // TODO check possible results!
-      qR = ((OFieldMatchPathItem) this.item).getExp().execute(startingPoint, iCommandContext);
+      qR =
+          ((OFieldMatchPathItem) this.item)
+              .getExp()
+              .execute(new OResultInternal(startingPoint), iCommandContext);
     } finally {
-      iCommandContext.setVariable("$current", prevCurrent);
+      iCommandContext.setCurrent(prevCurrent);
     }
 
     if (qR == null) {

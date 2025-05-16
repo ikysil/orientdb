@@ -6,6 +6,7 @@ import com.orientechnologies.orient.core.db.ODatabaseLifecycleListener;
 import com.orientechnologies.orient.core.db.ODatabaseListener;
 import com.orientechnologies.orient.core.db.viewmanager.ViewCreationListener;
 import com.orientechnologies.orient.core.exception.OSchemaException;
+import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OClassImpl;
 import com.orientechnologies.orient.core.metadata.schema.OSchemaShared;
@@ -14,7 +15,9 @@ import com.orientechnologies.orient.core.metadata.schema.OViewConfig;
 import com.orientechnologies.orient.core.metadata.schema.OViewImpl;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.ORule;
+import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -217,6 +220,56 @@ public class OSchemaRemote extends OSchemaShared {
     }
 
     return result;
+  }
+
+  @Override
+  public boolean createClassIfNotExists(ODatabaseDocumentInternal database, String className) {
+    return createClassIfNotExists(database, className, new OClass[] {});
+  }
+
+  @Override
+  public boolean createClassIfNotExists(
+      ODatabaseDocumentInternal database, String className, OClass... superClasses) {
+    final Character wrongCharacter = OSchemaShared.checkClassNameIfValid(className);
+    if (wrongCharacter != null)
+      throw new OSchemaException(
+          "Invalid class name found. Character '"
+              + wrongCharacter
+              + "' cannot be used in class name '"
+              + className
+              + "'");
+
+    database.checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_CREATE);
+    acquireSchemaWriteLock(database);
+    try {
+      StringBuilder cmd = new StringBuilder("create class ");
+      cmd.append('`');
+      cmd.append(className);
+      cmd.append("` if not exists ");
+
+      List<OClass> superClassesList = new ArrayList<OClass>();
+      if (superClasses != null && superClasses.length > 0) {
+        boolean first = true;
+        for (OClass superClass : superClasses) {
+          // Filtering for null
+          if (superClass != null) {
+            if (first) cmd.append(" extends ");
+            else cmd.append(", ");
+            cmd.append(superClass.getName());
+            first = false;
+            superClassesList.add(superClass);
+          }
+        }
+      }
+
+      OResultSet queryResult = database.command(cmd.toString());
+      boolean created = queryResult.hasNext();
+      queryResult.close();
+      reload(database);
+      return created;
+    } finally {
+      releaseSchemaWriteLock(database);
+    }
   }
 
   public OView createView(
@@ -440,6 +493,7 @@ public class OSchemaRemote extends OSchemaShared {
 
   public void update(ODocument schema) {
     if (!skipPush.get()) {
+      ORecordInternal.setIdentity(schema, new ORecordId(getIdentity()));
       fromStream(schema);
       this.snapshot = null;
     }

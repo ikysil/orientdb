@@ -7,7 +7,7 @@ import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.ODirection;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import java.util.Collections;
 import java.util.Iterator;
@@ -21,12 +21,8 @@ public class FetchEdgesToVerticesStep extends AbstractExecutionStep {
   private final OIdentifier targetClass;
 
   public FetchEdgesToVerticesStep(
-      String toAlias,
-      OIdentifier targetClass,
-      OIdentifier targetCluster,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+      String toAlias, OIdentifier targetClass, OIdentifier targetCluster) {
+    super();
     this.toAlias = toAlias;
     this.targetClass = targetClass;
     this.targetCluster = targetCluster;
@@ -35,12 +31,12 @@ public class FetchEdgesToVerticesStep extends AbstractExecutionStep {
   @Override
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
     getPrev().ifPresent(x -> x.start(ctx).close(ctx));
-    Iterator<Object> source = init();
+    Iterator<Object> source = init(ctx);
 
     return OExecutionStream.streamsFromIterator(source, this::edges);
   }
 
-  private Iterator<Object> init() {
+  private Iterator<Object> init(OCommandContext ctx) {
     Object toValues = null;
 
     toValues = ctx.getVariable(toAlias);
@@ -66,7 +62,7 @@ public class FetchEdgesToVerticesStep extends AbstractExecutionStep {
           StreamSupport.stream(edges.spliterator(), false)
               .filter(
                   (edge) -> {
-                    return matchesClass(edge) && matchesCluster(edge);
+                    return matchesClass(edge) && matchesCluster(edge, ctx);
                   })
               .map((e) -> new OResultInternal(e));
       return OExecutionStream.resultIterator(stream.iterator());
@@ -75,7 +71,7 @@ public class FetchEdgesToVerticesStep extends AbstractExecutionStep {
     }
   }
 
-  private boolean matchesCluster(OEdge edge) {
+  private boolean matchesCluster(OEdge edge, OCommandContext ctx) {
     if (targetCluster == null) {
       return true;
     }
@@ -92,8 +88,8 @@ public class FetchEdgesToVerticesStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     String result = spaces + "+ FOR EACH x in " + toAlias + "\n";
     result += spaces + "       FETCH EDGES TO x";
     if (targetClass != null) {

@@ -8,7 +8,6 @@ import com.orientechnologies.orient.core.index.OIndexDefinition;
 import com.orientechnologies.orient.core.index.OIndexManagerShared;
 import com.orientechnologies.orient.core.index.OSimpleKeyIndexDefinition;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.OCommandExecutorSQLCreateIndex;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.server.distributed.impl.ODatabaseDocumentDistributed;
 
@@ -101,9 +100,7 @@ public class OIndexManagerDistributed extends OIndexManagerShared {
       createIndexDDL = iIndexDefinition.toCreateIndexDDL(iName, iType, engine);
     else createIndexDDL = new OSimpleKeyIndexDefinition().toCreateIndexDDL(iName, iType, engine);
 
-    if (metadata != null)
-      createIndexDDL +=
-          " " + OCommandExecutorSQLCreateIndex.KEYWORD_METADATA + " " + metadata.toJSON();
+    if (metadata != null) createIndexDDL += " metadata " + metadata.toJSON();
 
     if (progressListener != null) progressListener.onBegin(this, 0, false);
 

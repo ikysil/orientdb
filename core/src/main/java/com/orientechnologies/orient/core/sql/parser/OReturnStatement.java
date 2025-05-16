@@ -7,9 +7,7 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
-import java.util.ArrayList;
-import java.util.List;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Map;
 
 public class OReturnStatement extends OSimpleExecStatement {
@@ -25,14 +23,12 @@ public class OReturnStatement extends OSimpleExecStatement {
 
   @Override
   public OExecutionStream executeSimple(OCommandContext ctx) {
-    List<OResult> rs = new ArrayList<>();
-
     Object result = expression == null ? null : expression.execute((OResult) null, ctx);
+    OExecutionStream streamResult;
     if (result instanceof OResult) {
-      rs.add((OResult) result);
+      streamResult = OExecutionStream.singleton((OResult) result);
     } else if (result instanceof OIdentifiable) {
-      OResultInternal res = new OResultInternal((OIdentifiable) result);
-      rs.add(res);
+      streamResult = OExecutionStream.singleton(new OResultInternal((OIdentifiable) result));
     } else if (result instanceof OResultSet) {
       if (!((OResultSet) result).hasNext()) {
         try {
@@ -46,15 +42,16 @@ public class OReturnStatement extends OSimpleExecStatement {
           // this operation does not hurt
         }
       }
-      return OExecutionStream.resultIterator(((OResultSet) result).stream().iterator());
+      streamResult = OExecutionStream.resultIterator(((OResultSet) result));
     } else if (result instanceof OExecutionStream) {
-      return (OExecutionStream) result;
+      streamResult = (OExecutionStream) result;
     } else {
       OResultInternal res = new OResultInternal();
       res.setProperty("value", result);
-      rs.add(res);
+      streamResult = OExecutionStream.singleton(res);
     }
-    return OExecutionStream.resultIterator(rs.iterator());
+    // This message that the script should not continue
+    return streamResult.terminate();
   }
 
   @Override

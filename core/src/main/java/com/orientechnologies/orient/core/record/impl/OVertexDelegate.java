@@ -41,7 +41,6 @@ import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.serialization.OSerializableStream;
-import com.orientechnologies.orient.core.storage.OStorage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -287,26 +286,6 @@ public class OVertexDelegate implements OVertex {
   @Override
   public <T extends ORecord> T getRecord() {
     return (T) element;
-  }
-
-  @Override
-  public void lock(boolean iExclusive) {
-    element.lock(iExclusive);
-  }
-
-  @Override
-  public boolean isLocked() {
-    return element.isLocked();
-  }
-
-  @Override
-  public OStorage.LOCKING_STRATEGY lockingStrategy() {
-    return element.lockingStrategy();
-  }
-
-  @Override
-  public void unlock() {
-    element.unlock();
   }
 
   @Override

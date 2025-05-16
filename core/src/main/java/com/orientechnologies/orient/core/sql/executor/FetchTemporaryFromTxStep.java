@@ -10,7 +10,7 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -28,8 +28,8 @@ public class FetchTemporaryFromTxStep extends AbstractExecutionStep {
 
   private Object order;
 
-  public FetchTemporaryFromTxStep(OCommandContext ctx, String className, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FetchTemporaryFromTxStep(String className) {
+    super();
     this.className = className;
   }
 
@@ -46,7 +46,7 @@ public class FetchTemporaryFromTxStep extends AbstractExecutionStep {
   }
 
   private OResult setContext(OResult result, OCommandContext context) {
-    context.setVariable("$current", result);
+    context.setCurrent(result);
     return result;
   }
 
@@ -131,13 +131,13 @@ public class FetchTemporaryFromTxStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ FETCH NEW RECORDS FROM CURRENT TRANSACTION SCOPE (if any)");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     return result.toString();
   }
@@ -165,9 +165,8 @@ public class FetchTemporaryFromTxStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    FetchTemporaryFromTxStep result =
-        new FetchTemporaryFromTxStep(ctx, this.className, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    FetchTemporaryFromTxStep result = new FetchTemporaryFromTxStep(this.className);
     return result;
   }
 }

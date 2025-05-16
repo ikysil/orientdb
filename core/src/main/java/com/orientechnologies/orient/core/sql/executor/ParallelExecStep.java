@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,11 +10,8 @@ import java.util.stream.Collectors;
 public class ParallelExecStep extends AbstractExecutionStep {
   private final List<OInternalExecutionPlan> subExecutionPlans;
 
-  public ParallelExecStep(
-      List<OInternalExecutionPlan> subExecuitonPlans,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public ParallelExecStep(List<OInternalExecutionPlan> subExecuitonPlans) {
+    super();
     this.subExecutionPlans = subExecuitonPlans;
   }
 
@@ -32,15 +29,15 @@ public class ParallelExecStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     String result = "";
-    String ind = OExecutionStepInternal.getIndent(depth, indent);
+    String ind = OExecutionStepInternal.getIndent(ctx);
 
     int[] blockSizes = new int[subExecutionPlans.size()];
 
     for (int i = 0; i < subExecutionPlans.size(); i++) {
       OInternalExecutionPlan currentPlan = subExecutionPlans.get(subExecutionPlans.size() - 1 - i);
-      String partial = currentPlan.prettyPrint(0, indent);
+      String partial = currentPlan.prettyPrint(ctx);
 
       String[] partials = partial.split("\n");
       blockSizes[subExecutionPlans.size() - 1 - i] = partials.length + 2;
@@ -59,7 +56,7 @@ public class ParallelExecStep extends AbstractExecutionStep {
     result += foot(blockSizes);
     result = ind + result;
     result = result.replaceAll("\n", "\n" + ind);
-    result = head(depth, indent, subExecutionPlans.size()) + "\n" + result;
+    result = head(ctx, subExecutionPlans.size()) + "\n" + result;
     return result;
   }
 
@@ -121,8 +118,8 @@ public class ParallelExecStep extends AbstractExecutionStep {
     return false;
   }
 
-  private String head(int depth, int indent, int nItems) {
-    String ind = OExecutionStepInternal.getIndent(depth, indent);
+  private String head(OPrintContext ctx, int nItems) {
+    String ind = OExecutionStepInternal.getIndent(ctx);
     return ind + "+ PARALLEL";
   }
 
@@ -146,8 +143,14 @@ public class ParallelExecStep extends AbstractExecutionStep {
     return "| " + p;
   }
 
-  public List<OExecutionPlan> getSubExecutionPlans() {
-    return (List) subExecutionPlans;
+  public List<OInternalExecutionPlan> getSubExecutionPlans() {
+    return subExecutionPlans;
+  }
+
+  @Override
+  public void serializeToResult(OResultInternal result, OToResultContext ctx) {
+    result.setProperty(
+        "subExecutionPlans", subExecutionPlans.stream().map((x) -> x.toResult(ctx)).toList());
   }
 
   @Override
@@ -161,10 +164,8 @@ public class ParallelExecStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
+  public OExecutionStepInternal copy(OCommandContext ctx) {
     return new ParallelExecStep(
-        subExecutionPlans.stream().map(x -> x.copy(ctx)).collect(Collectors.toList()),
-        ctx,
-        profilingEnabled);
+        subExecutionPlans.stream().map(x -> x.copy(ctx)).collect(Collectors.toList()));
   }
 }

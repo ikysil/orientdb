@@ -2,13 +2,13 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /** Created by luigidellaquila on 12/10/16. */
 public class ReturnMatchPathsStep extends AbstractExecutionStep {
 
-  public ReturnMatchPathsStep(OCommandContext context, boolean profilingEnabled) {
-    super(context, profilingEnabled);
+  public ReturnMatchPathsStep() {
+    super();
   }
 
   @Override
@@ -17,8 +17,8 @@ public class ReturnMatchPathsStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ RETURN $paths";
   }
 }

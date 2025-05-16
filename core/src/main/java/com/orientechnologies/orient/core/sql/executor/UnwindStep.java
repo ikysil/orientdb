@@ -5,7 +5,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OUnwind;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,8 +23,8 @@ public class UnwindStep extends AbstractExecutionStep {
   private final OUnwind unwind;
   private List<String> unwindFields;
 
-  public UnwindStep(OUnwind unwind, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public UnwindStep(OUnwind unwind) {
+    super();
     this.unwind = unwind;
     unwindFields =
         unwind.getItems().stream().map(x -> x.getStringValue()).collect(Collectors.toList());
@@ -40,7 +40,7 @@ public class UnwindStep extends AbstractExecutionStep {
   }
 
   private OExecutionStream fetchNextResults(OResult res, OCommandContext ctx) {
-    return OExecutionStream.resultIterator(unwind(res, unwindFields, ctx).iterator());
+    return OExecutionStream.resultCollection(unwind(res, unwindFields, ctx));
   }
 
   private Collection<OResult> unwind(
@@ -97,8 +97,8 @@ public class UnwindStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ " + unwind;
   }
 }

@@ -32,13 +32,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Johann Sorel (Geomatys)
  */
-public class ODynamicSQLElementFactory
-    implements OCommandExecutorSQLFactory, OQueryOperatorFactory, OSQLFunctionFactory {
+public class ODynamicSQLElementFactory implements OQueryOperatorFactory, OSQLFunctionFactory {
 
   // Used by SQLEngine to register on the fly new elements
   static final Map<String, Object> FUNCTIONS = new ConcurrentHashMap<String, Object>();
-  static final Map<String, Class<? extends OCommandExecutorSQLAbstract>> COMMANDS =
-      new ConcurrentHashMap<String, Class<? extends OCommandExecutorSQLAbstract>>();
   static final Set<OQueryOperator> OPERATORS =
       Collections.synchronizedSet(new HashSet<OQueryOperator>());
 
@@ -73,29 +70,6 @@ public class ODynamicSQLElementFactory
                     + " errors"),
             e);
       }
-    }
-  }
-
-  public Set<String> getCommandNames() {
-    return COMMANDS.keySet();
-  }
-
-  public OCommandExecutorSQLAbstract createCommand(final String name)
-      throws OCommandExecutionException {
-    final Class<? extends OCommandExecutorSQLAbstract> clazz = COMMANDS.get(name);
-
-    if (clazz == null) throw new OCommandExecutionException("Unknown command name :" + name);
-
-    try {
-      return clazz.newInstance();
-    } catch (Exception e) {
-      throw OException.wrapException(
-          new OCommandExecutionException(
-              "Error in creation of command "
-                  + name
-                  + "(). Probably there is not an empty constructor or the constructor generates"
-                  + " errors"),
-          e);
     }
   }
 

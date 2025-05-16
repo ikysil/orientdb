@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.OExecutionThreadLocal;
 import com.orientechnologies.orient.core.exception.OCommandInterruptedException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OStatement;
 import java.util.List;
 
@@ -18,13 +18,8 @@ public class RetryStep extends AbstractExecutionStep {
   private final int retries;
 
   public RetryStep(
-      List<OStatement> statements,
-      int retries,
-      List<OStatement> elseStatements,
-      Boolean elseFail,
-      OCommandContext ctx,
-      boolean enableProfiling) {
-    super(ctx, enableProfiling);
+      List<OStatement> statements, int retries, List<OStatement> elseStatements, Boolean elseFail) {
+    super();
     this.body = statements;
     this.retries = retries;
     this.elseBody = elseStatements;
@@ -41,9 +36,9 @@ public class RetryStep extends AbstractExecutionStep {
           throw new OCommandInterruptedException("The command has been interrupted");
         }
         OScriptExecutionPlan plan = initPlan(body, ctx);
-        OExecutionStepInternal result = plan.executeFull(ctx);
-        if (result != null) {
-          return result.start(ctx);
+        OExecutionStream result = plan.start(ctx);
+        if (result.isTermination(ctx)) {
+          return result;
         }
         break;
       } catch (ONeedRetryException ex) {
@@ -55,9 +50,9 @@ public class RetryStep extends AbstractExecutionStep {
         if (i == retries - 1) {
           if (elseBody != null && elseBody.size() > 0) {
             OScriptExecutionPlan plan = initPlan(elseBody, ctx);
-            OExecutionStepInternal result = plan.executeFull(ctx);
-            if (result != null) {
-              return result.start(ctx);
+            OExecutionStream result = plan.start(ctx);
+            if (result.isTermination(ctx)) {
+              return result;
             }
           }
           if (elseFail) {
@@ -69,7 +64,7 @@ public class RetryStep extends AbstractExecutionStep {
       }
     }
 
-    return new EmptyStep(ctx, false).start(ctx);
+    return new EmptyStep().start(ctx);
   }
 
   public OScriptExecutionPlan initPlan(List<OStatement> body, OCommandContext ctx) {
@@ -77,7 +72,7 @@ public class RetryStep extends AbstractExecutionStep {
     subCtx1.setParent(ctx);
     OScriptExecutionPlan plan = new OScriptExecutionPlan();
     for (OStatement stm : body) {
-      plan.chain(stm, profilingEnabled, subCtx1);
+      plan.chain(stm);
     }
     return plan;
   }

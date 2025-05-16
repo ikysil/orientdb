@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.index.OIndexInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OIndexIdentifier;
 import java.util.Collections;
@@ -25,16 +25,10 @@ public class CountFromIndexWithKeyStep extends AbstractExecutionStep {
   /**
    * @param targetIndex the index name as it is parsed by the SQL parsed
    * @param alias the name of the property returned in the result-set
-   * @param ctx the query context
-   * @param profilingEnabled true to enable the profiling of the execution (for SQL PROFILE)
    */
   public CountFromIndexWithKeyStep(
-      OIndexIdentifier targetIndex,
-      OExpression keyValue,
-      String alias,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+      OIndexIdentifier targetIndex, OExpression keyValue, String alias) {
+    super();
     this.target = targetIndex;
     this.alias = alias;
     this.keyValue = keyValue;
@@ -73,8 +67,8 @@ public class CountFromIndexWithKeyStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ CALCULATE INDEX SIZE BY KEY: " + target;
   }
 }

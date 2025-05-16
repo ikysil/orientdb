@@ -7,7 +7,10 @@ import com.orientechnologies.orient.core.collate.OCollate;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.id.OContextualRecordId;
+import com.orientechnologies.orient.core.metadata.OMetadataInternal;
+import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.metadata.schema.OImmutableSchema;
+import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -15,7 +18,10 @@ import com.orientechnologies.orient.core.sql.executor.AggregationContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
+import com.orientechnologies.orient.core.sql.executor.OUpdatableResult;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -63,49 +69,49 @@ public class OSuffixIdentifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
     if (star) {
-      return iCurrentRecord;
+      return Collections.EMPTY_LIST;
     }
     if (identifier != null) {
       String varName = identifier.getStringValue();
       if (ctx != null && varName.equalsIgnoreCase("$parent")) {
-        return ctx.getParent();
+        return Collections.singleton(ctx.getParent());
       }
-      if (varName.startsWith("$") && ctx != null && ctx.getVariable(varName) != null) {
-        return ctx.getVariable(varName);
-      }
+      if (ctx != null && varName.startsWith("$") && ctx.getVariable(varName) != null) {
+        Object result = ctx.getVariable(varName);
+        if (result instanceof OResettable) {
+          ((OResettable) result).reset();
+        }
+        if (result instanceof Collection) {
+          List<Object> newResult = new ArrayList<>();
+          for (Object obj : (Collection) result) {
+            if (obj instanceof OResult) {
+              if (((OResult) obj).isElement()) {
+                obj = ((OResult) obj).getIdentity().orElse(null);
+              } else {
+                Set<String> props = ((OResult) obj).getPropertyNames();
+                if (props.size() == 1) {
+                  obj = ((OResult) obj).getProperty(props.iterator().next());
+                }
+              }
+              if (obj instanceof Collection) {
+                newResult.addAll((Collection<? extends Object>) obj);
+              } else {
+                newResult.add(obj);
+              }
 
-      if (iCurrentRecord != null) {
-        if (iCurrentRecord instanceof OContextualRecordId) {
-          Map<String, Object> meta = ((OContextualRecordId) iCurrentRecord).getContext();
-          if (meta != null && meta.containsKey(varName)) {
-            return meta.get(varName);
+            } else {
+              newResult.add(obj);
+            }
           }
+          return (Collection) newResult;
         }
-        OElement rec = iCurrentRecord.getRecord();
-        if (rec == null) {
-          return null;
-        }
-        Object result = rec.getProperty(varName);
-        if (result == null && ctx != null) {
-          result = ctx.getVariable(varName);
-        }
-        return result;
-      }
-      return varName;
-    }
-    if (recordAttribute != null && iCurrentRecord != null) {
-      OElement rec =
-          iCurrentRecord instanceof OElement
-              ? (OElement) iCurrentRecord
-              : iCurrentRecord.getRecord();
-      if (rec != null) {
-        return recordAttribute.evaluate(rec, ctx);
+        return Collections.singleton(result);
       }
     }
 
-    return null;
+    return Collections.EMPTY_LIST;
   }
 
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
@@ -135,8 +141,10 @@ public class OSuffixIdentifier extends SimpleNode {
             && ((OResultInternal) iCurrentRecord).getTemporaryProperties().contains(varName)) {
           return ((OResultInternal) iCurrentRecord).getTemporaryProperty(varName);
         }
+        return null;
+      } else {
+        return null;
       }
-      return null;
     }
 
     if (iCurrentRecord != null && recordAttribute != null) {
@@ -226,7 +234,7 @@ public class OSuffixIdentifier extends SimpleNode {
       return execute((OResult) currentValue, ctx);
     }
     if (currentValue instanceof OIdentifiable) {
-      return execute((OIdentifiable) currentValue, ctx);
+      return execute(new OResultInternal((OIdentifiable) currentValue), ctx);
     }
     if (currentValue instanceof Map) {
       return execute((Map) currentValue, ctx);
@@ -341,7 +349,12 @@ public class OSuffixIdentifier extends SimpleNode {
     if (target instanceof OResult) {
       setValue((OResult) target, value, ctx);
     } else if (target instanceof OIdentifiable) {
-      setValue((OIdentifiable) target, value, ctx);
+      if (target instanceof OElement) {
+        setValue(new OUpdatableResult((OElement) target), value, ctx);
+      } else {
+        OElement element = ctx.getDatabase().load(((OIdentifiable) target).getIdentity());
+        setValue(new OUpdatableResult(element), value, ctx);
+      }
     } else if (target instanceof Map) {
       setValue((Map) target, value, ctx);
     }
@@ -449,13 +462,22 @@ public class OSuffixIdentifier extends SimpleNode {
 
   public OCollate getCollate(OResult currentRecord, OCommandContext ctx) {
     if (identifier != null && currentRecord != null) {
-      return currentRecord
-          .getRecord()
-          .map(x -> (OElement) x)
-          .flatMap(elem -> elem.getSchemaType())
-          .map(clazz -> clazz.getProperty(identifier.getStringValue()))
-          .map(prop -> prop.getCollate())
-          .orElse(null);
+      String clazz = currentRecord.getProperty("@class");
+      if (clazz != null && ctx.getDatabase() != null) {
+        OImmutableSchema schema =
+            ((OMetadataInternal) ctx.getDatabase().getMetadata()).getImmutableSchemaSnapshot();
+        OClass cl = schema.getClass(clazz);
+        if (cl == null) {
+          cl = schema.getView(clazz);
+        }
+        if (cl == null) {
+          return null;
+        }
+        OProperty prop = cl.getProperty(identifier.getStringValue());
+        if (prop != null) {
+          return prop.getCollate();
+        }
+      }
     }
     return null;
   }

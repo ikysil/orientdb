@@ -19,7 +19,7 @@ package com.orientechnologies.orient.object.metadata;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.index.OIndexManager;
 import com.orientechnologies.orient.core.index.OIndexManagerAbstract;
-import com.orientechnologies.orient.core.index.OIndexManagerProxy;
+import com.orientechnologies.orient.core.index.OSessionIndexManager;
 import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.metadata.OMetadataInternal;
 import com.orientechnologies.orient.core.metadata.function.OFunctionLibrary;
@@ -27,14 +27,13 @@ import com.orientechnologies.orient.core.metadata.schema.OImmutableSchema;
 import com.orientechnologies.orient.core.metadata.security.OSecurity;
 import com.orientechnologies.orient.core.metadata.sequence.OSequenceLibrary;
 import com.orientechnologies.orient.core.schedule.OScheduler;
-import com.orientechnologies.orient.object.metadata.schema.OSchemaProxyObject;
-import java.io.IOException;
+import com.orientechnologies.orient.object.metadata.schema.OSessionSchemaObject;
 
 /** @author Luca Molino (molino.luca--at--gmail.com) */
 public class OMetadataObject implements OMetadataInternal {
 
   protected OMetadataInternal underlying;
-  protected OSchemaProxyObject schema;
+  protected OSessionSchemaObject schema;
   private ODatabaseDocumentInternal database;
 
   public OMetadataObject(OMetadataInternal iUnderlying, ODatabaseDocumentInternal database) {
@@ -42,7 +41,7 @@ public class OMetadataObject implements OMetadataInternal {
     this.database = database;
   }
 
-  public OMetadataObject(OMetadataInternal iUnderlying, OSchemaProxyObject iSchema) {
+  public OMetadataObject(OMetadataInternal iUnderlying, OSessionSchemaObject iSchema) {
     underlying = iUnderlying;
     schema = iSchema;
   }
@@ -63,20 +62,8 @@ public class OMetadataObject implements OMetadataInternal {
   }
 
   @Override
-  @Deprecated
-  public void load() {
-    underlying.load();
-  }
-
-  @Override
-  @Deprecated
-  public void create() throws IOException {
-    underlying.create();
-  }
-
-  @Override
-  public OSchemaProxyObject getSchema() {
-    if (schema == null) schema = new OSchemaProxyObject(underlying.getSchema());
+  public OSessionSchemaObject getSchema() {
+    if (schema == null) schema = new OSessionSchemaObject(underlying.getSchema());
     return schema;
   }
 
@@ -89,7 +76,7 @@ public class OMetadataObject implements OMetadataInternal {
   @Deprecated
   @Override
   public OIndexManager getIndexManager() {
-    return new OIndexManagerProxy(underlying.getIndexManagerInternal(), database);
+    return new OSessionIndexManager(underlying.getIndexManagerInternal(), database);
   }
 
   @Override
@@ -98,19 +85,8 @@ public class OMetadataObject implements OMetadataInternal {
   }
 
   @Override
-  public int getSchemaClusterId() {
-    return underlying.getSchemaClusterId();
-  }
-
-  @Override
   public void reload() {
     underlying.reload();
-  }
-
-  @Override
-  @Deprecated
-  public void close() {
-    underlying.close();
   }
 
   @Override

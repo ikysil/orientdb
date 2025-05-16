@@ -34,12 +34,14 @@ import com.orientechnologies.orient.core.metadata.sequence.OSequenceAction;
 import com.orientechnologies.orient.core.record.OEdge;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.OVertex;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.binary.OBinarySerializerFactory;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
-import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
+import com.orientechnologies.orient.core.sql.executor.OInternalExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
-import com.orientechnologies.orient.core.storage.ORecordCallback;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
+import com.orientechnologies.orient.core.storage.OPhysicalPosition;
+import com.orientechnologies.orient.core.storage.ORawBuffer;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.ridbag.sbtree.OBonsaiCollectionPointer;
 import com.orientechnologies.orient.core.storage.ridbag.sbtree.OSBTreeCollectionManager;
@@ -48,6 +50,7 @@ import com.orientechnologies.orient.core.tx.OTransactionAbstract;
 import com.orientechnologies.orient.core.tx.OTransactionData;
 import com.orientechnologies.orient.core.tx.OTransactionInternal;
 import com.orientechnologies.orient.core.tx.OTransactionOptimistic;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -121,16 +124,9 @@ public interface ODatabaseDocumentInternal extends ODatabaseSession, ODatabaseIn
       final String fetchPlan,
       final boolean ignoreCache,
       final boolean iUpdateCache,
-      final boolean loadTombstones,
-      final OStorage.LOCKING_STRATEGY lockingStrategy,
       RecordReader recordReader);
 
-  void executeDeleteRecord(
-      OIdentifiable record,
-      final int iVersion,
-      final boolean iRequired,
-      final OPERATION_MODE iMode,
-      boolean prohibitTombstones);
+  void executeDeleteRecord(OIdentifiable record, final int iVersion, final boolean iRequired);
 
   void setDefaultTransactionMode(Map<ORID, OTransactionAbstract.LockedRecordMetadata> noTxLocks);
 
@@ -138,8 +134,6 @@ public interface ODatabaseDocumentInternal extends ODatabaseSession, ODatabaseIn
   OMetadataInternal getMetadata();
 
   ODatabaseDocumentInternal copy();
-
-  void recycle(ORecord record);
 
   void checkIfActive();
 
@@ -214,7 +208,7 @@ public interface ODatabaseDocumentInternal extends ODatabaseSession, ODatabaseIn
    * @return an OResultSet to fetch the results of the query execution
    */
   default OExecutionStream queryOnNode(
-      String nodeName, OExecutionPlan executionPlan, Map<Object, Object> inputParameters) {
+      String nodeName, OInternalExecutionPlan executionPlan, Map<Object, Object> inputParameters) {
     throw new UnsupportedOperationException();
   }
 
@@ -237,13 +231,7 @@ public interface ODatabaseDocumentInternal extends ODatabaseSession, ODatabaseIn
 
   void internalClose(boolean recycle);
 
-  ORecord saveAll(
-      ORecord iRecord,
-      String iClusterName,
-      OPERATION_MODE iMode,
-      boolean iForceCreate,
-      ORecordCallback<? extends Number> iRecordCreatedCallback,
-      ORecordCallback<Integer> iRecordUpdatedCallback);
+  ORecord saveAll(ORecord iRecord, String iClusterName, boolean iForceCreate);
 
   String getClusterName(final ORecord record);
 
@@ -314,4 +302,38 @@ public interface ODatabaseDocumentInternal extends ODatabaseSession, ODatabaseIn
   default void remoteRollback(OTransactionOptimistic oTransactionOptimistic) {
     throw new UnsupportedOperationException();
   }
+
+  default List<ODocument> queryLikeLegacy(
+      String text, Map<Object, Object> params, int limit, String fetchPlan) {
+    throw new UnsupportedOperationException();
+  }
+
+  default List<ODocument> commandLikeLegacy(String text, Map<Object, Object> parameters) {
+    throw new UnsupportedOperationException();
+  }
+
+  default List<ODocument> executeLikeLegacy(
+      String language, String text, Map<Object, Object> parameters) {
+    throw new UnsupportedOperationException();
+  }
+
+  OPhysicalPosition[] higherPhysicalPositions(int clusterId, OPhysicalPosition physicalPosition);
+
+  OPhysicalPosition[] lowerPhysicalPositions(int clusterId, OPhysicalPosition physicalPosition);
+
+  OPhysicalPosition[] ceilingPhysicalPositions(int clusterId, OPhysicalPosition physicalPosition);
+
+  OPhysicalPosition[] floorPhysicalPositions(int clusterId, OPhysicalPosition physicalPosition);
+
+  long countRecords();
+
+  boolean isReusable();
+
+  OBonsaiCollectionPointer createSBTree(int clusterId, UUID ownerUUID);
+
+  public ORawBuffer directRead(
+      ORecordId rid, String fetchPlan, boolean ignoreCache, int recordVersion);
+
+  public ORawBuffer readIfVersionIsNotLatest(
+      ORecordId rid, String fetchPlan, boolean ignoreCache, int recordVersion);
 }

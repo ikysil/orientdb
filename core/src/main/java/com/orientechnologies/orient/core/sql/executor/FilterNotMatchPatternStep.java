@@ -2,16 +2,15 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.List;
 
 public class FilterNotMatchPatternStep extends AbstractExecutionStep {
 
   private List<AbstractExecutionStep> subSteps;
 
-  public FilterNotMatchPatternStep(
-      List<AbstractExecutionStep> steps, OCommandContext ctx, boolean enableProfiling) {
-    super(ctx, enableProfiling);
+  public FilterNotMatchPatternStep(List<AbstractExecutionStep> steps) {
+    super();
     this.subSteps = steps;
   }
 
@@ -44,7 +43,7 @@ public class FilterNotMatchPatternStep extends AbstractExecutionStep {
   private OSelectExecutionPlan createExecutionPlan(OResult nextItem, OCommandContext ctx) {
     OSelectExecutionPlan plan = new OSelectExecutionPlan();
     plan.chain(
-        new AbstractExecutionStep(ctx, profilingEnabled) {
+        new AbstractExecutionStep() {
 
           @Override
           public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
@@ -67,24 +66,24 @@ public class FilterNotMatchPatternStep extends AbstractExecutionStep {
   }
 
   @Override
-  public List<OExecutionStep> getSubSteps() {
+  public List<OExecutionStepInternal> getSubSteps() {
     return (List) subSteps;
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ NOT (\n");
-    this.subSteps.forEach(x -> result.append(x.prettyPrint(depth + 1, indent)).append("\n"));
+    this.subSteps.forEach(
+        x -> {
+          ctx.incDepth();
+          result.append(x.prettyPrint(ctx)).append("\n");
+          ctx.decDepth();
+        });
     result.append(spaces);
     result.append("  )");
     return result.toString();
-  }
-
-  @Override
-  public void close() {
-    super.close();
   }
 }

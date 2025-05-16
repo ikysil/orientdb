@@ -2,16 +2,15 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OProjection;
 
 /** Created by luigidellaquila on 12/07/16. */
 public class ProjectionCalculationStep extends AbstractExecutionStep {
   protected final OProjection projection;
 
-  public ProjectionCalculationStep(
-      OProjection projection, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public ProjectionCalculationStep(OProjection projection) {
+    super();
     this.projection = projection;
   }
 
@@ -26,10 +25,10 @@ public class ProjectionCalculationStep extends AbstractExecutionStep {
   }
 
   private OResult mapResult(OResult result, OCommandContext ctx) {
-    Object oldCurrent = ctx.getVariable("$current");
-    ctx.setVariable("$current", result);
+    OResult oldCurrent = ctx.getCurrent();
+    ctx.setCurrent(result);
     OResult newResult = calculateProjections(ctx, result);
-    ctx.setVariable("$current", oldCurrent);
+    ctx.setCurrent(oldCurrent);
     return newResult;
   }
 
@@ -38,12 +37,12 @@ public class ProjectionCalculationStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
 
     String result = spaces + "+ CALCULATE PROJECTIONS";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     result += ("\n" + spaces + "  " + projection.toString() + "");
     return result;
@@ -55,7 +54,7 @@ public class ProjectionCalculationStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new ProjectionCalculationStep(projection.copy(), ctx, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new ProjectionCalculationStep(projection.copy());
   }
 }

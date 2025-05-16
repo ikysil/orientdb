@@ -2,16 +2,12 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
-import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.sql.executor.ForEachStep;
 import com.orientechnologies.orient.core.sql.executor.GlobalLetExpressionStep;
 import com.orientechnologies.orient.core.sql.executor.OForEachExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.executor.OUpdateExecutionPlan;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,61 +37,15 @@ public class OForEachBlock extends OStatement {
     this.statements.add(statement);
   }
 
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Object[] args, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    Map<Object, Object> params = new HashMap<>();
-    if (args != null) {
-      for (int i = 0; i < args.length; i++) {
-        params.put(i, args[i]);
-      }
-    }
-    ctx.setInputParameters(params);
-    OUpdateExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OUpdateExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Map params, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    ctx.setInputParameters(params);
-
-    OUpdateExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OUpdateExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  public OUpdateExecutionPlan createExecutionPlan(OCommandContext ctx, boolean enableProfiling) {
+  public OUpdateExecutionPlan createExecutionPlan(OCommandContext ctx) {
     OForEachExecutionPlan plan = new OForEachExecutionPlan();
     int nextProg = ++FOREACH_VARIABLE_PROGR;
     if (FOREACH_VARIABLE_PROGR < 0) {
       FOREACH_VARIABLE_PROGR = 0;
     }
     OIdentifier varName = new OIdentifier("$__ORIENTDB_FOREACH_VAR_" + nextProg);
-    plan.chain(new GlobalLetExpressionStep(varName, loopValues, ctx, enableProfiling));
-    plan.chain(
-        new ForEachStep(loopVariable, new OExpression(varName), statements, ctx, enableProfiling));
+    plan.chain(new GlobalLetExpressionStep(varName, loopValues));
+    plan.chain(new ForEachStep(loopVariable, new OExpression(varName), statements));
     return plan;
   }
 
@@ -154,21 +104,6 @@ public class OForEachBlock extends OStatement {
       builder.append("\n");
     }
     builder.append("}");
-  }
-
-  public boolean containsReturn() {
-    for (OStatement stm : this.statements) {
-      if (stm instanceof OReturnStatement) {
-        return true;
-      }
-      if (stm instanceof OForEachBlock && ((OForEachBlock) stm).containsReturn()) {
-        return true;
-      }
-      if (stm instanceof OIfStatement && ((OIfStatement) stm).containsReturn()) {
-        return true;
-      }
-    }
-    return false;
   }
 }
 /* JavaCC - OriginalChecksum=071053b057a38c57f3c90d28399615d0 (do not edit this line) */

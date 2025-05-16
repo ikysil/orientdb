@@ -3,15 +3,18 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
+import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
+import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class OBetweenCondition extends OBooleanExpression {
@@ -26,32 +29,6 @@ public class OBetweenCondition extends OBooleanExpression {
 
   public OBetweenCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object firstValue = first.execute(currentRecord, ctx);
-    if (firstValue == null) {
-      return false;
-    }
-
-    Object secondValue = second.execute(currentRecord, ctx);
-    if (secondValue == null) {
-      return false;
-    }
-
-    secondValue = OType.convert(secondValue, firstValue.getClass());
-
-    Object thirdValue = third.execute(currentRecord, ctx);
-    if (thirdValue == null) {
-      return false;
-    }
-    thirdValue = OType.convert(thirdValue, firstValue.getClass());
-
-    final int leftResult = ((Comparable<Object>) firstValue).compareTo(secondValue);
-    final int rightResult = ((Comparable<Object>) firstValue).compareTo(thirdValue);
-
-    return leftResult >= 0 && rightResult <= 0;
   }
 
   @Override
@@ -166,29 +143,6 @@ public class OBetweenCondition extends OBooleanExpression {
   }
 
   @Override
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
-    if (info.allowsRange()) {
-      if (first.isBaseIdentifier()) {
-        if (info.getField().equals(first.getDefaultAlias().getStringValue())) {
-          if (second != null && third != null) {
-            return second.isEarlyCalculated(info.getCtx())
-                && third.isEarlyCalculated(info.getCtx());
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    return this.second;
-  }
-
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    return this.third;
-  }
-
-  @Override
   protected int getNumberOfExternalCalculations() {
     return 0;
   }
@@ -294,6 +248,26 @@ public class OBetweenCondition extends OBooleanExpression {
     return true;
   }
 
+  public Optional<OIndexCandidate> findIndex(OIndexFinder info, OCommandContext ctx) {
+    Optional<OPath> path = first.getPath();
+    if (path.isPresent()) {
+      OPath p = path.get();
+      if (second.isEarlyCalculated(ctx) && third.isEarlyCalculated(ctx)) {
+        return info.findRange(p, this::secondValue, this::thirdValue, ctx);
+      }
+    }
+
+    return Optional.empty();
+  }
+
+  public Collection<Object> secondValue(OCommandContext ctx, boolean asc) {
+    return second.getIndexKey(ctx);
+  }
+
+  public Collection<Object> thirdValue(OCommandContext ctx, boolean asc) {
+    return third.getIndexKey(ctx);
+  }
+
   @Override
   public OBooleanExpression rewriteIndexChainsAsSubqueries(OCommandContext ctx, OClass clazz) {
     if (second.isEarlyCalculated(ctx)
@@ -354,16 +328,6 @@ public class OBetweenCondition extends OBooleanExpression {
     base.third = third.copy();
 
     return result;
-  }
-
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    return true;
-  }
-
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    return true;
   }
 }
 /* JavaCC - OriginalChecksum=f94f4779c4a6c6d09539446045ceca89 (do not edit this line) */

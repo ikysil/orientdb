@@ -26,9 +26,7 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OCommonConst;
-import com.orientechnologies.orient.core.command.OCommandRequest;
 import com.orientechnologies.orient.core.command.script.OCommandScriptException;
-import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.conflict.ORecordConflictStrategy;
 import com.orientechnologies.orient.core.db.ODatabase;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
@@ -38,7 +36,6 @@ import com.orientechnologies.orient.core.db.ODatabaseWrapperAbstract;
 import com.orientechnologies.orient.core.db.OLiveQueryMonitor;
 import com.orientechnologies.orient.core.db.OLiveQueryResultListener;
 import com.orientechnologies.orient.core.db.OSharedContext;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.db.object.ODatabaseObject;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ORecordElement;
@@ -57,9 +54,7 @@ import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.ORule;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
-import com.orientechnologies.orient.core.metadata.security.OToken;
 import com.orientechnologies.orient.core.metadata.security.OUser;
-import com.orientechnologies.orient.core.query.OQuery;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.ORecordInternal;
@@ -68,7 +63,6 @@ import com.orientechnologies.orient.core.serialization.serializer.record.OSerial
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.storage.ORecordCallback;
 import com.orientechnologies.orient.core.storage.OStorageInfo;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import com.orientechnologies.orient.core.tx.OTransactionNoTx;
@@ -112,13 +106,6 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
   protected boolean automaticSchemaGeneration;
   protected OMetadataObject metadata;
 
-  @Deprecated
-  public OObjectDatabaseTx(final String iURL) {
-    super(new ODatabaseDocumentTx(iURL));
-    underlying.setDatabaseOwner(this);
-    init();
-  }
-
   /**
    * Constructor to wrap an existing database connect for object connections
    *
@@ -140,29 +127,6 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
 
   public <RET> RET newInstance(String iClassName) {
     return (RET) newInstance(iClassName, null, OCommonConst.EMPTY_OBJECT_ARRAY);
-  }
-
-  @Override
-  public <THISDB extends ODatabase> THISDB open(String iUserName, String iUserPassword) {
-    super.open(iUserName, iUserPassword);
-    saveOnlyDirty =
-        getConfiguration().getValueAsBoolean(OGlobalConfiguration.OBJECT_SAVE_ONLY_DIRTY);
-
-    entityManager.registerEntityClass(OUser.class);
-    entityManager.registerEntityClass(ORole.class);
-    metadata = new OMetadataObject((OMetadataInternal) underlying.getMetadata(), underlying);
-    this.registerFieldMappingStrategy();
-    return (THISDB) this;
-  }
-
-  @Override
-  public <THISDB extends ODatabase> THISDB open(OToken iToken) {
-    super.open(iToken);
-    entityManager.registerEntityClass(OUser.class);
-    entityManager.registerEntityClass(ORole.class);
-    metadata = new OMetadataObject((OMetadataInternal) underlying.getMetadata(), underlying);
-    this.registerFieldMappingStrategy();
-    return (THISDB) this;
   }
 
   public OSecurityUser getUser() {
@@ -494,24 +458,7 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
    * stored separately.
    */
   public <RET> RET save(final Object iContent) {
-    return (RET) save(iContent, (String) null, OPERATION_MODE.SYNCHRONOUS, false, null, null);
-  }
-
-  /**
-   * Saves an object to the database specifying the mode. First checks if the object is new or not.
-   * In case it's new a new ODocument is created and bound to the object, otherwise the ODocument is
-   * retrieved and updated. The object is introspected using the Java Reflection to extract the
-   * field values. <br>
-   * If a multi value (array, collection or map of objects) is passed, then each single object is
-   * stored separately.
-   */
-  public <RET> RET save(
-      final Object iContent,
-      OPERATION_MODE iMode,
-      boolean iForceCreate,
-      final ORecordCallback<? extends Number> iRecordCreatedCallback,
-      ORecordCallback<Integer> iRecordUpdatedCallback) {
-    return (RET) save(iContent, null, iMode, false, iRecordCreatedCallback, iRecordUpdatedCallback);
+    return (RET) save(iContent, (String) null, false);
   }
 
   /**
@@ -528,7 +475,7 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
    * @see ODocument#validate()
    */
   public <RET> RET save(final Object iPojo, final String iClusterName) {
-    return (RET) save(iPojo, iClusterName, OPERATION_MODE.SYNCHRONOUS, false, null, null);
+    return (RET) save(iPojo, iClusterName, false);
   }
 
   /**
@@ -544,13 +491,7 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
    *
    * @see ODocument#validate()
    */
-  public <RET> RET save(
-      final Object iPojo,
-      final String iClusterName,
-      OPERATION_MODE iMode,
-      boolean iForceCreate,
-      final ORecordCallback<? extends Number> iRecordCreatedCallback,
-      ORecordCallback<Integer> iRecordUpdatedCallback) {
+  public <RET> RET save(final Object iPojo, final String iClusterName, boolean iForceCreate) {
     checkOpenness();
     if (iPojo == null) return (RET) iPojo;
     else if (OMultiValue.isMultiValue(iPojo)) {
@@ -573,14 +514,7 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
           // registerUserObject(iPojo, record);
           deleteOrphans((((OObjectProxyMethodHandler) ((ProxyObject) proxiedObject).getHandler())));
 
-          ODocument savedRecord =
-              underlying.save(
-                  record,
-                  iClusterName,
-                  iMode,
-                  iForceCreate,
-                  iRecordCreatedCallback,
-                  iRecordUpdatedCallback);
+          ODocument savedRecord = underlying.save(record, iClusterName, iForceCreate);
 
           ((OObjectProxyMethodHandler) ((ProxyObject) proxiedObject).getHandler())
               .setDoc(savedRecord);
@@ -685,11 +619,6 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
 
   public OObjectDatabaseTx begin(final OTransaction.TXTYPE iType) {
     underlying.begin(iType);
-    return this;
-  }
-
-  public OObjectDatabaseTx begin(final OTransaction iTx) {
-    underlying.begin(iTx);
     return this;
   }
 
@@ -1022,56 +951,6 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
   }
 
   /**
-   * Register the static document binary mapping mode in the database context (only if it's not
-   * already set)
-   */
-  private void registerFieldMappingStrategy() {
-    if (!this.getConfiguration()
-        .getContextKeys()
-        .contains(OGlobalConfiguration.DOCUMENT_BINARY_MAPPING.getKey())) {
-      this.getConfiguration()
-          .setValue(
-              OGlobalConfiguration.DOCUMENT_BINARY_MAPPING,
-              OGlobalConfiguration.DOCUMENT_BINARY_MAPPING.getValueAsInteger());
-    }
-  }
-
-  /**
-   * Returns a wrapped OCommandRequest instance to catch the result-set by converting it before to
-   * return to the user application.
-   */
-  public <RET extends OCommandRequest> RET command(final OCommandRequest iCommand) {
-    return (RET) new OCommandSQLPojoWrapper(this, underlying.command(iCommand));
-  }
-
-  @Override
-  public <RET extends List<?>> RET query(OQuery<?> iCommand, Object... iArgs) {
-    checkOpenness();
-
-    convertParameters(iArgs);
-
-    final List<ODocument> result = underlying.query(iCommand, iArgs);
-
-    if (result == null) return null;
-
-    final List<Object> resultPojo = new ArrayList<Object>();
-    Object obj;
-    for (OIdentifiable doc : result) {
-      if (doc instanceof ODocument) {
-        // GET THE ASSOCIATED DOCUMENT
-        if (((ODocument) doc).getClassName() == null) obj = doc;
-        else obj = getUserObjectByRecord(((ODocument) doc), iCommand.getFetchPlan(), true);
-
-        resultPojo.add(obj);
-      } else {
-        resultPojo.add(doc);
-      }
-    }
-
-    return (RET) resultPojo;
-  }
-
-  /**
    * Converts an array of parameters: if a POJO is used, then replace it with its record id.
    *
    * @param iArgs Array of parameters as Object
@@ -1149,39 +1028,6 @@ public class OObjectDatabaseTx extends ODatabaseWrapperAbstract<ODatabaseDocumen
       }
 
     return iParameter;
-  }
-
-  @Deprecated
-  public boolean isMVCC() {
-    return underlying.isMVCC();
-  }
-
-  @Deprecated
-  public <DBTYPE extends ODatabase<?>> DBTYPE setMVCC(final boolean iMvcc) {
-    underlying.setMVCC(iMvcc);
-    return (DBTYPE) this;
-  }
-
-  /**
-   * Returns true if current configuration retains objects, otherwise false
-   *
-   * @see #setRetainObjects(boolean)
-   */
-  @Deprecated
-  public boolean isRetainObjects() {
-    return false;
-  }
-
-  /**
-   * Specifies if retain handled objects in memory or not. Setting it to false can improve
-   * performance on large inserts. Default is enabled.
-   *
-   * @param iValue True to enable, false to disable it.
-   * @see #isRetainObjects()
-   */
-  @Deprecated
-  public OObjectDatabaseTx setRetainObjects(final boolean iValue) {
-    return this;
   }
 
   @Override

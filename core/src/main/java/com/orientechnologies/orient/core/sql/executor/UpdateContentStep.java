@@ -11,7 +11,7 @@ import com.orientechnologies.orient.core.metadata.security.OSecurity;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OInputParameter;
 import com.orientechnologies.orient.core.sql.parser.OJson;
 import java.util.HashMap;
@@ -22,14 +22,13 @@ public class UpdateContentStep extends AbstractExecutionStep {
   private OJson json;
   private OInputParameter inputParameter;
 
-  public UpdateContentStep(OJson json, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public UpdateContentStep(OJson json) {
+    super();
     this.json = json;
   }
 
-  public UpdateContentStep(
-      OInputParameter inputParameter, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public UpdateContentStep(OInputParameter inputParameter) {
+    super();
     this.inputParameter = inputParameter;
   }
 
@@ -137,8 +136,8 @@ public class UpdateContentStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ UPDATE CONTENT\n");

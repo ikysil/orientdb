@@ -3,12 +3,14 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
+import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
+import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class OIsNullCondition extends OBooleanExpression {
@@ -21,11 +23,6 @@ public class OIsNullCondition extends OBooleanExpression {
 
   public OIsNullCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    return expression.execute(currentRecord, ctx) == null;
   }
 
   @Override
@@ -125,37 +122,15 @@ public class OIsNullCondition extends OBooleanExpression {
     return false;
   }
 
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
+  @Override
+  public Optional<OIndexCandidate> findIndex(OIndexFinder info, OCommandContext ctx) {
     if (expression.isBaseIdentifier()) {
-      if (info.getField().equals(expression.getDefaultAlias().getStringValue())) {
-        return info.isSupportNull();
+      Optional<OPath> path = expression.getPath();
+      if (path.isPresent()) {
+        return info.findNull(path.get(), ctx);
       }
     }
-    return false;
-  }
-
-  @Override
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    OExpression exp = new OExpression(-1);
-    exp.setNull(true);
-    return exp;
-  }
-
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    return true;
-  }
-
-  @Override
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    OExpression exp = new OExpression(-1);
-    exp.setNull(true);
-    return exp;
-  }
-
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    return true;
+    return Optional.empty();
   }
 
   @Override

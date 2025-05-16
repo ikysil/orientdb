@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -30,30 +30,24 @@ import java.util.stream.Collectors;
  *
  * @author Luigi Dell'Aquila l.dellaquila - at - orientdb.com
  */
-public interface OExecutionStepInternal extends OExecutionStep {
+public interface OExecutionStepInternal {
 
   OExecutionStream start(OCommandContext ctx) throws OTimeoutException;
 
-  void sendTimeout();
-
   void setPrevious(OExecutionStepInternal step);
 
-  void setNext(OExecutionStepInternal step);
-
-  void close();
-
-  static String getIndent(int depth, int indent) {
+  static String getIndent(OPrintContext ctx) {
     StringBuilder result = new StringBuilder();
-    for (int i = 0; i < depth; i++) {
-      for (int j = 0; j < indent; j++) {
+    for (int i = 0; i < ctx.getDepth(); i++) {
+      for (int j = 0; j < ctx.getIdent(); j++) {
         result.append(" ");
       }
     }
     return result.toString();
   }
 
-  default String prettyPrint(int depth, int indent) {
-    String spaces = getIndent(depth, indent);
+  default String prettyPrint(OPrintContext ctx) {
+    String spaces = getIndent(ctx);
     return spaces + getClass().getSimpleName();
   }
 
@@ -65,24 +59,16 @@ public interface OExecutionStepInternal extends OExecutionStep {
     return getClass().getSimpleName();
   }
 
-  default String getDescription() {
-    return prettyPrint(0, 3);
-  }
-
   default String getTargetNode() {
     return "<local>";
   }
 
-  default List<OExecutionStep> getSubSteps() {
+  default List<OExecutionStepInternal> getSubSteps() {
     return Collections.EMPTY_LIST;
   }
 
-  default List<OExecutionPlan> getSubExecutionPlans() {
+  default List<OInternalExecutionPlan> getSubExecutionPlans() {
     return Collections.EMPTY_LIST;
-  }
-
-  default void reset() {
-    // do nothing
   }
 
   default OResult serialize() {
@@ -98,7 +84,7 @@ public interface OExecutionStepInternal extends OExecutionStep {
     result.setProperty(OInternalExecutionPlan.JAVA_TYPE, step.getClass().getName());
     if (step.getSubSteps() != null && step.getSubSteps().size() > 0) {
       List<OResult> serializedSubsteps = new ArrayList<>();
-      for (OExecutionStep substep : step.getSubSteps()) {
+      for (OExecutionStepInternal substep : step.getSubSteps()) {
         serializedSubsteps.add(((OExecutionStepInternal) substep).serialize());
       }
       result.setProperty("subSteps", serializedSubsteps);
@@ -106,7 +92,7 @@ public interface OExecutionStepInternal extends OExecutionStep {
 
     if (step.getSubExecutionPlans() != null && step.getSubExecutionPlans().size() > 0) {
       List<OResult> serializedSubPlans = new ArrayList<>();
-      for (OExecutionPlan substep : step.getSubExecutionPlans()) {
+      for (OInternalExecutionPlan substep : step.getSubExecutionPlans()) {
         serializedSubPlans.add(((OInternalExecutionPlan) substep).serialize());
       }
       result.setProperty("subExecutionPlans", serializedSubPlans);
@@ -139,7 +125,7 @@ public interface OExecutionStepInternal extends OExecutionStep {
     }
   }
 
-  default OExecutionStep copy(OCommandContext ctx) {
+  default OExecutionStepInternal copy(OCommandContext ctx) {
     throw new UnsupportedOperationException();
   }
 
@@ -148,31 +134,38 @@ public interface OExecutionStepInternal extends OExecutionStep {
   }
 
   default OResult toResult() {
-    OResultInternal result = new OResultInternal();
-    result.setProperty("name", getName());
-    result.setProperty("type", getType());
-    result.setProperty("targetNode", getType());
-    result.setProperty(OInternalExecutionPlan.JAVA_TYPE, getClass().getName());
-    result.setProperty("cost", getCost());
-    result.setProperty(
-        "subSteps",
-        getSubSteps() == null
-            ? null
-            : getSubSteps().stream().map(x -> x.toResult()).collect(Collectors.toList()));
-    result.setProperty("description", getDescription());
-    serializeToResult(result);
-    return result;
+    return toResult(new OToResultContextImpl());
   }
 
-  default void serializeToResult(OResultInternal result) {}
+  default void serializeToResult(OResultInternal result, OToResultContext ctx) {}
 
-  static void fillIndexes(OExecutionStep step, Set<String> indexes) {
-    for (OExecutionStep chilStep : step.getSubSteps()) {
+  static void fillIndexes(OExecutionStepInternal step, Set<String> indexes) {
+    for (OExecutionStepInternal chilStep : step.getSubSteps()) {
       fillIndexes(chilStep, indexes);
     }
     String index = step.toResult().getProperty("index");
     if (index != null) {
       indexes.add(index);
     }
+  }
+
+  default OResult toResult(OToResultContext ctx) {
+    OResultInternal result = new OResultInternal();
+    result.setProperty("name", getName());
+    result.setProperty("type", getType());
+    result.setProperty("targetNode", getType());
+    result.setProperty(OInternalExecutionPlan.JAVA_TYPE, getClass().getName());
+    result.setProperty("cost", ctx.getCost(this));
+    result.setProperty(
+        "subSteps",
+        getSubSteps() == null
+            ? null
+            : getSubSteps().stream()
+                .map(x -> ((OExecutionStepInternal) x).toResult(ctx))
+                .collect(Collectors.toList()));
+    String description = prettyPrint(new OPrintContexImpl(ctx.getContext(), 0, 3));
+    result.setProperty("description", description);
+    serializeToResult(result, ctx);
+    return result;
   }
 }

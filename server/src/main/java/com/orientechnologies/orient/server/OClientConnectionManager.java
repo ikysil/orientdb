@@ -25,7 +25,6 @@ import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.profiler.OAbstractProfiler.OProfilerHookValue;
 import com.orientechnologies.common.profiler.OProfiler.METRIC_TYPE;
 import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.security.OParsedToken;
@@ -114,11 +113,6 @@ public class OClientConnectionManager {
                 "[OClientConnectionManager] found and removed pending closed channel %d (%s)",
                 entry.getKey(), socket);
             try {
-              OCommandRequestText command = entry.getValue().getData().command;
-              if (command != null && command.isIdempotent()) {
-                entry.getValue().getProtocol().sendShutdown();
-                entry.getValue().getProtocol().interrupt();
-              }
               removeConnectionFromSession(entry.getValue());
               entry.getValue().close();
 
@@ -455,46 +449,41 @@ public class OClientConnectionManager {
 
       logger.debug("Sending shutdown to thread %s", protocol);
 
-      OCommandRequestText command = entry.getValue().getData().command;
-      if (command != null && command.isIdempotent()) {
-        protocol.interrupt();
-      } else {
+      if (protocol instanceof ONetworkProtocolBinary
+          && ((ONetworkProtocolBinary) protocol).getRequestType()
+              == OChannelBinaryProtocol.REQUEST_SHUTDOWN) {
+        continue;
+      }
+
+      final Socket socket;
+      if (protocol == null || protocol.getChannel() == null) socket = null;
+      else socket = protocol.getChannel().socket;
+
+      if (socket != null && !socket.isClosed() && !socket.isInputShutdown()) {
+        try {
+          logger.debug("Closing input socket of thread %s", protocol);
+          if (!(socket
+              instanceof SSLSocket)) // An SSLSocket will throw an UnsupportedOperationException.
+          socket.shutdownInput();
+        } catch (IOException e) {
+          logger.debug(
+              "Error on closing connection of %s client during shutdown",
+              e, entry.getValue().getRemoteAddress());
+        }
+      }
+      if (protocol.isAlive()) {
         if (protocol instanceof ONetworkProtocolBinary
-            && ((ONetworkProtocolBinary) protocol).getRequestType()
-                == OChannelBinaryProtocol.REQUEST_SHUTDOWN) {
-          continue;
-        }
-
-        final Socket socket;
-        if (protocol == null || protocol.getChannel() == null) socket = null;
-        else socket = protocol.getChannel().socket;
-
-        if (socket != null && !socket.isClosed() && !socket.isInputShutdown()) {
+            && ((ONetworkProtocolBinary) protocol).getRequestType() == -1) {
           try {
-            logger.debug("Closing input socket of thread %s", protocol);
-            if (!(socket
-                instanceof SSLSocket)) // An SSLSocket will throw an UnsupportedOperationException.
-            socket.shutdownInput();
-          } catch (IOException e) {
-            logger.debug(
-                "Error on closing connection of %s client during shutdown",
-                e, entry.getValue().getRemoteAddress());
+            logger.debug("Closing socket of thread %s", protocol);
+            protocol.getChannel().close();
+          } catch (Exception e) {
+            logger.debug("Error during chanel close at shutdown", e);
           }
+          logger.debug("Sending interrupt signal to thread %s", protocol);
+          protocol.interrupt();
         }
-        if (protocol.isAlive()) {
-          if (protocol instanceof ONetworkProtocolBinary
-              && ((ONetworkProtocolBinary) protocol).getRequestType() == -1) {
-            try {
-              logger.debug("Closing socket of thread %s", protocol);
-              protocol.getChannel().close();
-            } catch (Exception e) {
-              logger.debug("Error during chanel close at shutdown", e);
-            }
-            logger.debug("Sending interrupt signal to thread %s", protocol);
-            protocol.interrupt();
-          }
-          toWait.add(protocol);
-        }
+        toWait.add(protocol);
       }
     }
 

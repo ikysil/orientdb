@@ -53,75 +53,59 @@ public class OInsertExecutionPlanner {
     this.unsafe = statement.isUnsafe();
   }
 
-  public OInsertExecutionPlan createExecutionPlan(OCommandContext ctx, boolean enableProfiling) {
+  public OInsertExecutionPlan createExecutionPlan(OCommandContext ctx) {
     OInsertExecutionPlan result = new OInsertExecutionPlan();
 
     if (targetIndex != null) {
       OIndexAbstract.manualIndexesWarning();
-      result.chain(new InsertIntoIndexStep(targetIndex, insertBody, ctx, enableProfiling));
+      result.chain(new InsertIntoIndexStep(targetIndex, insertBody));
     } else {
       if (selectStatement != null) {
-        handleInsertSelect(result, this.selectStatement, ctx, enableProfiling);
-        handleTargetClass(result, ctx, enableProfiling);
+        handleInsertSelect(result, this.selectStatement, ctx);
+        handleTargetClass(result, ctx);
       } else {
-        handleCreateRecord(result, this.insertBody, ctx, enableProfiling);
+        handleCreateRecord(result, this.insertBody, ctx);
       }
-      handleSetFields(result, insertBody, ctx, enableProfiling);
+      handleSetFields(result, insertBody);
       ODatabaseSession database = ctx.getDatabase();
       if (targetCluster != null) {
         String name = targetCluster.getClusterName();
         if (name == null) {
           name = database.getClusterNameById(targetCluster.getClusterNumber());
         }
-        handleSave(result, new OIdentifier(name), ctx, enableProfiling);
+        handleSave(result, new OIdentifier(name));
       } else {
-        handleSave(result, targetClusterName, ctx, enableProfiling);
+        handleSave(result, targetClusterName);
       }
-      handleReturn(result, returnStatement, ctx, enableProfiling);
+      handleReturn(result, returnStatement);
     }
     return result;
   }
 
-  private void handleSave(
-      OInsertExecutionPlan result,
-      OIdentifier targetClusterName,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    result.chain(new SaveElementStep(ctx, targetClusterName, profilingEnabled));
+  private void handleSave(OInsertExecutionPlan result, OIdentifier targetClusterName) {
+    result.chain(new SaveElementStep(targetClusterName));
   }
 
-  private void handleReturn(
-      OInsertExecutionPlan result,
-      OProjection returnStatement,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
+  private void handleReturn(OInsertExecutionPlan result, OProjection returnStatement) {
     if (returnStatement != null) {
-      result.chain(new ProjectionCalculationStep(returnStatement, ctx, profilingEnabled));
+      result.chain(new ProjectionCalculationStep(returnStatement));
     }
   }
 
-  private void handleSetFields(
-      OInsertExecutionPlan result,
-      OInsertBody insertBody,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
+  private void handleSetFields(OInsertExecutionPlan result, OInsertBody insertBody) {
     if (insertBody == null) {
       return;
     }
     if (insertBody.getIdentifierList() != null) {
       result.chain(
-          new InsertValuesStep(
-              insertBody.getIdentifierList(),
-              insertBody.getValueExpressions(),
-              ctx,
-              profilingEnabled));
+          new InsertValuesStep(insertBody.getIdentifierList(), insertBody.getValueExpressions()));
     } else if (insertBody.getContent() != null) {
       for (OJson json : insertBody.getContent()) {
-        result.chain(new UpdateContentStep(json, ctx, profilingEnabled));
+        result.chain(new UpdateContentStep(json));
       }
     } else if (insertBody.getContentInputParam() != null) {
       for (OInputParameter inputParam : insertBody.getContentInputParam()) {
-        result.chain(new UpdateContentStep(inputParam, ctx, profilingEnabled));
+        result.chain(new UpdateContentStep(inputParam));
       }
     } else if (insertBody.getSetExpressions() != null) {
       List<OUpdateItem> items = new ArrayList<>();
@@ -132,16 +116,15 @@ public class OInsertExecutionPlanner {
         item.setRight(exp.getRight().copy());
         items.add(item);
       }
-      result.chain(new UpdateSetStep(items, ctx, profilingEnabled));
+      result.chain(new UpdateSetStep(items));
     }
   }
 
-  private void handleTargetClass(
-      OInsertExecutionPlan result, OCommandContext ctx, boolean profilingEnabled) {
+  private void handleTargetClass(OInsertExecutionPlan result, OCommandContext ctx) {
     ODatabaseSession database = ctx.getDatabase();
     Optional<String> tc = resolveTargetClass(database);
     if (tc.isPresent()) {
-      result.chain(new SetDocumentClassStep(tc.get(), ctx, profilingEnabled));
+      result.chain(new SetDocumentClassStep(tc.get()));
     }
   }
 
@@ -189,10 +172,7 @@ public class OInsertExecutionPlanner {
   }
 
   private void handleCreateRecord(
-      OInsertExecutionPlan result,
-      OInsertBody body,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
+      OInsertExecutionPlan result, OInsertBody body, OCommandContext ctx) {
     int tot = 1;
 
     if (body != null
@@ -213,17 +193,14 @@ public class OInsertExecutionPlanner {
       }
     }
     Optional<String> cl = resolveTargetClass(ctx.getDatabase());
-    result.chain(new CreateRecordStep(ctx, tot, profilingEnabled, cl));
+    result.chain(new CreateRecordStep(tot, cl));
   }
 
   private void handleInsertSelect(
-      OInsertExecutionPlan result,
-      OSelectStatement selectStatement,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    OInternalExecutionPlan subPlan = selectStatement.createExecutionPlan(ctx, profilingEnabled);
-    result.chain(new SubQueryStep(subPlan, ctx, ctx, profilingEnabled));
-    result.chain(new CopyDocumentStep(ctx, profilingEnabled));
-    result.chain(new RemoveEdgePointersStep(ctx, profilingEnabled));
+      OInsertExecutionPlan result, OSelectStatement selectStatement, OCommandContext ctx) {
+    OInternalExecutionPlan subPlan = selectStatement.createExecutionPlan(ctx);
+    result.chain(new SubQueryStep(subPlan, ctx, ctx));
+    result.chain(new CopyDocumentStep());
+    result.chain(new RemoveEdgePointersStep());
   }
 }

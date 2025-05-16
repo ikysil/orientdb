@@ -50,15 +50,8 @@ public class OCreateEdgeExecutionPlanner {
     this.batch = statement.getBatch() == null ? null : statement.getBatch().copy();
   }
 
-  public OInsertExecutionPlan createExecutionPlan(
-      OCommandContext ctx, boolean enableProfiling, boolean useCache) {
+  public OInsertExecutionPlan createExecutionPlan(OCommandContext ctx, boolean useCache) {
     ODatabaseDocumentInternal db = (ODatabaseDocumentInternal) ctx.getDatabase();
-    if (useCache && !enableProfiling && statement.executinPlanCanBeCached()) {
-      OExecutionPlan plan = OExecutionPlanCache.get(statement.getOriginalStatement(), ctx, db);
-      if (plan != null) {
-        return (OInsertExecutionPlan) plan;
-      }
-    }
 
     long planningStart = System.currentTimeMillis();
 
@@ -80,20 +73,10 @@ public class OCreateEdgeExecutionPlanner {
 
     OInsertExecutionPlan result = new OInsertExecutionPlan();
 
-    handleCheckType(result, ctx, enableProfiling);
+    handleCheckType(result);
 
-    handleGlobalLet(
-        result,
-        new OIdentifier("$__ORIENT_CREATE_EDGE_fromV"),
-        leftExpression,
-        ctx,
-        enableProfiling);
-    handleGlobalLet(
-        result,
-        new OIdentifier("$__ORIENT_CREATE_EDGE_toV"),
-        rightExpression,
-        ctx,
-        enableProfiling);
+    handleGlobalLet(result, new OIdentifier("$__ORIENT_CREATE_EDGE_fromV"), leftExpression);
+    handleGlobalLet(result, new OIdentifier("$__ORIENT_CREATE_EDGE_toV"), rightExpression);
 
     String uniqueIndexName = null;
     if (upsert) {
@@ -135,16 +118,14 @@ public class OCreateEdgeExecutionPlanner {
             new OIdentifier("$__ORIENT_CREATE_EDGE_toV"),
             wait,
             retry,
-            batch,
-            ctx,
-            enableProfiling));
+            batch));
 
-    handleSetFields(result, body, ctx, enableProfiling);
-    handleSave(result, targetClusterName, ctx, enableProfiling);
+    handleSetFields(result, body);
+    handleSave(result, targetClusterName);
     // TODO implement batch, wait and retry
 
     if (useCache
-        && !enableProfiling
+        && !ctx.isProfiling()
         && statement.executinPlanCanBeCached()
         && result.canBeCached()
         && OExecutionPlanCache.getLastInvalidation(db) < planningStart) {
@@ -156,52 +137,34 @@ public class OCreateEdgeExecutionPlanner {
   }
 
   private void handleGlobalLet(
-      OInsertExecutionPlan result,
-      OIdentifier name,
-      OExpression expression,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    result.chain(new GlobalLetExpressionStep(name, expression, ctx, profilingEnabled));
+      OInsertExecutionPlan result, OIdentifier name, OExpression expression) {
+    result.chain(new GlobalLetExpressionStep(name, expression));
   }
 
-  private void handleCheckType(
-      OInsertExecutionPlan result, OCommandContext ctx, boolean profilingEnabled) {
+  private void handleCheckType(OInsertExecutionPlan result) {
     if (targetClass != null) {
-      result.chain(
-          new CheckClassTypeStep(targetClass.getStringValue(), "E", ctx, profilingEnabled));
+      result.chain(new CheckClassTypeStep(targetClass.getStringValue(), "E"));
     }
   }
 
-  private void handleSave(
-      OInsertExecutionPlan result,
-      OIdentifier targetClusterName,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    result.chain(new SaveElementStep(ctx, targetClusterName, profilingEnabled));
+  private void handleSave(OInsertExecutionPlan result, OIdentifier targetClusterName) {
+    result.chain(new SaveElementStep(targetClusterName));
   }
 
-  private void handleSetFields(
-      OInsertExecutionPlan result,
-      OInsertBody insertBody,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
+  private void handleSetFields(OInsertExecutionPlan result, OInsertBody insertBody) {
     if (insertBody == null) {
       return;
     }
     if (insertBody.getIdentifierList() != null) {
       result.chain(
-          new InsertValuesStep(
-              insertBody.getIdentifierList(),
-              insertBody.getValueExpressions(),
-              ctx,
-              profilingEnabled));
+          new InsertValuesStep(insertBody.getIdentifierList(), insertBody.getValueExpressions()));
     } else if (insertBody.getContent() != null) {
       for (OJson json : insertBody.getContent()) {
-        result.chain(new UpdateContentStep(json, ctx, profilingEnabled));
+        result.chain(new UpdateContentStep(json));
       }
     } else if (insertBody.getContentInputParam() != null) {
       for (OInputParameter inputParam : insertBody.getContentInputParam()) {
-        result.chain(new UpdateContentStep(inputParam, ctx, profilingEnabled));
+        result.chain(new UpdateContentStep(inputParam));
       }
     } else if (insertBody.getSetExpressions() != null) {
       List<OUpdateItem> items = new ArrayList<>();
@@ -212,7 +175,7 @@ public class OCreateEdgeExecutionPlanner {
         item.setRight(exp.getRight().copy());
         items.add(item);
       }
-      result.chain(new UpdateSetStep(items, ctx, profilingEnabled));
+      result.chain(new UpdateSetStep(items));
     }
   }
 }

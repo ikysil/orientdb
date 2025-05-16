@@ -36,13 +36,4 @@ public interface OFunctionLibrary {
   void dropFunction(String iName);
 
   void dropFunction(OFunction function);
-
-  @Deprecated
-  void create();
-
-  @Deprecated
-  void load();
-
-  @Deprecated
-  void close();
 }

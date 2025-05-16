@@ -7,6 +7,8 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunctionFiltered;
 
 /** Created by luigidellaquila on 03/01/17. */
@@ -26,7 +28,7 @@ public abstract class OSQLFunctionMoveFiltered extends OSQLFunctionMove
   @Override
   public Object execute(
       final Object iThis,
-      final OIdentifiable iCurrentRecord,
+      final OResult current,
       final Object iCurrentResult,
       final Object[] iParameters,
       final Iterable<OIdentifiable> iPossibleResults,
@@ -50,7 +52,8 @@ public abstract class OSQLFunctionMoveFiltered extends OSQLFunctionMove
         new OCallable<Object, OIdentifiable>() {
           @Override
           public Object call(final OIdentifiable iArgument) {
-            return move(iContext.getDatabase(), iArgument, labels, iPossibleResults);
+            return move(
+                iContext.getDatabase(), new OResultInternal(iArgument), labels, iPossibleResults);
           }
         },
         iThis,
@@ -59,7 +62,7 @@ public abstract class OSQLFunctionMoveFiltered extends OSQLFunctionMove
 
   protected abstract Object move(
       ODatabaseSession graph,
-      OIdentifiable iArgument,
+      OResult iArgument,
       String[] labels,
       Iterable<OIdentifiable> iPossibleResults);
 }

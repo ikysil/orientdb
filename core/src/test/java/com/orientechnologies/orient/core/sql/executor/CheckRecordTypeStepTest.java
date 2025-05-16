@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
@@ -19,9 +19,9 @@ public class CheckRecordTypeStepTest extends TestUtilsFixture {
   public void shouldCheckRecordsOfOneType() {
     OCommandContext context = new OBasicCommandContext(db);
     String className = createClassInstance().getName();
-    CheckRecordTypeStep step = new CheckRecordTypeStep(context, className, false);
+    CheckRecordTypeStep step = new CheckRecordTypeStep(className);
     AbstractExecutionStep previous =
-        new AbstractExecutionStep(context, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -33,7 +33,7 @@ public class CheckRecordTypeStepTest extends TestUtilsFixture {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 
@@ -48,9 +48,9 @@ public class CheckRecordTypeStepTest extends TestUtilsFixture {
     OCommandContext context = new OBasicCommandContext(db);
     OClass parentClass = createClassInstance();
     OClass childClass = createChildClassInstance(parentClass);
-    CheckRecordTypeStep step = new CheckRecordTypeStep(context, parentClass.getName(), false);
+    CheckRecordTypeStep step = new CheckRecordTypeStep(parentClass.getName());
     AbstractExecutionStep previous =
-        new AbstractExecutionStep(context, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -63,7 +63,7 @@ public class CheckRecordTypeStepTest extends TestUtilsFixture {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 
@@ -78,9 +78,9 @@ public class CheckRecordTypeStepTest extends TestUtilsFixture {
     OCommandContext context = new OBasicCommandContext(db);
     String firstClassName = createClassInstance().getName();
     String secondClassName = createClassInstance().getName();
-    CheckRecordTypeStep step = new CheckRecordTypeStep(context, firstClassName, false);
+    CheckRecordTypeStep step = new CheckRecordTypeStep(firstClassName);
     AbstractExecutionStep previous =
-        new AbstractExecutionStep(context, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -94,7 +94,7 @@ public class CheckRecordTypeStepTest extends TestUtilsFixture {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 

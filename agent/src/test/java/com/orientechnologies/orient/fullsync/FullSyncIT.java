@@ -1,6 +1,5 @@
 package com.orientechnologies.orient.fullsync;
 
-import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.OrientDB;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
@@ -11,7 +10,6 @@ public class FullSyncIT {
 
   @Test
   public void test() throws Exception {
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     OServer server0 = OServer.startFromClasspathConfig("orientdb-simple-dserver-config-0.xml");
     OServer server1 = OServer.startFromClasspathConfig("orientdb-simple-dserver-config-1.xml");
     OServer server2 = OServer.startFromClasspathConfig("orientdb-simple-dserver-config-2.xml");

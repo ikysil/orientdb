@@ -6,10 +6,9 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.command.script.transformer.OScriptTransformer;
-import com.orientechnologies.orient.core.command.traverse.OAbstractScriptExecutor;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.metadata.security.ORule;
@@ -151,9 +150,6 @@ public class OPolyglotScriptExecutor extends OAbstractScriptExecutor
       OCommandContext context, final String functionName, final Map<Object, Object> iArgs) {
 
     ODatabaseDocumentInternal database = (ODatabaseDocumentInternal) context.getDatabase();
-    if (database == null) {
-      database = ODatabaseRecordThreadLocal.instance().get();
-    }
     final OFunction f = database.getMetadata().getFunctionLibrary().getFunction(functionName);
 
     database.checkSecurity(ORule.ResourceGeneric.FUNCTION, ORole.PERMISSION_READ, f.getName());
@@ -177,7 +173,7 @@ public class OPolyglotScriptExecutor extends OAbstractScriptExecutor
       } else if (result.hasArrayElements()) {
         final List<Object> array = new ArrayList<>((int) result.getArraySize());
         for (int i = 0; i < result.getArraySize(); ++i)
-          array.add(new OResultInternal(result.getArrayElement(i).asHostObject()));
+          array.add(new OResultInternal((OIdentifiable) result.getArrayElement(i).asHostObject()));
         finalResult = array;
       } else if (result.isHostObject()) {
         finalResult = result.asHostObject();

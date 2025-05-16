@@ -36,8 +36,8 @@ import com.orientechnologies.orient.core.exception.OConcurrentModificationExcept
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.metadata.OMetadata;
-import com.orientechnologies.orient.core.metadata.OMetadataDefault;
 import com.orientechnologies.orient.core.metadata.OMetadataInternal;
+import com.orientechnologies.orient.core.metadata.OSessionMetadata;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OClassImpl;
 import com.orientechnologies.orient.core.metadata.schema.OSchemaShared;
@@ -48,7 +48,6 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sharding.auto.OAutoShardingIndexFactory;
 import com.orientechnologies.orient.core.storage.OStorage;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -82,8 +81,8 @@ public class OIndexManagerShared implements OIndexManagerAbstract {
   protected final Map<String, Map<OMultiKey, Set<OIndex>>> classPropertyIndex =
       new ConcurrentHashMap<>();
   protected Map<String, OIndex> indexes = new ConcurrentHashMap<>();
-  protected String defaultClusterName = OMetadataDefault.CLUSTER_INDEX_NAME;
-  protected String manualClusterName = OMetadataDefault.CLUSTER_MANUAL_INDEX_NAME;
+  protected String defaultClusterName = OSessionMetadata.CLUSTER_INDEX_NAME;
+  protected String manualClusterName = OSessionMetadata.CLUSTER_MANUAL_INDEX_NAME;
   protected final AtomicInteger writeLockNesting = new AtomicInteger();
   protected final ReadWriteLock lock = new ReentrantReadWriteLock();
   protected ORID identity;
@@ -143,8 +142,8 @@ public class OIndexManagerShared implements OIndexManagerAbstract {
         });
   }
 
-  public void addClusterToIndex(final String clusterName, final String indexName) {
-    ODatabaseDocumentInternal database = getDatabaseIfDefined();
+  public void addClusterToIndex(
+      ODatabaseDocumentInternal database, final String clusterName, final String indexName) {
     acquireSharedLock();
     try {
       final OIndex index = indexes.get(indexName);
@@ -171,8 +170,8 @@ public class OIndexManagerShared implements OIndexManagerAbstract {
     }
   }
 
-  public void removeClusterFromIndex(final String clusterName, final String indexName) {
-    ODatabaseDocumentInternal database = getDatabaseIfDefined();
+  public void removeClusterFromIndex(
+      ODatabaseDocumentInternal database, final String clusterName, final String indexName) {
     acquireSharedLock();
     try {
       final OIndex index = indexes.get(indexName);
@@ -196,7 +195,7 @@ public class OIndexManagerShared implements OIndexManagerAbstract {
   public void create(ODatabaseDocumentInternal database) {
     acquireExclusiveLock();
     try {
-      ODocument document = database.save(new ODocument(), OMetadataDefault.CLUSTER_INTERNAL_NAME);
+      ODocument document = database.save(new ODocument(), OSessionMetadata.CLUSTER_INTERNAL_NAME);
       identity = document.getIdentity();
       database.getStorage().setIndexMgrRecordId(document.getIdentity().toString());
     } finally {
@@ -453,10 +452,6 @@ public class OIndexManagerShared implements OIndexManagerAbstract {
     } finally {
       releaseExclusiveLock();
     }
-  }
-
-  protected static ODatabaseDocumentInternal getDatabase() {
-    return ODatabaseRecordThreadLocal.instance().get();
   }
 
   private static ODatabaseDocumentInternal getDatabaseIfDefined() {
@@ -886,11 +881,10 @@ public class OIndexManagerShared implements OIndexManagerAbstract {
   public boolean autoRecreateIndexesAfterCrash(ODatabaseDocumentInternal database) {
     if (rebuildCompleted) return false;
 
-    final OStorage storage = database.getStorage();
-    if (storage instanceof OAbstractPaginatedStorage) {
-      OAbstractPaginatedStorage paginatedStorage = (OAbstractPaginatedStorage) storage;
-      return paginatedStorage.wereDataRestoredAfterOpen()
-          && paginatedStorage.wereNonTxOperationsPerformedInPreviousOpen();
+    if (!database.isRemote()) {
+      final OStorage storage = database.getStorage();
+      return storage.wereDataRestoredAfterOpen()
+          && storage.wereNonTxOperationsPerformedInPreviousOpen();
     }
 
     return false;

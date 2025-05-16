@@ -1,8 +1,8 @@
 package com.orientechnologies.orient.core.sql.functions.graph;
 
 import com.orientechnologies.orient.core.db.ODatabaseSession;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.ODirection;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 
 /** Created by luigidellaquila on 03/01/17. */
 public class OSQLFunctionBoth extends OSQLFunctionMove {
@@ -13,8 +13,7 @@ public class OSQLFunctionBoth extends OSQLFunctionMove {
   }
 
   @Override
-  protected Object move(
-      final ODatabaseSession graph, final OIdentifiable iRecord, final String[] iLabels) {
-    return v2v(graph, iRecord, ODirection.BOTH, iLabels);
+  protected Object move(final ODatabaseSession graph, final OResult rec, final String[] iLabels) {
+    return v2v(graph, rec, ODirection.BOTH, iLabels);
   }
 }

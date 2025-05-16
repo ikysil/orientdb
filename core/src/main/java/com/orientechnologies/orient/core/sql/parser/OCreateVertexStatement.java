@@ -2,14 +2,9 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
-import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.sql.executor.OCreateVertexExecutionPlanner;
-import com.orientechnologies.orient.core.sql.executor.OInsertExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OInternalExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import java.util.HashMap;
 import java.util.Map;
 
 public class OCreateVertexStatement extends OStatement {
@@ -29,51 +24,9 @@ public class OCreateVertexStatement extends OStatement {
   }
 
   @Override
-  public OResultSet execute(
-      ODatabaseSession db, Map params, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    ctx.setInputParameters(params);
-    OInsertExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = (OInsertExecutionPlan) createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OInsertExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Object[] args, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    Map<Object, Object> params = new HashMap<>();
-    if (args != null) {
-      for (int i = 0; i < args.length; i++) {
-        params.put(i, args[i]);
-      }
-    }
-    ctx.setInputParameters(params);
-    OInsertExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = (OInsertExecutionPlan) createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (OInsertExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  @Override
-  public OInternalExecutionPlan createExecutionPlan(OCommandContext ctx, boolean enableProfiling) {
+  public OInternalExecutionPlan createExecutionPlan(OCommandContext ctx) {
     OCreateVertexExecutionPlanner planner = new OCreateVertexExecutionPlanner(this);
-    OInternalExecutionPlan result = planner.createExecutionPlan(ctx, enableProfiling);
+    OInternalExecutionPlan result = planner.createExecutionPlan(ctx);
     result.setStatement(this.originalStatement);
     result.setGenericStatement(this.toGenericStatement());
     return result;

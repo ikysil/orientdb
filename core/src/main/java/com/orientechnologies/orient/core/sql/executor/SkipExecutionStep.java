@@ -2,15 +2,15 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OSkip;
 
 /** Created by luigidellaquila on 08/07/16. */
 public class SkipExecutionStep extends AbstractExecutionStep {
   private final OSkip skip;
 
-  public SkipExecutionStep(OSkip skip, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public SkipExecutionStep(OSkip skip) {
+    super();
     this.skip = skip;
   }
 
@@ -28,15 +28,7 @@ public class SkipExecutionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public void sendTimeout() {}
-
-  @Override
-  public void close() {
-    prev.ifPresent(x -> x.close());
-  }
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
-    return OExecutionStepInternal.getIndent(depth, indent) + "+ SKIP (" + skip.toString() + ")";
+  public String prettyPrint(OPrintContext ctx) {
+    return OExecutionStepInternal.getIndent(ctx) + "+ SKIP (" + skip.toString() + ")";
   }
 }

@@ -1372,7 +1372,7 @@ public class OMatchStatementExecutionNewTest extends BaseMemoryDatabase {
         .ifPresent(
             x ->
                 x.getSteps().stream()
-                    .filter(y -> y instanceof MatchPrefetchStep)
+                    .filter(y -> y.getName().equals(MatchPrefetchStep.class.getSimpleName()))
                     .forEach(prefetchStepFound -> Assert.fail()));
 
     for (int i = 0; i < 1000; i++) {

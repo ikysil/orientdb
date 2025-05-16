@@ -46,6 +46,10 @@ public interface OSchema {
 
   OClass createClass(String className, int[] clusterIds, OClass... superClasses);
 
+  boolean createClassIfNotExists(String className);
+
+  boolean createClassIfNotExists(String iClassName, OClass... superClasses);
+
   OClass createAbstractClass(String iClassName);
 
   OClass createAbstractClass(String iClassName, OClass iSuperClass);
@@ -102,12 +106,6 @@ public interface OSchema {
 
   void dropView(String name);
 
-  @Deprecated
-  void create();
-
-  @Deprecated
-  int getVersion();
-
   ORID getIdentity();
 
   /**
@@ -130,4 +128,6 @@ public interface OSchema {
   OClusterSelectionFactory getClusterSelectionFactory();
 
   OImmutableSchema makeSnapshot();
+
+  int getVersion();
 }

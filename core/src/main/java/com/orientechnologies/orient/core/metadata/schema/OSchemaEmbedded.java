@@ -82,6 +82,36 @@ public class OSchemaEmbedded extends OSchemaShared {
     return doCreateClass(database, className, clusters, superClasses);
   }
 
+  @Override
+  public boolean createClassIfNotExists(ODatabaseDocumentInternal session, String className) {
+    try {
+      acquireSchemaWriteLock(session);
+      if (existsClass(className)) {
+        return false;
+      } else {
+        createClass(session, className);
+        return true;
+      }
+    } finally {
+      releaseSchemaWriteLock(session);
+    }
+  }
+
+  public boolean createClassIfNotExists(
+      ODatabaseDocumentInternal session, String className, OClass... superclasses) {
+    try {
+      acquireSchemaWriteLock(session);
+      if (existsClass(className)) {
+        return false;
+      } else {
+        createClass(session, className, superclasses);
+        return true;
+      }
+    } finally {
+      releaseSchemaWriteLock(session);
+    }
+  }
+
   private OClass doCreateClass(
       ODatabaseDocumentInternal database,
       final String className,
@@ -190,7 +220,7 @@ public class OSchemaEmbedded extends OSchemaShared {
               if (clusterName != null)
                 database
                     .getMetadata()
-                    .getIndexManagerInternal()
+                    .getIndexManager()
                     .addClusterToIndex(clusterName, index.getName());
         }
       }

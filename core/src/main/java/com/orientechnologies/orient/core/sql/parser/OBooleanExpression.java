@@ -3,183 +3,22 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /** Created by luigidellaquila on 07/11/14. */
 public abstract class OBooleanExpression extends SimpleNode {
 
-  public static final OBooleanExpression TRUE =
-      new OBooleanExpression(0) {
-        @Override
-        public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-          return true;
-        }
-
-        @Override
-        public boolean evaluate(OResult currentRecord, OCommandContext ctx) {
-          return true;
-        }
-
-        @Override
-        protected boolean supportsBasicCalculation() {
-          return true;
-        }
-
-        @Override
-        protected int getNumberOfExternalCalculations() {
-          return 0;
-        }
-
-        @Override
-        protected List<Object> getExternalCalculationConditions() {
-          return Collections.EMPTY_LIST;
-        }
-
-        @Override
-        public boolean needsAliases(Set<String> aliases) {
-          return false;
-        }
-
-        @Override
-        public OBooleanExpression copy() {
-          return TRUE;
-        }
-
-        @Override
-        public List<String> getMatchPatternInvolvedAliases() {
-          return null;
-        }
-
-        @Override
-        public void translateLuceneOperator() {}
-
-        @Override
-        public boolean isCacheable() {
-          return true;
-        }
-
-        @Override
-        public String toString() {
-          return "true";
-        }
-
-        public void toString(Map<Object, Object> params, StringBuilder builder) {
-          builder.append("true");
-        }
-
-        @Override
-        public void toGenericStatement(StringBuilder builder) {
-          builder.append(PARAMETER_PLACEHOLDER);
-        }
-
-        @Override
-        public boolean isEmpty() {
-          return false;
-        }
-
-        @Override
-        public void extractSubQueries(SubQueryCollector collector) {}
-
-        @Override
-        public boolean refersToParent() {
-          return false;
-        }
-
-        @Override
-        public boolean isAlwaysTrue() {
-          return true;
-        }
-      };
-
-  public static final OBooleanExpression FALSE =
-      new OBooleanExpression(0) {
-        @Override
-        public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-          return false;
-        }
-
-        @Override
-        public boolean evaluate(OResult currentRecord, OCommandContext ctx) {
-          return false;
-        }
-
-        @Override
-        protected boolean supportsBasicCalculation() {
-          return true;
-        }
-
-        @Override
-        protected int getNumberOfExternalCalculations() {
-          return 0;
-        }
-
-        @Override
-        protected List<Object> getExternalCalculationConditions() {
-          return Collections.EMPTY_LIST;
-        }
-
-        @Override
-        public boolean needsAliases(Set<String> aliases) {
-          return false;
-        }
-
-        @Override
-        public OBooleanExpression copy() {
-          return FALSE;
-        }
-
-        @Override
-        public List<String> getMatchPatternInvolvedAliases() {
-          return null;
-        }
-
-        @Override
-        public void translateLuceneOperator() {}
-
-        @Override
-        public boolean isCacheable() {
-          return true;
-        }
-
-        @Override
-        public String toString() {
-          return "false";
-        }
-
-        public void toString(Map<Object, Object> params, StringBuilder builder) {
-          builder.append("false");
-        }
-
-        @Override
-        public void toGenericStatement(StringBuilder builder) {
-          builder.append(PARAMETER_PLACEHOLDER);
-        }
-
-        @Override
-        public boolean isEmpty() {
-          return false;
-        }
-
-        @Override
-        public void extractSubQueries(SubQueryCollector collector) {}
-
-        @Override
-        public boolean refersToParent() {
-          return false;
-        }
-      };
+  public static final OBooleanExpression TRUE = new OTrueExpression(0);
+  public static final OBooleanExpression FALSE = new OFalseExpression(0);
 
   public OBooleanExpression(int id) {
     super(id);
@@ -188,8 +27,6 @@ public abstract class OBooleanExpression extends SimpleNode {
   public OBooleanExpression(OrientSql p, int id) {
     super(p, id);
   }
-
-  public abstract boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx);
 
   public abstract boolean evaluate(OResult currentRecord, OCommandContext ctx);
 
@@ -216,7 +53,6 @@ public abstract class OBooleanExpression extends SimpleNode {
   }
 
   public List<OAndBlock> flatten() {
-
     return Collections.singletonList(encapsulateInAndBlock(this));
   }
 
@@ -300,35 +136,23 @@ public abstract class OBooleanExpression extends SimpleNode {
     return false;
   }
 
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
-    return false;
-  }
-
   public Optional<OIndexCandidate> findIndex(OIndexFinder info, OCommandContext ctx) {
     return Optional.empty();
   }
 
-  public boolean createRangeWith(OBooleanExpression match) {
-    return false;
+  public OAndBlock extractRidRanges(OCommandContext ctx) {
+    return new OAndBlock(-1);
   }
 
-  public boolean isFullTextIndexAware(String indexField) {
-    return false;
+  public int conditionsCount() {
+    return 1;
   }
 
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    throw new UnsupportedOperationException("Cannot execute index query with " + this);
+  public OBooleanExpression getIndexKeyCondition() {
+    return null;
   }
 
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    throw new UnsupportedOperationException("Cannot execute index query with " + this);
-  }
-
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    throw new UnsupportedOperationException("Cannot execute index query with " + this);
-  }
-
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    throw new UnsupportedOperationException("Cannot execute index query with " + this);
+  public OBooleanExpression getIndexRidCondition() {
+    return null;
   }
 }

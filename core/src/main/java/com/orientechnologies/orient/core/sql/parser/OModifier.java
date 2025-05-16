@@ -102,33 +102,8 @@ public class OModifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, Object result, OCommandContext ctx) {
-    if (ctx.getVariable("$current") == null) {
-      ctx.setVariable("$current", iCurrentRecord);
-    }
-    if (methodCall != null) {
-      result = methodCall.execute(result, ctx);
-    } else if (suffix != null) {
-      result = suffix.execute(result, ctx);
-    } else if (arrayRange != null) {
-      result = arrayRange.execute(iCurrentRecord, result, ctx);
-    } else if (condition != null) {
-      result = filterByCondition(result, ctx);
-    } else if (arraySingleValues != null) {
-      result = arraySingleValues.execute(iCurrentRecord, result, ctx);
-    } else if (rightBinaryCondition != null) {
-      result = rightBinaryCondition.execute(iCurrentRecord, result, ctx);
-    }
-    if (next != null) {
-      result = next.execute(iCurrentRecord, result, ctx);
-    }
-    return result;
-  }
-
   public Object execute(OResult iCurrentRecord, Object result, OCommandContext ctx) {
-    if (ctx.getVariable("$current") == null) {
-      ctx.setVariable("$current", iCurrentRecord);
-    }
+    ctx.setCurrentIfMissing(iCurrentRecord);
     if (methodCall != null) {
       result = methodCall.execute(result, ctx);
     } else if (suffix != null) {
@@ -383,14 +358,11 @@ public class OModifier extends SimpleNode {
       if (arrayRange != null) {
         arrayRange.applyRemove(currentValue, originalRecord, ctx);
       } else if (condition != null) {
-        // TODO
-        throw new UnsupportedOperationException(
-            "Remove on conditional filtering will be supported soon");
+        condition.applyRemove(currentValue, originalRecord, ctx);
       } else if (arraySingleValues != null) {
         arraySingleValues.applyRemove(currentValue, originalRecord, ctx);
       } else if (rightBinaryCondition != null) {
-        throw new UnsupportedOperationException(
-            "Remove on conditional filtering will be supported soon");
+        rightBinaryCondition.applyRemove(currentValue, originalRecord, ctx);
       } else if (suffix != null) {
         suffix.applyRemove(currentValue, ctx);
       } else {

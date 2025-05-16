@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OBatch;
 
 /** Created by luigidellaquila on 14/02/17. */
@@ -11,8 +11,8 @@ public class BatchStep extends AbstractExecutionStep {
 
   private Integer batchSize;
 
-  public BatchStep(OBatch batch, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public BatchStep(OBatch batch, OCommandContext ctx) {
+    super();
     batchSize = batch.evaluate(ctx);
   }
 
@@ -34,11 +34,8 @@ public class BatchStep extends AbstractExecutionStep {
   }
 
   @Override
-  public void reset() {}
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ BATCH COMMIT EVERY " + batchSize);

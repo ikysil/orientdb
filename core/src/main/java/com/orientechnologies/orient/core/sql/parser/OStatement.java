@@ -3,17 +3,18 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.exception.OException;
-import com.orientechnologies.common.listener.OProgressListener;
+import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
+import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.exception.OQueryParsingException;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.executor.OInternalExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
+import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionResultSet;
 import java.util.Map;
 
 public class OStatement extends SimpleNode {
@@ -49,36 +50,8 @@ public class OStatement extends SimpleNode {
     return builder.toString();
   }
 
-  public Object execute(
-      OSQLAsynchQuery<ODocument> request,
-      OCommandContext context,
-      OProgressListener progressListener) {
-    throw new UnsupportedOperationException("Unsupported command: " + getClass().getSimpleName());
-  }
-
-  public OResultSet execute(ODatabaseSession db, Object[] args) {
-    return execute(db, args, true);
-  }
-
-  public OResultSet execute(ODatabaseSession db, Object[] args, OCommandContext parentContext) {
-    return execute(db, args, parentContext, true);
-  }
-
-  public OResultSet execute(ODatabaseSession db, Map args) {
-    return execute(db, args, true);
-  }
-
-  public OResultSet execute(ODatabaseSession db, Map args, OCommandContext parentContext) {
-    return execute(db, args, parentContext, true);
-  }
-
   public OResultSet execute(ODatabaseSession db, Object[] args, boolean usePlanCache) {
     return execute(db, args, null, usePlanCache);
-  }
-
-  public OResultSet execute(
-      ODatabaseSession db, Object[] args, OCommandContext parentContext, boolean usePlanCache) {
-    throw new UnsupportedOperationException();
   }
 
   public OResultSet execute(ODatabaseSession db, Map args, boolean usePlanCache) {
@@ -86,8 +59,39 @@ public class OStatement extends SimpleNode {
   }
 
   public OResultSet execute(
-      ODatabaseSession db, Map args, OCommandContext parentContext, boolean usePlanCache) {
-    throw new UnsupportedOperationException();
+      ODatabaseSession db, Object[] args, OCommandContext parentCtx, boolean usePlanCache) {
+    OBasicCommandContext ctx = new OBasicCommandContext(db);
+    if (parentCtx != null) {
+      ctx.setParentWithoutOverridingChild(parentCtx);
+    }
+    ctx.setArrayParameters(args);
+    OInternalExecutionPlan executionPlan = resolvePlan(usePlanCache, ctx);
+    return new OExecutionResultSet(executionPlan.start(ctx), ctx, executionPlan);
+  }
+
+  public OInternalExecutionPlan resolvePlan(boolean useCache, OCommandContext ctx) {
+    if (useCache && !ctx.isProfiling() && executinPlanCanBeCached()) {
+      OInternalExecutionPlan plan =
+          OExecutionPlanCache.get(
+              getOriginalStatement(), ctx, (ODatabaseDocumentInternal) ctx.getDatabase());
+      if (plan != null) {
+        return plan;
+      }
+    }
+    return createExecutionPlan(ctx);
+  }
+
+  public OResultSet execute(
+      ODatabaseSession db, Map params, OCommandContext parentCtx, boolean usePlanCache) {
+    OBasicCommandContext ctx = new OBasicCommandContext(db);
+    if (parentCtx != null) {
+      ctx.setParentWithoutOverridingChild(parentCtx);
+    }
+    ctx.setInputParameters(params);
+
+    OInternalExecutionPlan executionPlan = resolvePlan(usePlanCache, ctx);
+
+    return new OExecutionResultSet(executionPlan.start(ctx), ctx, executionPlan);
   }
 
   /**
@@ -97,22 +101,7 @@ public class OStatement extends SimpleNode {
    * @return an execution plan
    */
   public OInternalExecutionPlan createExecutionPlan(OCommandContext ctx) {
-    return createExecutionPlan(ctx, false);
-  }
-
-  /**
-   * creates an execution plan for current statement
-   *
-   * @param ctx the context that will be used to execute the statement
-   * @param profile true to enable profiling, false to disable it
-   * @return an execution plan
-   */
-  public OInternalExecutionPlan createExecutionPlan(OCommandContext ctx, boolean profile) {
-    throw new UnsupportedOperationException();
-  }
-
-  public OInternalExecutionPlan createExecutionPlanNoCache(OCommandContext ctx, boolean profile) {
-    return createExecutionPlan(ctx, profile);
+    throw new OQueryParsingException("Cannot create execution plan for:" + getOriginalStatement());
   }
 
   public OStatement copy() {

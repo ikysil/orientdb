@@ -10,7 +10,6 @@ import com.orientechnologies.orient.core.db.OrientDBConfig;
 import com.orientechnologies.orient.core.db.OrientDBEmbedded;
 import com.orientechnologies.orient.core.db.OrientDBInternal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.db.tool.ODatabaseCompare;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
@@ -110,7 +109,6 @@ public class StorageBackupMTIT {
           null,
           backupDir.getAbsolutePath(),
           OrientDBConfig.defaultConfig());
-      embedded.close();
 
       final ODatabaseCompare compare =
           new ODatabaseCompare(
@@ -121,14 +119,10 @@ public class StorageBackupMTIT {
 
       boolean areSame = compare.compare();
       Assert.assertTrue(areSame);
+      embedded.close();
 
     } finally {
 
-      try {
-        ODatabaseDocumentTx.closeAll();
-      } catch (Exception ex) {
-        logger.error("", ex);
-      }
       if (orientDB.isOpen()) {
         try {
           orientDB.close();
@@ -217,7 +211,6 @@ public class StorageBackupMTIT {
       OrientDBEmbedded embedded =
           (OrientDBEmbedded) OrientDBInternal.embedded(buildDirectory, config);
       embedded.restore(backupDbName, null, null, null, backupDir.getAbsolutePath(), config);
-      embedded.close();
 
       OGlobalConfiguration.STORAGE_ENCRYPTION_KEY.setValue("T1JJRU5UREJfSVNfQ09PTA==");
       final ODatabaseCompare compare =
@@ -229,10 +222,10 @@ public class StorageBackupMTIT {
 
       boolean areSame = compare.compare();
       Assert.assertTrue(areSame);
+      embedded.close();
 
     } finally {
       try {
-        ODatabaseDocumentTx.closeAll();
         OGlobalConfiguration.STORAGE_ENCRYPTION_KEY.setValue(null);
       } catch (Exception ex) {
         logger.error("", ex);
@@ -278,7 +271,7 @@ public class StorageBackupMTIT {
             document.field("num", num);
             document.field("data", data);
 
-            document.save();
+            db.save(document);
           } catch (OModificationOperationProhibitedException e) {
             System.out.println("Modification prohibited ... wait ...");
             Thread.sleep(1000);

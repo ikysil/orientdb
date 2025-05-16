@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OCluster;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 
@@ -11,12 +11,8 @@ public class MoveVertexStep extends AbstractExecutionStep {
   private String targetCluster;
   private String targetClass;
 
-  public MoveVertexStep(
-      OIdentifier targetClass,
-      OCluster targetCluster,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public MoveVertexStep(OIdentifier targetClass, OCluster targetCluster, OCommandContext ctx) {
+    super();
     this.targetClass = targetClass == null ? null : targetClass.getStringValue();
     if (targetCluster != null) {
       this.targetCluster = targetCluster.getClusterName();
@@ -38,8 +34,8 @@ public class MoveVertexStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ MOVE VERTEX TO ");

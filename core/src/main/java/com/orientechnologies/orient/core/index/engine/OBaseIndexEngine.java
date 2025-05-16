@@ -3,8 +3,12 @@ package com.orientechnologies.orient.core.index.engine;
 import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.config.IndexEngineData;
 import com.orientechnologies.orient.core.id.ORID;
+import com.orientechnologies.orient.core.index.OIndexInternal;
 import com.orientechnologies.orient.core.index.OIndexMetadata;
+import com.orientechnologies.orient.core.index.OIndexOneValue;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperation;
+import com.orientechnologies.orient.core.tx.OTransactionIndexChanges;
+import com.orientechnologies.orient.core.tx.OTransactionIndexChangesPerKey;
 import java.io.IOException;
 import java.util.stream.Stream;
 
@@ -95,4 +99,47 @@ public interface OBaseIndexEngine {
       Object key,
       ORID value,
       IndexEngineValidator<Object, ORID> validator);
+
+  default void applyTxChanges(OAtomicOperation atomicOperation, OTransactionIndexChanges changes) {
+    for (final OTransactionIndexChangesPerKey changesPerKey : changes.changesPerKey.values()) {
+      applyKeyTxChanges(atomicOperation, changesPerKey, this, changes.getAssociatedIndex());
+    }
+    applyKeyTxChanges(atomicOperation, changes.nullKeyChanges, this, changes.getAssociatedIndex());
+  }
+
+  private static void applyKeyTxChanges(
+      OAtomicOperation atomicOperation,
+      OTransactionIndexChangesPerKey changes,
+      OBaseIndexEngine engine,
+      OIndexInternal index) {
+
+    IndexEngineValidator<Object, ORID> uniqueValidator = null;
+    if (index.isUnique()) {
+      uniqueValidator = ((OIndexOneValue) index).getUniqueValidator();
+    }
+    for (OTransactionIndexChangesPerKey.OTransactionIndexEntry op :
+        index.interpretTxKeyChanges(changes)) {
+      switch (op.getOperation()) {
+        case PUT:
+          if (uniqueValidator != null) {
+            engine.validatedPut(
+                atomicOperation, changes.key, op.getValue().getIdentity(), uniqueValidator);
+          } else {
+            engine.put(atomicOperation, changes.key, op.getValue().getIdentity());
+          }
+          break;
+        case REMOVE:
+          if (op.getValue() != null) {
+            engine.remove(atomicOperation, changes.key, op.getValue().getIdentity());
+          } else {
+            engine.remove(atomicOperation, changes.key);
+          }
+          break;
+        case CLEAR:
+          // SHOULD NEVER BE THE CASE HANDLE BY cleared FLAG
+          break;
+      }
+      engine.updateUniqueIndexVersion(changes.key);
+    }
+  }
 }

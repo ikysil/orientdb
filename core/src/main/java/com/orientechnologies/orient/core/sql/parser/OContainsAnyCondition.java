@@ -6,8 +6,8 @@ import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
@@ -93,35 +93,6 @@ public class OContainsAnyCondition extends OBooleanExpression {
   }
 
   @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (right != null) {
-      Object rightValue = right.execute(currentRecord, ctx);
-      return execute(leftValue, rightValue);
-    } else {
-      if (!OMultiValue.isMultiValue(leftValue)) {
-        return false;
-      }
-      Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
-      while (iter.hasNext()) {
-        Object item = iter.next();
-        if (item instanceof OIdentifiable) {
-          if (!rightBlock.evaluate((OIdentifiable) item, ctx)) {
-            return false;
-          }
-        } else if (item instanceof OResult) {
-          if (!rightBlock.evaluate((OResult) item, ctx)) {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-      return true;
-    }
-  }
-
-  @Override
   public boolean evaluate(OResult currentRecord, OCommandContext ctx) {
     Object leftValue = left.execute(currentRecord, ctx);
     if (right != null) {
@@ -135,7 +106,7 @@ public class OContainsAnyCondition extends OBooleanExpression {
       while (iter.hasNext()) {
         Object item = iter.next();
         if (item instanceof OIdentifiable) {
-          if (!rightBlock.evaluate((OIdentifiable) item, ctx)) {
+          if (!rightBlock.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
             return false;
           }
         } else if (item instanceof OResult) {
@@ -377,63 +348,18 @@ public class OContainsAnyCondition extends OBooleanExpression {
   }
 
   @Override
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
-    if (left.isBaseIdentifier()) {
-      if (info.getField().equals(left.getDefaultAlias().getStringValue())) {
-        if (right.isEarlyCalculated(info.getCtx())) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  @Override
   public Optional<OIndexCandidate> findIndex(OIndexFinder info, OCommandContext ctx) {
     Optional<OPath> path = left.getPath();
     if (path.isPresent()) {
       if (right.isEarlyCalculated(ctx)) {
-        Object value = right.execute((OResult) null, ctx);
-        return info.findExactIndex(path.get(), value, ctx);
+        return info.findAny(path.get(), this::rightValue, ctx);
       }
     }
     return Optional.empty();
   }
 
-  @Override
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    if (getRight() != null) {
-      return getRight();
-    } else {
-      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
-  }
-
-  @Override
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    if (getRight() != null) {
-      return getRight();
-    } else {
-      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
-  }
-
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    if (additional != null && additional.getOperator() != null) {
-      return additional.getOperator().isGreaterInclude();
-    } else {
-      return true;
-    }
-  }
-
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    if (additional != null && additional.getOperator() != null) {
-      return additional.getOperator().isLessInclude();
-    } else {
-      return true;
-    }
+  private Collection<Object> rightValue(OCommandContext ctx, boolean asc) {
+    return right.getIndexKey(ctx);
   }
 }
 /* JavaCC - OriginalChecksum=7992ab9e8e812c6d9358ede8b67b4506 (do not edit this line) */

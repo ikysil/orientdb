@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -16,9 +16,8 @@ import java.util.stream.Collectors;
 public class FetchFromRidsStep extends AbstractExecutionStep {
   private Collection<ORecordId> rids;
 
-  public FetchFromRidsStep(
-      Collection<ORecordId> rids, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FetchFromRidsStep(Collection<ORecordId> rids) {
+    super();
     this.rids = rids;
   }
 
@@ -29,10 +28,10 @@ public class FetchFromRidsStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    return OExecutionStepInternal.getIndent(depth, indent)
+  public String prettyPrint(OPrintContext ctx) {
+    return OExecutionStepInternal.getIndent(ctx)
         + "+ FETCH FROM RIDs\n"
-        + OExecutionStepInternal.getIndent(depth, indent)
+        + OExecutionStepInternal.getIndent(ctx)
         + "  "
         + rids;
   }
@@ -54,7 +53,6 @@ public class FetchFromRidsStep extends AbstractExecutionStep {
         List<String> ser = fromResult.getProperty("rids");
         rids = ser.stream().map(x -> new ORecordId(x)).collect(Collectors.toList());
       }
-      reset();
     } catch (Exception e) {
       throw OException.wrapException(new OCommandExecutionException(""), e);
     }

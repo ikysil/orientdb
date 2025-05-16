@@ -1,21 +1,22 @@
 package com.orientechnologies.orient.core.command;
 
-import com.orientechnologies.orient.core.command.script.OCommandExecutorFunction;
-import com.orientechnologies.orient.core.command.script.OCommandFunction;
-import com.orientechnologies.orient.core.command.traverse.OAbstractScriptExecutor;
+import com.orientechnologies.orient.core.command.script.OAbstractScriptExecutor;
+import com.orientechnologies.orient.core.command.script.OScriptManager;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
+import com.orientechnologies.orient.core.metadata.function.OFunction;
+import com.orientechnologies.orient.core.metadata.security.ORole;
+import com.orientechnologies.orient.core.metadata.security.ORule;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.executor.ORetryExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OScriptExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.RetryStep;
+import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionResultSet;
 import com.orientechnologies.orient.core.sql.parser.OBeginStatement;
 import com.orientechnologies.orient.core.sql.parser.OCommitStatement;
 import com.orientechnologies.orient.core.sql.parser.OLetStatement;
-import com.orientechnologies.orient.core.sql.parser.OLocalResultSet;
 import com.orientechnologies.orient.core.sql.parser.OStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,7 +84,7 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
       }
 
       if (nestedTxLevel <= 0) {
-        plan.chain(stm, false, scriptContext);
+        plan.chain(stm);
       } else {
         lastRetryBlock.add(stm);
       }
@@ -102,16 +103,14 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
                     lastRetryBlock,
                     nRetries,
                     ((OCommitStatement) stm).getElseStatements(),
-                    ((OCommitStatement) stm).getElseFail(),
-                    scriptContext,
-                    false);
+                    ((OCommitStatement) stm).getElseFail());
             ORetryExecutionPlan retryPlan = new ORetryExecutionPlan();
             retryPlan.chain(step);
-            plan.chain(retryPlan, false, scriptContext);
+            plan.chain(retryPlan);
             lastRetryBlock = new ArrayList<>();
           } else {
             for (OStatement statement : lastRetryBlock) {
-              plan.chain(statement, false, scriptContext);
+              plan.chain(statement);
             }
             lastRetryBlock = new ArrayList<>();
           }
@@ -124,10 +123,10 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
     }
     if (!lastRetryBlock.isEmpty()) {
       for (OStatement statement : lastRetryBlock) {
-        plan.chain(statement, false, scriptContext);
+        plan.chain(statement);
       }
     }
-    return new OLocalResultSet(plan, scriptContext);
+    return new OExecutionResultSet(plan.start(scriptContext), scriptContext, plan);
   }
 
   @Override
@@ -135,12 +134,12 @@ public class OSqlScriptExecutor extends OAbstractScriptExecutor {
       OCommandContext context, final String functionName, final Map<Object, Object> iArgs) {
 
     ODatabaseDocumentInternal db = (ODatabaseDocumentInternal) context.getDatabase();
-    if (db == null) {
-      db = ODatabaseRecordThreadLocal.instance().get();
-    }
 
-    final OCommandExecutorFunction command = new OCommandExecutorFunction();
-    command.parse(new OCommandFunction(functionName));
-    return command.executeInContext(context, iArgs);
+    OFunction function = db.getMetadata().getFunctionLibrary().getFunction(functionName);
+
+    db.checkSecurity(ORule.ResourceGeneric.FUNCTION, ORole.PERMISSION_READ, function.getName());
+    final OScriptManager scriptManager = db.getSharedContext().getOrientDB().getScriptManager();
+    final Object[] args = iArgs == null ? null : iArgs.values().toArray();
+    return execute(db, scriptManager.getFunctionInvoke(function, args), iArgs);
   }
 }

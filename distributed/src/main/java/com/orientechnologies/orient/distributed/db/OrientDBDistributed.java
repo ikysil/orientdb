@@ -8,6 +8,7 @@ import com.orientechnologies.common.concur.lock.OModificationOperationProhibited
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
+import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentEmbeddedPooled;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseLifecycleListener;
@@ -21,8 +22,8 @@ import com.orientechnologies.orient.core.db.OrientDBConfig;
 import com.orientechnologies.orient.core.db.OrientDBEmbedded;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentEmbedded;
 import com.orientechnologies.orient.core.exception.ODatabaseException;
+import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.disk.OLocalPaginatedStorage;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinary;
 import com.orientechnologies.orient.server.OClientConnection;
 import com.orientechnologies.orient.server.OServer;
@@ -45,11 +46,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -59,8 +57,6 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       OLoggerDistributed.logger(OrientDBDistributed.class);
   private volatile OServer server;
   private volatile ODistributedPlugin plugin;
-  protected final ConcurrentHashMap<String, ODistributedDatabaseImpl> databases =
-      new ConcurrentHashMap<String, ODistributedDatabaseImpl>();
   protected final ConcurrentHashMap<String, ODistributedConfigurationManager> configurations =
       new ConcurrentHashMap<String, ODistributedConfigurationManager>();
 
@@ -92,14 +88,18 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     }
   }
 
-  public synchronized ODistributedPlugin getPlugin() {
+  public ODistributedPlugin getPlugin() {
     if (plugin == null) {
-      if (server != null && server.isActive()) plugin = server.getPlugin("cluster");
+      synchronized (this) {
+        if (plugin == null) {
+          if (server != null && server.isActive()) plugin = server.getPlugin("cluster");
+        }
+      }
     }
     return plugin;
   }
 
-  protected OSharedContext createSharedContext(OAbstractPaginatedStorage storage) {
+  protected OSharedContext createSharedContext(OStorage storage) {
     if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
         || plugin == null
         || !plugin.isEnabled()) {
@@ -108,41 +108,44 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     return new OSharedContextDistributed(storage, this);
   }
 
-  protected ODatabaseDocumentEmbedded newSessionInstance(
-      OAbstractPaginatedStorage storage, OrientDBConfig config, OSharedContext sharedContext) {
+  protected ODatabaseDocumentEmbedded newSessionInstance(OStorage storage, OrientDBConfig config) {
     ODatabaseDocumentEmbedded embedded;
     if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
         || plugin == null
         || !plugin.isEnabled()) {
       embedded = new ODatabaseDocumentEmbedded(storage);
-      embedded.init(config, sharedContext);
+      embedded.init(config, getOrCreateSharedContext(storage));
     } else {
-      embedded = new ODatabaseDocumentDistributed(storage, plugin, sharedContext);
+      OSharedContext sharedContext = getOrCreateSharedContext(storage);
+      embedded = new ODatabaseDocumentDistributed(storage, plugin);
       embedded.init(config, sharedContext);
-      registerNewDatabaseIfNeeded(embedded, sharedContext);
+      //      getOrInitDistributedConfiguration(storage.getName());
     }
     return embedded;
   }
 
   @Override
   protected ODatabaseDocumentEmbedded newCreateSessionInstance(
-      OAbstractPaginatedStorage storage, OrientDBConfig config, OSharedContext sharedContext) {
+      OStorage storage, OrientDBConfig config) {
     ODatabaseDocumentEmbedded embedded;
+
     if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
         || plugin == null
         || !plugin.isEnabled()) {
       embedded = new ODatabaseDocumentEmbedded(storage);
-      embedded.internalCreate(config, getOrCreateSharedContext(storage));
+      OSharedContext sharedContext = getOrCreateSharedContext(storage);
+      embedded.internalCreate(config, sharedContext);
     } else {
-      embedded = new ODatabaseDocumentDistributed(storage, plugin, sharedContext);
-      embedded.internalCreate(config, getOrCreateSharedContext(storage));
-      registerNewDatabaseIfNeeded(embedded, sharedContext);
+      embedded = new ODatabaseDocumentDistributed(storage, plugin);
+      OSharedContext sharedContext = getOrCreateSharedContext(storage);
+      embedded.internalCreate(config, sharedContext);
+      //      getOrInitDistributedConfiguration(storage.getName());
     }
     return embedded;
   }
 
   protected ODatabaseDocumentEmbedded newPooledSessionInstance(
-      ODatabasePoolInternal pool, OAbstractPaginatedStorage storage, OSharedContext sharedContext) {
+      ODatabasePoolInternal pool, OStorage storage, OSharedContext sharedContext) {
     ODatabaseDocumentEmbedded embedded;
     if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
         || plugin == null
@@ -150,9 +153,9 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       embedded = new ODatabaseDocumentEmbeddedPooled(pool, storage);
       embedded.init(pool.getConfig(), getOrCreateSharedContext(storage));
     } else {
-      embedded = new ODatabaseDocumentDistributedPooled(pool, storage, plugin, sharedContext);
+      embedded = new ODatabaseDocumentDistributedPooled(pool, storage, plugin);
       embedded.init(pool.getConfig(), getOrCreateSharedContext(storage));
-      registerNewDatabaseIfNeeded(embedded, sharedContext);
+      //      getOrInitDistributedConfiguration(storage.getName());
     }
     return embedded;
   }
@@ -162,7 +165,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
   }
 
   public void fullSync(String dbName, InputStream backupStream, OrientDBConfig config) {
-    OAbstractPaginatedStorage storage = null;
+    OStorage storage = null;
     ODatabaseDocumentEmbedded embedded;
     synchronized (this) {
       if (!isOpen()) {
@@ -173,9 +176,9 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
 
         if (storage != null) {
           // The underlying storage instance will be closed so no need to closed it
-          ODatabaseDocumentEmbedded deleteInstance =
-              newSessionInstance(storage, config, getOrCreateSharedContext(storage));
+          ODatabaseDocumentEmbedded deleteInstance = newSessionInstance(storage, config);
           OSharedContext context = sharedContexts.remove(dbName);
+          dbCount.decrementAndGet();
           context.close();
           dropStorageFiles((OLocalPaginatedStorage) storage);
 
@@ -184,13 +187,12 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
           ODatabaseRecordThreadLocal.instance().remove();
         }
         storage =
-            (OAbstractPaginatedStorage)
-                disk.createStorage(
-                    buildName(dbName),
-                    maxWALSegmentSize,
-                    doubleWriteLogMaxSegSize,
-                    generateStorageId(),
-                    this);
+            disk.createStorage(
+                buildName(dbName),
+                maxWALSegmentSize,
+                doubleWriteLogMaxSegSize,
+                generateStorageId(),
+                this);
         embedded = internalCreate(config, storage);
         storages.put(dbName, storage);
       } catch (OModificationOperationProhibitedException e) {
@@ -270,7 +272,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
 
     synchronized (this) {
       if (exists(name, null, null)) {
-        OAbstractPaginatedStorage storage = getOrInitStorage(name);
+        OStorage storage = getOrInitStorage(name);
         OSharedContext sharedContext = sharedContexts.get(name);
         if (sharedContext != null) {
           sharedContext.close();
@@ -310,13 +312,38 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     return dbStatus == DB_STATUS.ONLINE || dbStatus == DB_STATUS.BACKUP;
   }
 
+  private boolean checkDbAvailableOpen(String name) {
+    if (!checkDbAvailable(name)) {
+      long waitTime =
+          getConfigurations()
+              .getConfigurations()
+              .getValueAsLong(OGlobalConfiguration.DISTRIBUTED_DATABASE_ONLINE_GRACE_PERIOD);
+      if (waitTime != 0) {
+        long retry = waitTime / 500;
+        // TODO: when there will be proper node online event this should attach to that with a
+        // notification instead of sleep
+        for (long i = 0; i < retry; i++) {
+          try {
+            Thread.sleep(500);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          if (checkDbAvailable(name)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   @Override
   public ODatabaseDocumentInternal open(String name, String user, String password) {
-    if (checkDbAvailable(name)) {
+    if (checkDbAvailableOpen(name)) {
       return super.open(name, user, password);
     } else {
       if (exists(name, user, password)) {
-        super.open(name, user, password);
+        return super.open(name, user, password);
       }
       throw new OOfflineNodeException(
           "database " + name + " not online on " + plugin.getLocalNodeName());
@@ -327,11 +354,11 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
   public ODatabaseDocumentInternal open(
       String name, String user, String password, OrientDBConfig config) {
 
-    if (checkDbAvailable(name)) {
+    if (checkDbAvailableOpen(name)) {
       return super.open(name, user, password, config);
     } else {
       if (exists(name, user, password)) {
-        super.open(name, user, password, config);
+        return super.open(name, user, password, config);
       }
       throw new OOfflineNodeException(
           "database " + name + " not online on " + plugin.getLocalNodeName());
@@ -393,28 +420,23 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
 
   private void offlineOnShutdown() {
     // SET ALL DATABASES TO NOT_AVAILABLE
-    for (Entry<String, ODistributedDatabaseImpl> m : databases.entrySet()) {
-      if (OSystemDatabase.SYSTEM_DB_NAME.equals(m.getKey())) continue;
+    for (String dbName : listLodadedDatabases()) {
 
       try {
-        plugin.setDatabaseStatus(plugin.getLocalNodeName(), m.getKey(), DB_STATUS.NOT_AVAILABLE);
+        plugin.setDatabaseStatus(plugin.getLocalNodeName(), dbName, DB_STATUS.NOT_AVAILABLE);
       } catch (Exception t) {
         // IGNORE IT
       }
-      m.getValue().shutdown();
     }
-    databases.clear();
   }
 
   public ODistributedDatabaseImpl getDatabase(final String iDatabaseName) {
-    return databases.get(iDatabaseName);
-  }
-
-  private ODistributedDatabaseImpl newDistributedDatabase(
-      String key, ODatabaseDocumentInternal session) {
-    ODistributedDatabaseImpl db = new ODistributedDatabaseImpl(this, plugin, key);
-    db.initFirstOpen(session);
-    return db;
+    OSharedContextDistributed ctx = (OSharedContextDistributed) sharedContexts.get(iDatabaseName);
+    if (ctx != null) {
+      return ctx.getDistributedContext();
+    } else {
+      return null;
+    }
   }
 
   public ODistributedDatabaseImpl unregisterDatabase(final String iDatabaseName) {
@@ -425,16 +447,11 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       // IGNORE IT
     }
 
-    final ODistributedDatabaseImpl db = databases.remove(iDatabaseName);
+    final ODistributedDatabaseImpl db = getDatabase(iDatabaseName);
     if (db != null) {
       db.onDropShutdown();
     }
     return db;
-  }
-
-  public void registerNewDatabaseIfNeeded(
-      ODatabaseDocumentInternal session, OSharedContext context) {
-    databases.computeIfAbsent(session.getName(), (n) -> this.newDistributedDatabase(n, session));
   }
 
   public void distributedSetOnline(String database) {
@@ -452,23 +469,13 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
   }
 
   public Set<String> getActiveDatabases() {
-    // We assign the ConcurrentHashMap (databases) to the Map interface for this reason:
-    // ConcurrentHashMap.keySet() in Java 8 returns a ConcurrentHashMap.KeySetView.
-    // ConcurrentHashMap.keySet() in Java 7 returns a Set.
-    // If this code is compiled with Java 8 yet is run on Java 7, you'll receive a
-    // NoSuchMethodError:
-    // java.util.concurrent.ConcurrentHashMap.keySet()Ljava/util/concurrent/ConcurrentHashMap$KeySetView.
-    // By assigning the ConcurrentHashMap variable to a Map, the call to keySet() will return a Set
-    // and not the Java 8 type, KeySetView.
-    Map<String, ODistributedDatabaseImpl> map = databases;
-
-    final Set<String> result = new HashSet<String>(map.keySet());
-    result.remove(OSystemDatabase.SYSTEM_DB_NAME);
-    return result;
+    return listLodadedDatabases();
   }
 
   public Collection<ODistributedDatabaseImpl> getDistributedDatabases() {
-    return databases.values();
+    return this.sharedContexts.values().stream()
+        .map((x) -> ((OSharedContextDistributed) x).getDistributedContext())
+        .toList();
   }
 
   public ODistributedConfiguration getOrInitDistributedConfiguration(ODatabaseSession session) {
@@ -586,5 +593,9 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     if (!isOpen()) return;
     offlineOnShutdown();
     super.close();
+  }
+
+  public int getActiveDatabaseCount() {
+    return this.dbCount.get();
   }
 }

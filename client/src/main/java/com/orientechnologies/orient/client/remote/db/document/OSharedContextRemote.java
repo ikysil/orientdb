@@ -46,6 +46,7 @@ public class OSharedContextRemote extends OSharedContext {
         sequenceLibrary.load(database);
         schema.onPostIndexManagement();
         loaded = true;
+        ((ODatabaseDocumentRemote) database).initPush(new OPushListener(this));
       }
     } finally {
       PROFILER.stopChrono(
@@ -54,6 +55,11 @@ public class OSharedContextRemote extends OSharedContext {
           timer,
           "db.*.metadata.load");
     }
+  }
+
+  @Override
+  public OSchemaRemote getSchema() {
+    return (OSchemaRemote) super.getSchema();
   }
 
   @Override

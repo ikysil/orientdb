@@ -15,6 +15,8 @@ public interface OExecutionStep {
 
   List<OExecutionStep> getSubSteps();
 
+  List<OExecutionPlan> getSubExecutionPlans();
+
   /**
    * returns the absolute cost (in nanoseconds) of the execution of this step
    *

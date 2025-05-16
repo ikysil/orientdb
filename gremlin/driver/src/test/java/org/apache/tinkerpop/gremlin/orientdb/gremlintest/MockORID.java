@@ -5,7 +5,6 @@ import com.orientechnologies.orient.core.exception.OSerializationException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.serialization.OSerializableStream;
-import com.orientechnologies.orient.core.storage.OStorage.LOCKING_STRATEGY;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -26,26 +25,6 @@ public class MockORID implements ORID {
 
   @Override
   public <T extends ORecord> T getRecord() {
-    throw new IllegalArgumentException(errorText);
-  }
-
-  @Override
-  public void lock(boolean iExclusive) {
-    throw new IllegalArgumentException(errorText);
-  }
-
-  @Override
-  public boolean isLocked() {
-    throw new IllegalArgumentException(errorText);
-  }
-
-  @Override
-  public LOCKING_STRATEGY lockingStrategy() {
-    throw new IllegalArgumentException(errorText);
-  }
-
-  @Override
-  public void unlock() {
     throw new IllegalArgumentException(errorText);
   }
 

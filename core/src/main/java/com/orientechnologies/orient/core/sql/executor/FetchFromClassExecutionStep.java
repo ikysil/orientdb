@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,19 +19,15 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
   protected String className;
   protected boolean orderByRidAsc = false;
   protected boolean orderByRidDesc = false;
-  protected List<OExecutionStep> subSteps = new ArrayList<>();
+  protected List<OExecutionStepInternal> subSteps = new ArrayList<>();
 
-  protected FetchFromClassExecutionStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  protected FetchFromClassExecutionStep() {
+    super();
   }
 
   public FetchFromClassExecutionStep(
-      String className,
-      Set<String> clusters,
-      OCommandContext ctx,
-      Boolean ridOrder,
-      boolean profilingEnabled) {
-    this(className, clusters, null, ctx, ridOrder, profilingEnabled);
+      String className, Set<String> clusters, OCommandContext ctx, Boolean ridOrder) {
+    this(className, clusters, null, ctx, ridOrder);
   }
 
   /**
@@ -47,9 +43,8 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
       Set<String> clusters,
       QueryPlanningInfo planningInfo,
       OCommandContext ctx,
-      Boolean ridOrder,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+      Boolean ridOrder) {
+    super();
 
     this.className = className;
 
@@ -78,7 +73,7 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
       int clusterId = clusterIds[i];
       if (clusterId > 0) {
         FetchFromClusterExecutionStep step =
-            new FetchFromClusterExecutionStep(clusterId, planningInfo, ctx, profilingEnabled);
+            new FetchFromClusterExecutionStep(clusterId, planningInfo);
         if (orderByRidAsc) {
           step.setOrder(FetchFromClusterExecutionStep.ORDER_ASC);
         } else if (orderByRidDesc) {
@@ -87,8 +82,7 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
         getSubSteps().add(step);
       } else {
         // current tx
-        FetchTemporaryFromTxStep step =
-            new FetchTemporaryFromTxStep(ctx, className, profilingEnabled);
+        FetchTemporaryFromTxStep step = new FetchTemporaryFromTxStep(className);
         if (orderByRidAsc) {
           step.setOrder(FetchFromClusterExecutionStep.ORDER_ASC);
         } else if (orderByRidDesc) {
@@ -129,50 +123,36 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
   public OExecutionStream internalStart(OCommandContext ctx) throws OTimeoutException {
     getPrev().ifPresent(x -> x.start(ctx).close(ctx));
 
-    List<OExecutionStep> stepsIter = getSubSteps();
+    List<OExecutionStepInternal> stepsIter = getSubSteps();
 
     return OExecutionStream.streamsFromIterator(stepsIter.iterator(), this::startStep)
         .map(this::setCurrent);
   }
 
   private OResult setCurrent(OResult result, OCommandContext context) {
-    context.setVariable("$current", result);
+    context.setCurrent(result);
     return result;
   }
 
-  private OExecutionStream startStep(OExecutionStep value, OCommandContext cx) {
+  private OExecutionStream startStep(OExecutionStepInternal value, OCommandContext cx) {
     return ((AbstractExecutionStep) value).start(cx);
   }
 
   @Override
-  public void sendTimeout() {
-    for (OExecutionStep step : getSubSteps()) {
-      ((AbstractExecutionStep) step).sendTimeout();
-    }
-    prev.ifPresent(p -> p.sendTimeout());
-  }
-
-  @Override
-  public void close() {
-    for (OExecutionStep step : getSubSteps()) {
-      ((AbstractExecutionStep) step).close();
-    }
-    prev.ifPresent(p -> p.close());
-  }
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder builder = new StringBuilder();
-    String ind = OExecutionStepInternal.getIndent(depth, indent);
+    String ind = OExecutionStepInternal.getIndent(ctx);
     builder.append(ind);
     builder.append("+ FETCH FROM CLASS " + className);
-    if (profilingEnabled) {
-      builder.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      builder.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     builder.append("\n");
     for (int i = 0; i < getSubSteps().size(); i++) {
       OExecutionStepInternal step = (OExecutionStepInternal) getSubSteps().get(i);
-      builder.append(step.prettyPrint(depth + 1, indent));
+      ctx.incDepth();
+      builder.append(step.prettyPrint(ctx));
+      ctx.decDepth();
       if (i < getSubSteps().size() - 1) {
         builder.append("\n");
       }
@@ -202,7 +182,7 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public List<OExecutionStep> getSubSteps() {
+  public List<OExecutionStepInternal> getSubSteps() {
     return subSteps;
   }
 
@@ -212,15 +192,12 @@ public class FetchFromClassExecutionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    FetchFromClassExecutionStep result = new FetchFromClassExecutionStep(ctx, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    FetchFromClassExecutionStep result = new FetchFromClassExecutionStep();
     result.className = this.className;
     result.orderByRidAsc = this.orderByRidAsc;
     result.orderByRidDesc = this.orderByRidDesc;
-    result.subSteps =
-        this.subSteps.stream()
-            .map(x -> ((OExecutionStepInternal) x).copy(ctx))
-            .collect(Collectors.toList());
+    result.subSteps = this.subSteps.stream().map(x -> x.copy(ctx)).collect(Collectors.toList());
     return result;
   }
 }

@@ -6,23 +6,17 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.OExecutionThreadLocal;
 import com.orientechnologies.orient.core.exception.OCommandInterruptedException;
 import com.orientechnologies.orient.core.sql.executor.AbstractExecutionStep;
-import com.orientechnologies.orient.core.sql.executor.EmptyStep;
-import com.orientechnologies.orient.core.sql.executor.OExecutionStepInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OScriptExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.List;
 
 public class WhileStep extends AbstractExecutionStep {
   private final OBooleanExpression condition;
   private final List<OStatement> statements;
 
-  public WhileStep(
-      OBooleanExpression condition,
-      List<OStatement> statements,
-      OCommandContext ctx,
-      boolean enableProfiling) {
-    super(ctx, enableProfiling);
+  public WhileStep(OBooleanExpression condition, List<OStatement> statements) {
+    super();
     this.condition = condition;
     this.statements = statements;
   }
@@ -36,12 +30,12 @@ public class WhileStep extends AbstractExecutionStep {
         throw new OCommandInterruptedException("The command has been interrupted");
 
       OScriptExecutionPlan plan = initPlan(ctx);
-      OExecutionStepInternal result = plan.executeFull(ctx);
-      if (result != null) {
-        return result.start(ctx);
+      OExecutionStream result = plan.start(ctx);
+      if (result.isTermination(ctx)) {
+        return result;
       }
     }
-    return new EmptyStep(ctx, false).start(ctx);
+    return OExecutionStream.empty();
   }
 
   public OScriptExecutionPlan initPlan(OCommandContext ctx) {
@@ -52,26 +46,8 @@ public class WhileStep extends AbstractExecutionStep {
       if (stm.originalStatement == null) {
         stm.originalStatement = stm.toString();
       }
-      plan.chain(stm, profilingEnabled, subCtx1);
+      plan.chain(stm);
     }
     return plan;
-  }
-
-  public boolean containsReturn() {
-    for (OStatement stm : this.statements) {
-      if (stm instanceof OReturnStatement) {
-        return true;
-      }
-      if (stm instanceof OForEachBlock && ((OForEachBlock) stm).containsReturn()) {
-        return true;
-      }
-      if (stm instanceof OIfStatement && ((OIfStatement) stm).containsReturn()) {
-        return true;
-      }
-      if (stm instanceof OWhileBlock && ((OWhileBlock) stm).containsReturn()) {
-        return true;
-      }
-    }
-    return false;
   }
 }

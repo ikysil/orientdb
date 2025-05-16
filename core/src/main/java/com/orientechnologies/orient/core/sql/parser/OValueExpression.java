@@ -4,7 +4,6 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.collate.OCollate;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.sql.executor.AggregationContext;
@@ -23,10 +22,6 @@ public class OValueExpression extends OExpression {
   public OValueExpression(Object val) {
     super(-1);
     this.value = val;
-  }
-
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    return value;
   }
 
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {

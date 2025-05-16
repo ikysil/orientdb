@@ -28,7 +28,6 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.serialization.OBinaryProtocol;
 import com.orientechnologies.orient.core.serialization.OMemoryStream;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
-import com.orientechnologies.orient.core.storage.OStorage;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -276,33 +275,6 @@ public class ORecordId implements ORID {
 
     clusterId = iSource.getClusterId();
     clusterPosition = iSource.getClusterPosition();
-  }
-
-  @Override
-  public void lock(final boolean iExclusive) {
-    ODatabaseRecordThreadLocal.instance()
-        .get()
-        .getTransaction()
-        .lockRecord(
-            this,
-            iExclusive
-                ? OStorage.LOCKING_STRATEGY.EXCLUSIVE_LOCK
-                : OStorage.LOCKING_STRATEGY.SHARED_LOCK);
-  }
-
-  @Override
-  public boolean isLocked() {
-    return ODatabaseRecordThreadLocal.instance().get().getTransaction().isLockedRecord(this);
-  }
-
-  @Override
-  public OStorage.LOCKING_STRATEGY lockingStrategy() {
-    return ODatabaseRecordThreadLocal.instance().get().getTransaction().lockingStrategy(this);
-  }
-
-  @Override
-  public void unlock() {
-    ODatabaseRecordThreadLocal.instance().get().getTransaction().unlockRecord(this);
   }
 
   public String next() {

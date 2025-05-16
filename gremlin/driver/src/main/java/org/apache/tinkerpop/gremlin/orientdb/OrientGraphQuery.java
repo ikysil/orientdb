@@ -1,6 +1,5 @@
 package org.apache.tinkerpop.gremlin.orientdb;
 
-import com.orientechnologies.orient.core.sql.executor.FetchFromIndexStep;
 import com.orientechnologies.orient.core.sql.executor.GlobalLetQueryStep;
 import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
 import java.util.Map;
@@ -43,26 +42,17 @@ public class OrientGraphQuery implements OrientGraphBaseQuery {
     OExecutionPlan executionPlan = this.explain(graph).get();
     if (target > 1) {
       return executionPlan.getSteps().stream()
-          .filter(step -> (step instanceof GlobalLetQueryStep))
+          .filter(step -> (step.getName().equals(GlobalLetQueryStep.class.getSimpleName())))
           .map(
               s -> {
-                GlobalLetQueryStep subStep = (GlobalLetQueryStep) s;
                 return (int)
-                    subStep.getSubExecutionPlans().stream()
-                        .filter(
-                            plan ->
-                                plan.getSteps().stream()
-                                        .filter((step) -> step instanceof FetchFromIndexStep)
-                                        .count()
-                                    > 0)
+                    s.getSubExecutionPlans().stream()
+                        .filter(plan -> plan.getIndexes().size() > 0)
                         .count();
               })
           .reduce(0, (a, b) -> a + b);
     } else {
-      return (int)
-          executionPlan.getSteps().stream()
-              .filter((step) -> step instanceof FetchFromIndexStep)
-              .count();
+      return (int) executionPlan.getIndexes().size();
     }
   }
 }

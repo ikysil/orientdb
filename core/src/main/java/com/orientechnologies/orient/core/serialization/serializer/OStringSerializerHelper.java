@@ -19,7 +19,6 @@
  */
 package com.orientechnologies.orient.core.serialization.serializer;
 
-import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.io.OIOUtils;
 import com.orientechnologies.common.parser.OStringParser;
 import com.orientechnologies.common.types.OBinary;
@@ -35,7 +34,6 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.record.string.ORecordSerializerSchemaAware2CSV;
 import com.orientechnologies.orient.core.serialization.serializer.string.OStringSerializerAnyStreamable;
-import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -44,7 +42,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -609,18 +606,6 @@ public abstract class OStringSerializerHelper {
         iJumpChars);
   }
 
-  //  public static int parse(final String iSource, final StringBuilder iBuffer, final int
-  // beginIndex, final int endIndex,
-  //      final char[] iSeparator, final boolean iStringSeparatorExtended, final boolean
-  // iConsiderBraces, final boolean iConsiderSets,
-  //      final int iMinPosSeparatorAreValid, boolean considerBags, final boolean iUnicode, final
-  // char... iJumpChars) {
-  //    return parse(iSource, iBuffer, beginIndex, endIndex, iSeparator, iStringSeparatorExtended,
-  // iConsiderBraces, iConsiderSets,
-  //        iMinPosSeparatorAreValid, considerBags, iUnicode, false, iJumpChars);
-  //
-  //  }
-
   public static int parse(
       final String iSource,
       final StringBuilder iBuffer,
@@ -952,15 +937,6 @@ public abstract class OStringSerializerHelper {
     return iParts;
   }
 
-  public static String joinIntArray(int[] iArray) {
-    final StringBuilder ids = new StringBuilder(iArray.length * 3);
-    for (int id : iArray) {
-      if (ids.length() > 0) ids.append(RECORD_SEPARATOR);
-      ids.append(id);
-    }
-    return ids.toString();
-  }
-
   public static int[] splitIntArray(final String iInput) {
     final List<String> items = split(iInput, RECORD_SEPARATOR);
     final int[] values = new int[items.size()];
@@ -974,12 +950,6 @@ public abstract class OStringSerializerHelper {
     if (iText == null) return false;
 
     return iText.indexOf(iSeparator) > -1;
-  }
-
-  public static int getCollection(
-      final String iText, final int iStartPosition, final Collection<String> iCollection) {
-    return getCollection(
-        iText, iStartPosition, iCollection, LIST_BEGIN, LIST_END, COLLECTION_SEPARATOR);
   }
 
   public static int getCollection(
@@ -1058,76 +1028,6 @@ public abstract class OStringSerializerHelper {
     if (buffer.length() > 0) iCollection.add(buffer.toString().trim());
 
     return --currentPos;
-  }
-
-  public static int getParameters(
-      final String iText,
-      final int iBeginPosition,
-      int iEndPosition,
-      final List<String> iParameters) {
-    iParameters.clear();
-
-    final int openPos = iText.indexOf(EMBEDDED_BEGIN, iBeginPosition);
-    if (openPos == -1 || (iEndPosition > -1 && openPos > iEndPosition)) return iBeginPosition;
-
-    final StringBuilder buffer = new StringBuilder(128);
-    parse(
-        iText,
-        buffer,
-        openPos,
-        iEndPosition,
-        PARAMETER_EXT_SEPARATOR,
-        true,
-        true,
-        false,
-        -1,
-        false);
-    if (buffer.length() == 0) return iBeginPosition;
-
-    final String t = buffer.substring(1, buffer.length() - 1).trim();
-    final List<String> pars = smartSplit(t, PARAMETER_SEPARATOR, 0, -1, true, true, false, false);
-
-    for (int i = 0; i < pars.size(); ++i) iParameters.add(pars.get(i).trim());
-
-    return iBeginPosition + buffer.length();
-  }
-
-  public static int getEmbedded(
-      final String iText,
-      final int iBeginPosition,
-      int iEndPosition,
-      final StringBuilder iEmbedded) {
-    final int openPos = iText.indexOf(EMBEDDED_BEGIN, iBeginPosition);
-    if (openPos == -1 || (iEndPosition > -1 && openPos > iEndPosition)) return iBeginPosition;
-
-    final StringBuilder buffer = new StringBuilder(128);
-    parse(
-        iText,
-        buffer,
-        openPos,
-        iEndPosition,
-        PARAMETER_EXT_SEPARATOR,
-        true,
-        true,
-        false,
-        -1,
-        false);
-    if (buffer.length() == 0) return iBeginPosition;
-
-    final String t = buffer.substring(1, buffer.length() - 1).trim();
-    iEmbedded.append(t);
-    return iBeginPosition + buffer.length();
-  }
-
-  public static List<String> getParameters(final String iText) {
-    final List<String> params = new ArrayList<String>();
-    try {
-      getParameters(iText, 0, -1, params);
-    } catch (Exception e) {
-      throw OException.wrapException(
-          new OCommandSQLParsingException("Error on reading parameters in: " + iText), e);
-    }
-    return params;
   }
 
   public static Map<String, String> getMap(final String iText) {
@@ -1272,18 +1172,6 @@ public abstract class OStringSerializerHelper {
   }
 
   /**
-   * Use OIOUtils.getStringContent(iValue) instead.
-   *
-   * @param iValue
-   * @return
-   */
-  @Deprecated
-  public static String getStringContent(final Object iValue) {
-    // MOVED
-    return OIOUtils.getStringContent(iValue);
-  }
-
-  /**
    * Returns the binary representation of a content. If it's a String a Base64 decoding is applied.
    */
   public static byte[] getBinaryContent(final Object iValue) {
@@ -1308,30 +1196,6 @@ public abstract class OStringSerializerHelper {
               + iValue.getClass().getName()
               + "): "
               + iValue);
-  }
-
-  /**
-   * Checks if a string contains alphanumeric only characters.
-   *
-   * @param iContent String to check
-   * @return true is all the content is alphanumeric, otherwise false
-   */
-  public static boolean isAlphanumeric(final String iContent) {
-    final int tot = iContent.length();
-    for (int i = 0; i < tot; ++i) {
-      if (!Character.isLetterOrDigit(iContent.charAt(i))) return false;
-    }
-    return true;
-  }
-
-  public static String removeQuotationMarks(final String iValue) {
-    if (iValue != null
-        && iValue.length() > 1
-        && (iValue.charAt(0) == '\'' && iValue.charAt(iValue.length() - 1) == '\''
-            || iValue.charAt(0) == '"' && iValue.charAt(iValue.length() - 1) == '"'))
-      return iValue.substring(1, iValue.length() - 1);
-
-    return iValue;
   }
 
   public static boolean startsWithIgnoreCase(final String iFirst, final String iSecond) {
@@ -1361,48 +1225,6 @@ public abstract class OStringSerializerHelper {
         if (c == iChars[k]) return i;
       }
     }
-    return -1;
-  }
-
-  /** Finds the end of a block delimited by 2 chars. */
-  public static final int findEndBlock(
-      final String iOrigin, final char iBeginChar, final char iEndChar, final int iBeginOffset) {
-    int inc = 0;
-
-    for (int i = iBeginOffset; i < iOrigin.length(); i++) {
-      char c = iOrigin.charAt(i);
-      if (c == '\'') {
-        // skip to text end
-        int tend = i;
-        while (true) {
-          tend = iOrigin.indexOf('\'', tend + 1);
-          if (tend < 0) {
-            throw new OCommandSQLParsingException("Could not find end of text area", iOrigin, i);
-          }
-
-          if (iOrigin.charAt(tend - 1) == '\\') {
-            // inner quote, skip it
-            continue;
-          } else {
-            break;
-          }
-        }
-        i = tend;
-        continue;
-      }
-
-      if (c != iBeginChar && c != iEndChar) continue;
-
-      if (c == iBeginChar) {
-        inc++;
-      } else if (c == iEndChar) {
-        inc--;
-        if (inc == 0) {
-          return i;
-        }
-      }
-    }
-
     return -1;
   }
 
@@ -1445,68 +1267,6 @@ public abstract class OStringSerializerHelper {
     // lowest = index;
     // }
     return lowest;
-  }
-
-  public static int getLowerIndexOfKeywords(
-      final String iText, final int iBeginOffset, final String... iToSearch) {
-    Character lastQuote = null;
-    List<Character> nestedStack = new LinkedList<Character>();
-
-    for (int i = iBeginOffset; i < iText.length(); i++) {
-
-      char prevChar = i < 1 ? '\n' : iText.charAt(i - 1);
-      char lastChar = iText.charAt(i);
-      if (lastQuote != null) {
-        if (lastQuote.equals(lastChar)) {
-          lastQuote = null;
-        }
-        continue;
-      }
-      if (lastChar == '\'' || lastChar == '"') {
-        lastQuote = lastChar;
-        continue;
-      }
-
-      if (lastChar == '(' || lastChar == '[' || lastChar == '{') {
-        nestedStack.add(0, lastChar);
-        continue;
-      }
-
-      if (nestedStack.size() > 0) {
-        Character stackTop = nestedStack.get(0);
-
-        if (lastChar == ')' && stackTop == '(') {
-          nestedStack.remove(0);
-        }
-        if (lastChar == ']' && stackTop == '[') {
-          nestedStack.remove(0);
-        }
-        if (lastChar == '}' && stackTop == '{') {
-          nestedStack.remove(0);
-        }
-        continue;
-      }
-
-      if (prevChar == ' ' || prevChar == '\n' || prevChar == '\t') {
-        for (String s : iToSearch) {
-          if (iText.length() < i + s.length()) {
-            continue;
-          }
-
-          if (iText.substring(i, i + s.length()).equalsIgnoreCase(s)) {
-            if (iText.length() == (i + s.length())) {
-              return i;
-            }
-            char nextChar = iText.charAt(i + s.length());
-            if (nextChar == ' ' || nextChar == '\n' || nextChar == '\t') {
-              return i;
-            }
-          }
-        }
-      }
-    }
-
-    return -1;
   }
 
   public static int getHigherIndexOf(

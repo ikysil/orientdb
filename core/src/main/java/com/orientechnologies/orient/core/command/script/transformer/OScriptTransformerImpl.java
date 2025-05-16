@@ -55,7 +55,7 @@ public class OScriptTransformerImpl implements OScriptTransformer {
       else if (v.hasArrayElements()) {
         final List<Object> array = new ArrayList<>((int) v.getArraySize());
         for (int i = 0; i < v.getArraySize(); ++i)
-          array.add(new OResultInternal(v.getArrayElement(i).asHostObject()));
+          array.add(new OResultInternal((OIdentifiable) v.getArrayElement(i).asHostObject()));
         value = array;
       } else if (v.isHostObject()) value = v.asHostObject();
       else if (v.isString()) value = v.asString();

@@ -25,10 +25,9 @@ import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
-import com.orientechnologies.orient.core.sql.executor.OExecutionStep;
+import com.orientechnologies.orient.core.sql.executor.OExecutionStepInternal;
 import com.orientechnologies.orient.core.sql.executor.OIndexStreamStat;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.HashMap;
@@ -54,7 +53,6 @@ public class OBasicCommandContext implements OCommandContext {
   public static final String INVALID_COMPARE_COUNT = "INVALID_COMPARE_COUNT";
 
   protected ODatabaseSession database;
-  protected Object[] args;
 
   protected boolean recordMetrics = false;
   protected OCommandContext parent;
@@ -70,10 +68,10 @@ public class OBasicCommandContext implements OCommandContext {
   private long timeoutMs;
   private OCommandContext.TIMEOUT_STRATEGY timeoutStrategy;
   protected AtomicLong resultsProcessed = new AtomicLong(0);
-  protected Set<Object> uniqueResult = new HashSet<Object>();
-  private Map<OExecutionStep, OStepStats> stepStats = new IdentityHashMap<>();
+  private Map<OExecutionStepInternal, OStepStats> stepStats = new IdentityHashMap<>();
   private LinkedList<OStepStats> currentStepStats = new LinkedList<>();
   private boolean indexStats = true;
+  private boolean profiling = false;
 
   public OBasicCommandContext() {
     this.database = ODatabaseRecordThreadLocal.instance().getIfDefined();
@@ -81,6 +79,21 @@ public class OBasicCommandContext implements OCommandContext {
 
   public OBasicCommandContext(ODatabaseSession session) {
     this.database = session;
+  }
+
+  public OResult getCurrent() {
+    return (OResult) getSimpleVariable("current");
+  }
+
+  @Override
+  public void setCurrentIfMissing(OResult result) {
+    if (getCurrent() == null) {
+      setCurrent(result);
+    }
+  }
+
+  public void setCurrent(OResult result) {
+    setLocalVariable("current", result);
   }
 
   public Object getVariable(String iName) {
@@ -210,6 +223,39 @@ public class OBasicCommandContext implements OCommandContext {
       return ((OBasicCommandContext) parent).hasVariable(iName);
     }
     return false;
+  }
+
+  public Object getLocalVariable(String name) {
+    if (variables != null) {
+      return variables.get(name);
+    } else {
+      return null;
+    }
+  }
+
+  public void setLocalVariable(String name, Object value) {
+    if (variables == null) {
+      variables = new HashMap<>();
+    }
+    variables.put(name, value);
+  }
+
+  public boolean hasLocalVariable(String name) {
+    if (variables != null) {
+      return variables.containsKey(name);
+    } else {
+      return false;
+    }
+  }
+
+  public Object getSimpleVariable(String name) {
+    if (hasLocalVariable(name)) {
+      return variables.get(name);
+    } else if (parent != null && parent instanceof OBasicCommandContext) {
+      return ((OBasicCommandContext) parent).getSimpleVariable(name);
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -372,6 +418,16 @@ public class OBasicCommandContext implements OCommandContext {
     this.inputParameters = inputParameters;
   }
 
+  public void setArrayParameters(Object[] args) {
+    Map<Object, Object> params = new HashMap<>();
+    if (args != null) {
+      for (int i = 0; i < args.length; i++) {
+        params.put(i, args[i]);
+      }
+    }
+    this.inputParameters = params;
+  }
+
   /**
    * returns the number of results processed. This is intended to be used with LIMIT in SQL
    * statements
@@ -380,21 +436,6 @@ public class OBasicCommandContext implements OCommandContext {
    */
   public AtomicLong getResultsProcessed() {
     return resultsProcessed;
-  }
-
-  /**
-   * adds an item to the unique result set
-   *
-   * @param o the result item to add
-   * @return true if the element is successfully added (it was not present yet), false otherwise (it
-   *     was already present)
-   */
-  public synchronized boolean addToUniqueResult(Object o) {
-    Object toAdd = o;
-    if (o instanceof ODocument && ((ODocument) o).getIdentity().isNew()) {
-      toAdd = new ODocumentEqualityWrapper((ODocument) o);
-    }
-    return this.uniqueResult.add(toAdd);
   }
 
   public ODatabaseSession getDatabase() {
@@ -434,7 +475,7 @@ public class OBasicCommandContext implements OCommandContext {
         || (parent != null && parent.isScriptVariableDeclared(varName));
   }
 
-  public void startProfiling(OExecutionStep step) {
+  public void startProfiling(OExecutionStepInternal step) {
     OStepStats stats = stepStats.get(step);
     if (stats == null) {
       stats = new OStepStats();
@@ -447,7 +488,7 @@ public class OBasicCommandContext implements OCommandContext {
     this.currentStepStats.push(stats);
   }
 
-  public void endProfiling(OExecutionStep step) {
+  public void endProfiling(OExecutionStepInternal step) {
     if (!this.currentStepStats.isEmpty()) {
       this.currentStepStats.pop().end();
       if (!this.currentStepStats.isEmpty()) {
@@ -457,7 +498,7 @@ public class OBasicCommandContext implements OCommandContext {
   }
 
   @Override
-  public OStepStats getStats(OExecutionStep step) {
+  public OStepStats getStats(OExecutionStepInternal step) {
     return stepStats.get(step);
   }
 
@@ -497,5 +538,14 @@ public class OBasicCommandContext implements OCommandContext {
         indexStats = false;
       }
     }
+  }
+
+  public void enableProfiling() {
+    this.profiling = true;
+  }
+
+  @Override
+  public boolean isProfiling() {
+    return profiling;
   }
 }

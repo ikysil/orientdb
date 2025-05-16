@@ -1,9 +1,7 @@
 package com.orientechnologies.orient.core.sql.executor;
 
-import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OSimpleExecStatement;
 import java.util.Collections;
 import java.util.List;
@@ -13,31 +11,16 @@ import java.util.Set;
 public class OSingleOpExecutionPlan implements OInternalExecutionPlan {
 
   protected final OSimpleExecStatement statement;
-
-  private boolean executed = false;
-  private OExecutionStream result;
+  private String genericStatement;
+  private String stringStatement;
 
   public OSingleOpExecutionPlan(OSimpleExecStatement stm) {
     this.statement = stm;
   }
 
   @Override
-  public void close() {}
-
-  @Override
   public OExecutionStream start(OCommandContext ctx) {
-    if (executed && result == null) {
-      return OExecutionStream.empty();
-    }
-    if (!executed) {
-      executed = true;
-      result = statement.executeSimple(ctx);
-    }
-    return result;
-  }
-
-  public void reset(OCommandContext ctx) {
-    executed = false;
+    return statement.executeSimple(ctx);
   }
 
   @Override
@@ -50,40 +33,30 @@ public class OSingleOpExecutionPlan implements OInternalExecutionPlan {
     return false;
   }
 
-  public OExecutionStream executeInternal(OBasicCommandContext ctx)
-      throws OCommandExecutionException {
-    if (executed) {
-      throw new OCommandExecutionException(
-          "Trying to execute a result-set twice. Please use reset()");
-    }
-    executed = true;
-    result = statement.executeSimple(ctx);
-    return result;
-  }
-
   @Override
-  public List<OExecutionStep> getSteps() {
+  public List<OExecutionStepInternal> getSteps() {
     return Collections.emptyList();
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ ");
-    result.append(statement.toString());
+    result.append(statement.prettyPrint(ctx));
     return result.toString();
   }
 
   @Override
-  public OResult toResult() {
+  public OResult toResult(OToResultContext ctx) {
     OResultInternal result = new OResultInternal();
     result.setProperty("type", "QueryExecutionPlan");
     result.setProperty("javaType", getClass().getName());
     result.setProperty("stmText", statement.toString());
+    result.setProperty("genericStm", getGenericStatement());
     result.setProperty("cost", getCost());
-    result.setProperty("prettyPrint", prettyPrint(0, 2));
+    result.setProperty("prettyPrint", prettyPrint(new OPrintContexImpl(ctx.getContext(), 0, 2)));
     result.setProperty("steps", null);
     return result;
   }
@@ -91,5 +64,25 @@ public class OSingleOpExecutionPlan implements OInternalExecutionPlan {
   @Override
   public Set<String> getIndexes() {
     return Collections.emptySet();
+  }
+
+  @Override
+  public void setGenericStatement(String stm) {
+    this.genericStatement = stm;
+  }
+
+  @Override
+  public String getGenericStatement() {
+    return this.genericStatement;
+  }
+
+  @Override
+  public void setStatement(String stm) {
+    this.stringStatement = stm;
+  }
+
+  @Override
+  public String getStatement() {
+    return stringStatement;
   }
 }

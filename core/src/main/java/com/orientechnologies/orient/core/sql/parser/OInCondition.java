@@ -3,22 +3,23 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.collection.OMultiValue;
-import com.orientechnologies.orient.core.command.OBasicCommandContext;
+import com.orientechnologies.orient.core.collate.OCollate;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
-import com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquals;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 public class OInCondition extends OBooleanExpression {
@@ -41,32 +42,6 @@ public class OInCondition extends OBooleanExpression {
   }
 
   @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftVal = evaluateLeft(currentRecord, ctx);
-    Object rightVal = evaluateRight(currentRecord, ctx);
-    if (rightVal == null) {
-      return false;
-    }
-    return evaluateExpression(leftVal, rightVal);
-  }
-
-  public Object evaluateRight(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object rightVal = null;
-    if (rightStatement != null) {
-      rightVal = executeQuery(rightStatement, ctx);
-    } else if (rightParam != null) {
-      rightVal = rightParam.getValue(ctx.getInputParameters());
-    } else if (rightMathExpression != null) {
-      rightVal = rightMathExpression.execute(currentRecord, ctx);
-    }
-    return rightVal;
-  }
-
-  public Object evaluateLeft(OIdentifiable currentRecord, OCommandContext ctx) {
-    return left.execute(currentRecord, ctx);
-  }
-
-  @Override
   public boolean evaluate(OResult currentRecord, OCommandContext ctx) {
     Object rightVal = evaluateRight(currentRecord, ctx);
     if (rightVal == null) {
@@ -82,6 +57,11 @@ public class OInCondition extends OBooleanExpression {
     }
 
     Object leftVal = evaluateLeft(currentRecord, ctx);
+    OCollate collate = left.getCollate(currentRecord, ctx);
+    if (collate != null) {
+      leftVal = collate.transform(leftVal);
+      rightVal = collate.transform(rightVal);
+    }
     return evaluateExpression(leftVal, rightVal);
   }
 
@@ -122,9 +102,8 @@ public class OInCondition extends OBooleanExpression {
   }
 
   protected static Object executeQuery(OSelectStatement rightStatement, OCommandContext ctx) {
-    OBasicCommandContext subCtx = new OBasicCommandContext(ctx.getDatabase());
-    subCtx.setParentWithoutOverridingChild(ctx);
-    OResultSet result = rightStatement.execute(ctx.getDatabase(), ctx.getInputParameters(), false);
+    OResultSet result =
+        rightStatement.execute(ctx.getDatabase(), ctx.getInputParameters(), ctx, false);
     return result.stream().collect(Collectors.toSet());
   }
 
@@ -134,31 +113,31 @@ public class OInCondition extends OBooleanExpression {
         return true;
       }
       for (final Object o : OMultiValue.getMultiValueIterable(iRight, false)) {
-        if (OQueryOperatorEquals.equals(iLeft, o)) return true;
+        if (OEqualsCompareOperator.equals(iLeft, o)) return true;
         if (OMultiValue.isMultiValue(iLeft)) {
           for (final Object item : OMultiValue.getMultiValueIterable(iLeft, false)) {
-            if (OQueryOperatorEquals.equals(item, o)) {
+            if (OEqualsCompareOperator.equals(item, o)) {
               return true;
             }
             if (item instanceof OResult && ((OResult) item).getPropertyNames().size() == 1) {
               Object propValue =
                   ((OResult) item)
                       .getProperty(((OResult) item).getPropertyNames().iterator().next());
-              if (OQueryOperatorEquals.equals(propValue, o)) return true;
+              if (OEqualsCompareOperator.equals(propValue, o)) return true;
             }
           }
         }
       }
     } else if (iRight.getClass().isArray()) {
       for (final Object o : (Object[]) iRight) {
-        if (OQueryOperatorEquals.equals(iLeft, o)) return true;
+        if (OEqualsCompareOperator.equals(iLeft, o)) return true;
       }
     } else if (iRight instanceof OResultSet) {
 
       OResultSet rsRight = (OResultSet) iRight;
       rsRight.reset();
       while (((OResultSet) iRight).hasNext()) {
-        if (OQueryOperatorEquals.equals(iLeft, rsRight.next())) {
+        if (OEqualsCompareOperator.equals(iLeft, rsRight.next())) {
           return true;
         }
       }
@@ -401,79 +380,52 @@ public class OInCondition extends OBooleanExpression {
     this.rightMathExpression = rightMathExpression;
   }
 
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
-    if (left.isBaseIdentifier()) {
-      if (info.getField().equals(left.getDefaultAlias().getStringValue())) {
-        if (rightMathExpression != null) {
-          return rightMathExpression.isEarlyCalculated(info.getCtx());
-        } else if (rightParam != null) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   public Optional<OIndexCandidate> findIndex(OIndexFinder info, OCommandContext ctx) {
     Optional<OPath> path = left.getPath();
     if (path.isPresent()) {
       if (rightMathExpression != null && rightMathExpression.isEarlyCalculated(ctx)) {
-        Object value = rightMathExpression.execute((OResult) null, ctx);
-        return info.findExactIndex(path.get(), value, ctx);
+        return info.findExact(path.get(), this::rightValue, ctx);
+      } else if (rightParam != null) {
+        return info.findExact(path.get(), this::rightParam, ctx);
       }
     }
 
     return Optional.empty();
   }
 
-  @Override
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    OExpression item = new OExpression(-1);
-    if (getRightMathExpression() != null) {
-      item.setMathExpression(getRightMathExpression());
-      return item;
-    } else if (getRightParam() != null) {
-      OBaseExpression e = new OBaseExpression(-1);
-      e.setInputParam(getRightParam().copy());
-      item.setMathExpression(e);
-      return item;
-    } else {
-      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
+  private Collection<Object> rightValue(OCommandContext ctx, boolean asc) {
+    Collection<Object> val = rightMathExpression.getIndexKey(ctx);
+    return sortValues(val, asc);
   }
 
-  @Override
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    OExpression item = new OExpression(-1);
-    if (getRightMathExpression() != null) {
-      item.setMathExpression(getRightMathExpression());
-      return item;
-    } else if (getRightParam() != null) {
-      OBaseExpression e = new OBaseExpression(-1);
-      e.setInputParam(getRightParam().copy());
-      item.setMathExpression(e);
-      return item;
-    } else {
-      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
+  private Collection<Object> rightParam(OCommandContext ctx, boolean asc) {
+    Object val = rightParam.getValue(ctx.getInputParameters());
+    return sortValues(val, asc);
   }
 
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    if (additional != null && additional.getOperator() != null) {
-      return additional.getOperator().isGreaterInclude();
-    } else {
-      return true;
-    }
-  }
+  protected Collection<Object> sortValues(Object val, boolean asc) {
+    if (OMultiValue.isMultiValue(val)) {
+      Set<Object> itemsSet;
+      if (asc) {
+        itemsSet = new TreeSet<>();
+      } else {
+        itemsSet = new TreeSet<>((Comparator<Object>) Collections.reverseOrder());
+      }
+      for (Object item : OMultiValue.getMultiValueIterable(val)) {
+        if (item instanceof OResult) {
+          if (((OResult) item).isElement()) {
+            item = ((OResult) item).getElement().orElseThrow(IllegalStateException::new);
+          } else if (((OResult) item).getPropertyNames().size() == 1) {
+            item =
+                ((OResult) item).getProperty(((OResult) item).getPropertyNames().iterator().next());
+          }
+        }
+        itemsSet.add(item);
+      }
 
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    if (additional != null && additional.getOperator() != null) {
-      return additional.getOperator().isLessInclude();
-    } else {
-      return true;
+      return itemsSet;
     }
+    return Collections.singleton(val);
   }
 
   @Override

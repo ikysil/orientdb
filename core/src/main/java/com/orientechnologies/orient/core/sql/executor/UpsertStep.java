@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OAndBlock;
 import com.orientechnologies.orient.core.sql.parser.OBooleanExpression;
 import com.orientechnologies.orient.core.sql.parser.OCluster;
@@ -19,9 +19,8 @@ public class UpsertStep extends AbstractExecutionStep {
   private final OFromClause commandTarget;
   private final OWhereClause initialFilter;
 
-  public UpsertStep(
-      OFromClause target, OWhereClause where, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public UpsertStep(OFromClause target, OWhereClause where) {
+    super();
     this.commandTarget = target;
     this.initialFilter = where;
   }
@@ -59,12 +58,12 @@ public class UpsertStep extends AbstractExecutionStep {
 
     OUpdatableResult result = new OUpdatableResult(doc);
     if (initialFilter != null) {
-      setContent(result, initialFilter);
+      setContent(result, initialFilter, ctx);
     }
     return result;
   }
 
-  private void setContent(OResultInternal doc, OWhereClause initialFilter) {
+  private void setContent(OResultInternal doc, OWhereClause initialFilter, OCommandContext ctx) {
     List<OAndBlock> flattened = initialFilter.flatten();
     if (flattened.size() == 0) {
       return;
@@ -79,8 +78,8 @@ public class UpsertStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ INSERT (upsert, if needed)\n");

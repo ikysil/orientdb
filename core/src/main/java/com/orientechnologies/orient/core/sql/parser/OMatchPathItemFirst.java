@@ -2,6 +2,7 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import java.util.Collections;
 import java.util.Map;
 
@@ -41,7 +42,7 @@ public class OMatchPathItemFirst extends OMatchPathItem {
       OMatchStatement.MatchContext matchContext,
       OIdentifiable startingPoint,
       OCommandContext iCommandContext) {
-    Object qR = this.function.execute(startingPoint, iCommandContext);
+    Object qR = this.function.execute(new OResultInternal(startingPoint), iCommandContext);
     return (qR instanceof Iterable) ? (Iterable) qR : Collections.singleton((OIdentifiable) qR);
   }
 

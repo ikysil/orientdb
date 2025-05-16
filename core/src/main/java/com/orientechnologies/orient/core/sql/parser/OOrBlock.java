@@ -5,13 +5,16 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
+import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCanditateAll;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
-import com.orientechnologies.orient.core.sql.executor.metadata.ORequiredIndexCanditate;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,20 +30,6 @@ public class OOrBlock extends OBooleanExpression {
 
   public OOrBlock(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    if (getSubBlocks() == null) {
-      return true;
-    }
-
-    for (OBooleanExpression block : subBlocks) {
-      if (block.evaluate(currentRecord, ctx)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   @Override
@@ -61,11 +50,9 @@ public class OOrBlock extends OBooleanExpression {
     if (currentRecord instanceof OResult) {
       return evaluate((OResult) currentRecord, ctx);
     } else if (currentRecord instanceof OIdentifiable) {
-      return evaluate((OIdentifiable) currentRecord, ctx);
+      return evaluate(new OResultInternal((OIdentifiable) currentRecord), ctx);
     } else if (currentRecord instanceof Map) {
-      ODocument doc = new ODocument();
-      doc.fromMap((Map<String, Object>) currentRecord);
-      return evaluate(doc, ctx);
+      return evaluate(new OResultInternal((Map<String, Object>) currentRecord), ctx);
     }
     return false;
   }
@@ -255,6 +242,7 @@ public class OOrBlock extends OBooleanExpression {
         return false;
       }
     }
+
     return true;
   }
 
@@ -276,10 +264,10 @@ public class OOrBlock extends OBooleanExpression {
           result = singleResult;
 
         } else if (result.isPresent()) {
-          if (result.get() instanceof ORequiredIndexCanditate) {
-            ((ORequiredIndexCanditate) result.get()).addCanditate(singleResult.get());
+          if (result.get() instanceof OIndexCanditateAll) {
+            ((OIndexCanditateAll) result.get()).addCanditate(singleResult.get());
           } else {
-            ORequiredIndexCanditate req = new ORequiredIndexCanditate();
+            OIndexCanditateAll req = new OIndexCanditateAll();
             req.addCanditate(result.get());
             req.addCanditate(singleResult.get());
             result = Optional.of(req);
@@ -306,6 +294,66 @@ public class OOrBlock extends OBooleanExpression {
       }
     }
     return false;
+  }
+
+  public void applyRemove(
+      Object currentValue, OResultInternal originalRecord, OCommandContext ctx) {
+    if (currentValue == null) {
+      return;
+    }
+    if (currentValue instanceof Collection) {
+      Iterator it = ((Collection) currentValue).iterator();
+      while (it.hasNext()) {
+        Object cv = it.next();
+        if (this.evaluate(cv, ctx)) {
+          it.remove();
+        }
+      }
+    } else {
+      throw new OCommandExecutionException(
+          "Trying to remove elements from "
+              + currentValue
+              + " ("
+              + currentValue.getClass().getSimpleName()
+              + ")");
+    }
+  }
+
+  @Override
+  public OAndBlock extractRidRanges(OCommandContext ctx) {
+    if (getSubBlocks().size() == 1) {
+      return getSubBlocks().get(0).extractRidRanges(ctx);
+    }
+    return super.extractRidRanges(ctx);
+  }
+
+  @Override
+  public int conditionsCount() {
+    int count = 0;
+    for (OBooleanExpression exp : getSubBlocks()) {
+      count += exp.conditionsCount();
+    }
+    return count;
+  }
+
+  @Override
+  public OBooleanExpression getIndexKeyCondition() {
+    if (getSubBlocks().size() == 1) {
+      for (OBooleanExpression exp : getSubBlocks()) {
+        return exp.getIndexKeyCondition();
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public OBooleanExpression getIndexRidCondition() {
+    if (getSubBlocks().size() == 1) {
+      for (OBooleanExpression exp : getSubBlocks()) {
+        return exp.getIndexRidCondition();
+      }
+    }
+    return null;
   }
 }
 /* JavaCC - OriginalChecksum=98d3077303a598705894dbb7bd4e1573 (do not edit this line) */

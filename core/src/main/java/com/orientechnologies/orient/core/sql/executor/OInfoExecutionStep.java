@@ -13,6 +13,7 @@ public class OInfoExecutionStep implements OExecutionStep {
   private String description;
   private long cost;
   private List<OExecutionStep> subSteps = new ArrayList<>();
+  private List<OExecutionPlan> subPlans = new ArrayList<>();
   private OResult sourceResult;
 
   @Override
@@ -38,6 +39,10 @@ public class OInfoExecutionStep implements OExecutionStep {
   @Override
   public List<OExecutionStep> getSubSteps() {
     return subSteps;
+  }
+
+  public List<OExecutionPlan> getSubExecutionPlans() {
+    return subPlans;
   }
 
   @Override
@@ -80,5 +85,28 @@ public class OInfoExecutionStep implements OExecutionStep {
 
   public void setJavaType(String javaType) {
     this.javaType = javaType;
+  }
+
+  protected static OExecutionStep fromResult(OResult x) {
+    OInfoExecutionStep result = new OInfoExecutionStep();
+    result.setSourceResult(x);
+    result.setName(x.getProperty("name"));
+    result.setType(x.getProperty("type"));
+    result.setTargetNode(x.getProperty("targetNode"));
+    result.setJavaType(x.getProperty("javaType"));
+    result.setCost(x.getProperty("cost") == null ? -1 : x.getProperty("cost"));
+    List<OResult> ssteps = x.getProperty("subSteps");
+    if (ssteps != null) {
+      ssteps.stream()
+          .forEach(sstep -> result.getSubSteps().add(OInfoExecutionStep.fromResult(sstep)));
+    }
+    List<OResult> splans = x.getProperty("subExecutionPlans");
+    if (splans != null) {
+      splans.stream()
+          .forEach(
+              splan -> result.getSubExecutionPlans().add(OInfoExecutionPlan.fromResult(splan)));
+    }
+    result.setDescription(x.getProperty("description"));
+    return result;
   }
 }

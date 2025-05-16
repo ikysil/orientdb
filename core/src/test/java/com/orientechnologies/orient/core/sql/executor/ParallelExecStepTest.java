@@ -16,23 +16,19 @@ public class ParallelExecStepTest {
     OCommandContext ctx = new OBasicCommandContext();
     List<OInternalExecutionPlan> subPlans = new ArrayList<>();
     for (int i = 0; i < 4; i++) {
-      FetchFromRidsStep step0 =
-          new FetchFromRidsStep(Collections.singleton(new ORecordId(12, i)), ctx, false);
-      FetchFromRidsStep step1 =
-          new FetchFromRidsStep(Collections.singleton(new ORecordId(12, i)), ctx, false);
+      FetchFromRidsStep step0 = new FetchFromRidsStep(Collections.singleton(new ORecordId(12, i)));
+      FetchFromRidsStep step1 = new FetchFromRidsStep(Collections.singleton(new ORecordId(12, i)));
       OInternalExecutionPlan plan = new OSelectExecutionPlan();
       plan.getSteps().add(step0);
       plan.getSteps().add(step1);
       subPlans.add(plan);
     }
 
-    ParallelExecStep step = new ParallelExecStep(subPlans, ctx, false);
+    ParallelExecStep step = new ParallelExecStep(subPlans);
 
     OSelectExecutionPlan plan = new OSelectExecutionPlan();
-    plan.getSteps()
-        .add(new FetchFromRidsStep(Collections.singleton(new ORecordId(12, 100)), ctx, false));
+    plan.getSteps().add(new FetchFromRidsStep(Collections.singleton(new ORecordId(12, 100))));
     plan.getSteps().add(step);
-    plan.getSteps()
-        .add(new FetchFromRidsStep(Collections.singleton(new ORecordId(12, 100)), ctx, false));
+    plan.getSteps().add(new FetchFromRidsStep(Collections.singleton(new ORecordId(12, 100))));
   }
 }

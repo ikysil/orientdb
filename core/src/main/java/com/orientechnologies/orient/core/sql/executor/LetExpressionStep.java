@@ -4,7 +4,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import com.orientechnologies.orient.core.sql.parser.OProjectionItem;
@@ -14,9 +14,8 @@ public class LetExpressionStep extends AbstractExecutionStep {
   private OIdentifier varname;
   private OExpression expression;
 
-  public LetExpressionStep(
-      OIdentifier varName, OExpression expression, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public LetExpressionStep(OIdentifier varName, OExpression expression) {
+    super();
     this.varname = varName;
     this.expression = expression;
   }
@@ -38,8 +37,8 @@ public class LetExpressionStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ LET (for each record)\n" + spaces + "  " + varname + " = " + expression;
   }
 
@@ -66,7 +65,6 @@ public class LetExpressionStep extends AbstractExecutionStep {
         expression = new OExpression(-1);
         expression.deserialize(fromResult.getProperty("expression"));
       }
-      reset();
     } catch (Exception e) {
       throw OException.wrapException(new OCommandExecutionException(""), e);
     }

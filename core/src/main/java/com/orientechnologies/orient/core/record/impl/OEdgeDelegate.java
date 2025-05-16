@@ -36,7 +36,6 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.serialization.OSerializableStream;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
-import com.orientechnologies.orient.core.storage.OStorage;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
@@ -245,28 +244,6 @@ public class OEdgeDelegate implements OEdge {
       return null;
     }
     return (T) element;
-  }
-
-  @Override
-  public void lock(boolean iExclusive) {
-    if (element != null) element.lock(iExclusive);
-  }
-
-  @Override
-  public boolean isLocked() {
-    if (element != null) return element.isLocked();
-    return false;
-  }
-
-  @Override
-  public OStorage.LOCKING_STRATEGY lockingStrategy() {
-    if (element != null) return element.lockingStrategy();
-    return OStorage.LOCKING_STRATEGY.NONE;
-  }
-
-  @Override
-  public void unlock() {
-    if (element != null) element.unlock();
   }
 
   @Override

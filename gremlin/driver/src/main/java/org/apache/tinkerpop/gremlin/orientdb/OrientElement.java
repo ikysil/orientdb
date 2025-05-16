@@ -7,10 +7,13 @@ import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.storage.OStorage;
 import java.util.Arrays;
 import java.util.Iterator;
-import org.apache.tinkerpop.gremlin.structure.*;
+import org.apache.tinkerpop.gremlin.structure.Element;
+import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.structure.Property;
+import org.apache.tinkerpop.gremlin.structure.T;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 
 public abstract class OrientElement implements Element, OIdentifiable {
@@ -134,28 +137,6 @@ public abstract class OrientElement implements Element, OIdentifiable {
   @Override
   public <T extends ORecord> T getRecord() {
     return (T) rawElement;
-  }
-
-  @Override
-  public void lock(boolean iExclusive) {
-
-    rawElement.lock(iExclusive);
-  }
-
-  @Override
-  public boolean isLocked() {
-    return rawElement.isLocked();
-  }
-
-  @Override
-  public OStorage.LOCKING_STRATEGY lockingStrategy() {
-    return rawElement.lockingStrategy();
-  }
-
-  @Override
-  public void unlock() {
-
-    rawElement.unlock();
   }
 
   @Override

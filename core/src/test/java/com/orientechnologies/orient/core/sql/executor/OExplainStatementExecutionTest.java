@@ -18,7 +18,7 @@ public class OExplainStatementExecutionTest extends BaseMemoryDatabase {
 
     Optional<OExecutionPlan> plan = result.getExecutionPlan();
     Assert.assertTrue(plan.isPresent());
-    Assert.assertTrue(plan.get() instanceof OSelectExecutionPlan);
+    Assert.assertTrue(plan.get().getSteps().size() > 0);
 
     result.close();
   }

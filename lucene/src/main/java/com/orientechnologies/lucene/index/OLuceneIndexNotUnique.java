@@ -120,8 +120,7 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
   public OIndexAbstract removeCluster(String iClusterName) {
     acquireExclusiveLock();
     try {
-      if (clustersToIndex.remove(iClusterName)) {
-        updateConfiguration();
+      if (im.removeCluster(iClusterName)) {
         remove("_CLUSTER:" + storage.getClusterIdByName(iClusterName));
       }
 
@@ -162,24 +161,6 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
         put(fieldValueItem, doc);
       }
     } else put(fieldValue, doc);
-  }
-
-  @Override
-  protected void onIndexEngineChange(int indexId) {
-    while (true)
-      try {
-        storage.callIndexEngine(
-            false,
-            indexId,
-            engine -> {
-              OLuceneIndexEngine oIndexEngine = (OLuceneIndexEngine) engine;
-              oIndexEngine.init(im);
-              return null;
-            });
-        break;
-      } catch (OInvalidIndexEngineIdException e) {
-        doReloadIndexEngine();
-      }
   }
 
   protected Object encodeKey(Object key) {
@@ -280,18 +261,18 @@ public class OLuceneIndexNotUnique extends OIndexAbstract implements OLuceneInde
   @Override
   public OLuceneIndexNotUnique put(final Object key, final OIdentifiable value) {
     final ORID rid = value.getIdentity();
-
+    ODatabaseDocumentInternal db = getDatabase();
     if (!rid.isValid()) {
       if (value instanceof ORecord) {
         // EARLY SAVE IT
-        ((ORecord) value).save();
+        db.save((ORecord) value);
       } else {
         throw new IllegalArgumentException(
             "Cannot store non persistent RID as index value for key '" + key + "'");
       }
     }
     if (key != null) {
-      ODatabaseDocumentInternal db = getDatabase();
+
       OTransaction transaction = db.getTransaction();
 
       if (transaction.isActive()) {

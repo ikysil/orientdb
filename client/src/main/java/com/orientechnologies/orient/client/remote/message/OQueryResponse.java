@@ -1,12 +1,10 @@
 package com.orientechnologies.orient.client.remote.message;
 
 import com.orientechnologies.orient.client.remote.OBinaryResponse;
-import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
+import com.orientechnologies.orient.client.remote.ORemoteClientSession;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.OExecutionStep;
 import com.orientechnologies.orient.core.sql.executor.OInfoExecutionPlan;
-import com.orientechnologies.orient.core.sql.executor.OInfoExecutionStep;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataInput;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataOutput;
@@ -71,7 +69,7 @@ public class OQueryResponse implements OBinaryResponse {
   }
 
   @Override
-  public void read(OChannelDataInput network, OStorageRemoteSession session) throws IOException {
+  public void read(OChannelDataInput network, ORemoteClientSession session) throws IOException {
     queryId = network.readString();
     txChanges = network.readBoolean();
     executionPlan = readExecutionPlan(network);
@@ -129,18 +127,8 @@ public class OQueryResponse implements OBinaryResponse {
     if (!present) {
       return Optional.empty();
     }
-    OInfoExecutionPlan result = new OInfoExecutionPlan();
     OResult read = OMessageHelper.readResult(network);
-    result.setCost(((Number) read.getProperty("cost")).intValue());
-    result.setType(read.getProperty("type"));
-    result.setJavaType(read.getProperty("javaType"));
-    result.setPrettyPrint(read.getProperty("prettyPrint"));
-    result.setStmText(read.getProperty("stmText"));
-    List<OResult> subSteps = read.getProperty("steps");
-    if (subSteps != null) {
-      subSteps.forEach(x -> result.getSteps().add(toInfoStep(x)));
-    }
-    return Optional.of(result);
+    return Optional.of(OInfoExecutionPlan.fromResult(read));
   }
 
   public String getQueryId() {
@@ -161,22 +149,6 @@ public class OQueryResponse implements OBinaryResponse {
 
   public Map<String, Long> getQueryStats() {
     return queryStats;
-  }
-
-  private OExecutionStep toInfoStep(OResult x) {
-    OInfoExecutionStep result = new OInfoExecutionStep();
-    result.setSourceResult(x);
-    result.setName(x.getProperty("name"));
-    result.setType(x.getProperty("type"));
-    result.setTargetNode(x.getProperty("targetNode"));
-    result.setJavaType(x.getProperty("javaType"));
-    result.setCost(x.getProperty("cost") == null ? -1 : x.getProperty("cost"));
-    List<OResult> ssteps = x.getProperty("subSteps");
-    if (ssteps != null) {
-      ssteps.stream().forEach(sstep -> result.getSubSteps().add(toInfoStep(sstep)));
-    }
-    result.setDescription(x.getProperty("description"));
-    return result;
   }
 
   public boolean isTxChanges() {

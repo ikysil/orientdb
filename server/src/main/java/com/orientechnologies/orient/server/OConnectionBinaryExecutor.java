@@ -15,8 +15,6 @@ import com.orientechnologies.orient.client.remote.message.OCommitResponse.OUpdat
 import com.orientechnologies.orient.client.remote.message.tx.ORecordOperationRequest;
 import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
-import com.orientechnologies.orient.core.command.OCommandResultListener;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
@@ -55,14 +53,10 @@ import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.parser.OLocalResultSetLifecycleDecorator;
-import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
-import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.core.storage.OPhysicalPosition;
 import com.orientechnologies.orient.core.storage.ORecordMetadata;
 import com.orientechnologies.orient.core.storage.cluster.OOfflineClusterException;
 import com.orientechnologies.orient.core.storage.config.OClusterBasedStorageConfiguration;
-import com.orientechnologies.orient.core.storage.impl.local.OAbstractPaginatedStorage;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.atomicoperations.OAtomicOperationsManager;
 import com.orientechnologies.orient.core.storage.index.sbtree.OTreeInternal;
 import com.orientechnologies.orient.core.storage.index.sbtreebonsai.local.OSBTreeBonsai;
 import com.orientechnologies.orient.core.storage.ridbag.sbtree.OBonsaiCollectionPointer;
@@ -75,11 +69,7 @@ import com.orientechnologies.orient.server.distributed.ODistributedConfiguration
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
 import com.orientechnologies.orient.server.distributed.ORemoteServerController;
 import com.orientechnologies.orient.server.network.protocol.binary.HandshakeInfo;
-import com.orientechnologies.orient.server.network.protocol.binary.OAbstractCommandResultListener;
-import com.orientechnologies.orient.server.network.protocol.binary.OAsyncCommandResultListener;
-import com.orientechnologies.orient.server.network.protocol.binary.OLiveCommandResultListener;
 import com.orientechnologies.orient.server.network.protocol.binary.ONetworkProtocolBinary;
-import com.orientechnologies.orient.server.network.protocol.binary.OSyncCommandResultListener;
 import com.orientechnologies.orient.server.plugin.OServerPlugin;
 import com.orientechnologies.orient.server.tx.OTransactionOptimisticProxy;
 import com.orientechnologies.orient.server.tx.OTransactionOptimisticServer;
@@ -251,10 +241,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
 
   @Override
   public OBinaryResponse executeCountCluster(OCountRequest request) {
-    final long count =
-        connection
-            .getDatabase()
-            .countClusterElements(request.getClusterIds(), request.isCountTombstones());
+    final long count = connection.getDatabase().countClusterElements(request.getClusterIds());
     return new OCountResponse(count);
   }
 
@@ -574,84 +561,39 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     try {
       connection.getDatabase().swapTx(new OTransactionNoTx(connection.getDatabase(), null));
 
-      final boolean live = request.isLive();
-      final boolean asynch = request.isAsynch();
-
-      OCommandRequestText command = request.getQuery();
-
-      final Map<Object, Object> params = command.getParameters();
-
-      if (asynch && command instanceof OSQLSynchQuery) {
-        // CONVERT IT IN ASYNCHRONOUS QUERY
-        final OSQLAsynchQuery asynchQuery = new OSQLAsynchQuery(command.getText());
-        asynchQuery.setFetchPlan(command.getFetchPlan());
-        asynchQuery.setLimit(command.getLimit());
-        asynchQuery.setTimeout(command.getTimeoutTime(), command.getTimeoutStrategy());
-        asynchQuery.setUseCache(((OSQLSynchQuery) command).isUseCache());
-        command = asynchQuery;
-      }
-
-      connection.getData().commandDetail = command.getText();
-
-      connection.getData().command = command;
-      OAbstractCommandResultListener listener = null;
-      OLiveCommandResultListener liveListener = null;
-
-      OCommandResultListener cmdResultListener = command.getResultListener();
-
-      if (live) {
-        liveListener = new OLiveCommandResultListener(server, connection, cmdResultListener);
-        listener = new OSyncCommandResultListener(null);
-        command.setResultListener(liveListener);
-      } else if (asynch) {
-        listener = new OAsyncCommandResultListener(connection, cmdResultListener);
-        command.setResultListener(listener);
-      } else {
-        listener = new OSyncCommandResultListener(null);
-      }
-
-      final long serverTimeout =
-          connection
-              .getDatabase()
-              .getConfiguration()
-              .getValueAsLong(OGlobalConfiguration.COMMAND_TIMEOUT);
-
-      if (serverTimeout > 0 && command.getTimeoutTime() > serverTimeout)
-        // FORCE THE SERVER'S TIMEOUT
-        command.setTimeout(serverTimeout, command.getTimeoutStrategy());
-
-      // REQUEST CAN'T MODIFY THE RESULT, SO IT'S CACHEABLE
-      command.setCacheableResult(true);
-
       // ASSIGNED THE PARSED FETCHPLAN
-      final OCommandRequestText commandRequest = connection.getDatabase().command(command);
-      listener.setFetchPlan(commandRequest.getFetchPlan());
       OCommandResponse response;
-      if (asynch) {
-        // In case of async it execute the request during the write of the response
-        response =
-            new OCommandResponse(
-                null, listener, false, asynch, connection.getDatabase(), command, params);
-      } else {
-        // SYNCHRONOUS
-        final Object result;
-        if (params == null) result = commandRequest.execute();
-        else result = commandRequest.execute(params);
+      // SYNCHRONOUS
+      final Object result;
+      ODatabaseDocumentInternal db = connection.getDatabase();
+      // TODO: handle query/command/execute
 
-        // FETCHPLAN HAS TO BE ASSIGNED AGAIN, because it can be changed by SQL statement
-        listener.setFetchPlan(commandRequest.getFetchPlan());
-        boolean isRecordResultSet = true;
-        isRecordResultSet = command.isRecordResultSet();
-        response =
-            new OCommandResponse(
-                result,
-                listener,
-                isRecordResultSet,
-                asynch,
-                connection.getDatabase(),
-                command,
-                params);
+      OCommandRequest.OQuery query = request.getQuery();
+      OCommandRequest.OCommand command = request.getQueryCommand();
+      OCommandRequest.OScript script = request.getScript();
+      OCommandRequest.OLQuery liveQ = request.getLiveQuery();
+      if (query != null) {
+        connection.getData().commandDetail = query.getText();
+        result =
+            db.queryLikeLegacy(
+                query.getText(), query.getParameters(), query.getLimit(), query.getFetchPlan());
+
+      } else if (command != null) {
+        connection.getData().commandDetail = command.getText();
+        result = db.commandLikeLegacy(command.getText(), command.getParameters());
+
+      } else if (script != null) {
+        connection.getData().commandDetail = script.getText();
+        result =
+            db.executeLikeLegacy(script.getLanguage(), script.getText(), script.getParameters());
+
+      } else if (liveQ != null) {
+        result = new ArrayList<>();
+      } else {
+        result = new ArrayList<>();
       }
+
+      response = new OCommandResponse(result, true, connection.getDatabase());
       return response;
     } finally {
       connection.getDatabase().swapTx(oldTx);
@@ -741,11 +683,8 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     final OTransactionOptimisticProxy tx =
         new OTransactionOptimisticProxy(
             connection.getDatabase(),
-            request.getTxId(),
-            request.isUsingLong(),
             request.getOperations(),
             request.getIndexChanges(),
-            connection.getData().protocolVersion,
             connection.getData().getSerializer());
     try {
       try {
@@ -880,23 +819,9 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
 
   @Override
   public OBinaryResponse executeSBTreeCreate(OSBTCreateTreeRequest request) {
-    OBonsaiCollectionPointer collectionPointer = null;
-    try {
-      final ODatabaseDocumentInternal database = connection.getDatabase();
-      final OAbstractPaginatedStorage storage = (OAbstractPaginatedStorage) database.getStorage();
-      final OAtomicOperationsManager atomicOperationsManager = storage.getAtomicOperationsManager();
-      collectionPointer =
-          atomicOperationsManager.calculateInsideAtomicOperation(
-              null,
-              atomicOperation ->
-                  connection
-                      .getDatabase()
-                      .getSbTreeCollectionManager()
-                      .createSBTree(request.getClusterId(), atomicOperation, null));
-    } catch (IOException e) {
-      throw OException.wrapException(new ODatabaseException("Error during ridbag creation"), e);
-    }
-
+    final ODatabaseDocumentInternal database = connection.getDatabase();
+    OBonsaiCollectionPointer collectionPointer =
+        database.createSBTree(request.getClusterId(), null);
     return new OSBTCreateTreeResponse(collectionPointer);
   }
 
@@ -1457,7 +1382,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
         new OTransactionOptimisticServer(
             connection.getDatabase(),
             request.getTxId(),
-            request.isUsingLog(),
             request.getOperations(),
             request.getIndexChanges());
     try {
@@ -1477,7 +1401,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
         new OTransactionOptimisticServer(
             connection.getDatabase(),
             request.getTxId(),
-            request.isUsingLog(),
             request.getOperations(),
             request.getIndexChanges());
     try {
@@ -1498,11 +1421,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     if (request.isHasContent()) {
       tx =
           new OTransactionOptimisticServer(
-              database,
-              request.getTxId(),
-              request.isUsingLog(),
-              request.getOperations(),
-              request.getIndexChanges());
+              database, request.getTxId(), request.getOperations(), request.getIndexChanges());
       try {
         database.rawBegin(tx);
       } catch (final ORecordNotFoundException e) {
@@ -1561,11 +1480,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     if (request.isHasContent()) {
       tx =
           new OTransactionOptimisticServer(
-              database,
-              request.getTxId(),
-              request.isUsingLog(),
-              request.getOperations(),
-              request.getIndexChanges());
+              database, request.getTxId(), request.getOperations(), request.getIndexChanges());
       try {
         database.rawBegin(tx);
       } catch (final ORecordNotFoundException e) {

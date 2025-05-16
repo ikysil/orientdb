@@ -22,7 +22,7 @@ package com.orientechnologies.orient.client.remote.message;
 import com.orientechnologies.orient.client.binary.OBinaryRequestExecutor;
 import com.orientechnologies.orient.client.remote.OBinaryAsyncRequest;
 import com.orientechnologies.orient.client.remote.OBinaryResponse;
-import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
+import com.orientechnologies.orient.client.remote.ORemoteClientSession;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.id.ORID;
@@ -70,7 +70,7 @@ public class OCreateRecordRequest implements OBinaryAsyncRequest<OCreateRecordRe
   }
 
   @Override
-  public void write(final OChannelDataOutput network, final OStorageRemoteSession session)
+  public void write(final OChannelDataOutput network, final ORemoteClientSession session)
       throws IOException {
     network.writeShort((short) rid.getClusterId());
     network.writeBytes(rawContent);

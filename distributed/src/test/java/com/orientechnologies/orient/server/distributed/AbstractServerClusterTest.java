@@ -21,12 +21,10 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OCallable;
-import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.OrientDB;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -59,9 +57,6 @@ public abstract class AbstractServerClusterTest {
   protected final List<ServerRun> serverInstance = new ArrayList<ServerRun>();
 
   public void init(final int servers) {
-    ODatabaseDocumentTx.closeAll();
-
-    Orient.setRegisterDatabaseByPath(true);
     for (int i = 0; i < servers; ++i) serverInstance.add(new ServerRun(rootDirectory, "" + i));
   }
 
@@ -95,7 +90,6 @@ public abstract class AbstractServerClusterTest {
         else server.shutdownServer();
       }
 
-      ODatabaseDocumentTx.closeAll();
       onTestEnded();
 
       banner("Terminate HZ...");
@@ -188,7 +182,13 @@ public abstract class AbstractServerClusterTest {
 
   protected void onServerStarting(ServerRun server) {}
 
-  protected void onServerStarted(ServerRun server) {}
+  protected void onServerStarted(ServerRun server) {
+    try {
+      ODistributedServerManager mngr = server.getServerInstance().getDistributedManager();
+      mngr.waitUntilNodeOnline(mngr.getLocalNodeName(), getDatabaseName());
+    } catch (InterruptedException e) {
+    }
+  }
 
   protected void onTestEnded() {}
 

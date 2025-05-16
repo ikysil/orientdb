@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /**
  * This step is used just as a gate check for classes (eg. for CREATE VERTEX to make sure that the
@@ -27,19 +27,16 @@ public class CheckClassTypeStep extends AbstractExecutionStep {
    * @param targetClass a class to be checked
    * @param parentClass a class that is supposed to be the same or a parent class of the target
    *     class
-   * @param ctx execuiton context
-   * @param profilingEnabled true to collect execution stats
    */
-  public CheckClassTypeStep(
-      String targetClass, String parentClass, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CheckClassTypeStep(String targetClass, String parentClass) {
+    super();
     this.targetClass = targetClass;
     this.parentClass = parentClass;
   }
 
   @Override
   public OExecutionStream internalStart(OCommandContext context) throws OTimeoutException {
-    getPrev().ifPresent(x -> x.start(context).close(ctx));
+    getPrev().ifPresent(x -> x.start(context).close(context));
     if (this.targetClass.equals(this.parentClass)) {
       return OExecutionStream.empty();
     }
@@ -74,13 +71,13 @@ public class CheckClassTypeStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ CHECK CLASS HIERARCHY");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     result.append("\n");
     result.append("  " + this.parentClass);
@@ -88,8 +85,8 @@ public class CheckClassTypeStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new CheckClassTypeStep(targetClass, parentClass, ctx, profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new CheckClassTypeStep(targetClass, parentClass);
   }
 
   @Override

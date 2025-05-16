@@ -4,11 +4,8 @@ import com.orientechnologies.orient.core.command.OBasicServerCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.command.OServerCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OSimpleExecServerStatement;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 
 /** @author Luigi Dell'Aquila (l.dellaquila-(at)-orientdb.com) */
 public class OSingleOpServerExecutionPlan implements OServerExecutionPlan {
@@ -41,14 +38,8 @@ public class OSingleOpServerExecutionPlan implements OServerExecutionPlan {
     return statement.executeSimple(ctx);
   }
 
-  @Override
-  public List<OExecutionStep> getSteps() {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ ");
@@ -57,20 +48,16 @@ public class OSingleOpServerExecutionPlan implements OServerExecutionPlan {
   }
 
   @Override
-  public OResult toResult() {
+  public OResult toResult(OToResultContext ctx) {
     OResultInternal result = new OResultInternal();
     result.setProperty("type", "QueryExecutionPlan");
     result.setProperty("javaType", getClass().getName());
     result.setProperty("stmText", statement.toString());
+    result.setProperty("genericStm", getGenericStatement());
     result.setProperty("cost", getCost());
-    result.setProperty("prettyPrint", prettyPrint(0, 2));
+    result.setProperty("prettyPrint", prettyPrint(new OPrintContexImpl(ctx.getContext(), 0, 2)));
     result.setProperty("steps", null);
     return result;
-  }
-
-  @Override
-  public Set<String> getIndexes() {
-    return Collections.emptySet();
   }
 
   @Override

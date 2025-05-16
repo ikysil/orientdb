@@ -38,7 +38,6 @@ public class OrientDBRemoteTest {
   public void before() throws Exception {
     ODatabaseRecordThreadLocal.instance().remove();
 
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     server = new OServer(false);
     server.setServerRootDirectory(SERVER_DIRECTORY);
     server.startup(

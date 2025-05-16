@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
@@ -15,10 +15,10 @@ public class DistinctExecutionStepTest {
   @Test
   public void test() {
     OCommandContext ctx = new OBasicCommandContext();
-    DistinctExecutionStep step = new DistinctExecutionStep(ctx, false);
+    DistinctExecutionStep step = new DistinctExecutionStep(ctx);
 
     AbstractExecutionStep prev =
-        new AbstractExecutionStep(ctx, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -32,7 +32,7 @@ public class DistinctExecutionStepTest {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 

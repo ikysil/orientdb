@@ -10,17 +10,22 @@ import com.orientechnologies.agent.services.metrics.server.database.QueryInfo;
 import com.orientechnologies.enterprise.server.listener.OEnterpriseConnectionListener;
 import com.orientechnologies.enterprise.server.listener.OEnterpriseStorageListener;
 import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.command.OCommandExecutor;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
-import com.orientechnologies.orient.core.db.*;
+import com.orientechnologies.orient.core.db.ODatabase;
+import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
+import com.orientechnologies.orient.core.db.ODatabaseInternal;
+import com.orientechnologies.orient.core.db.ODatabaseLifecycleListener;
+import com.orientechnologies.orient.core.db.ODatabaseListener;
 import com.orientechnologies.orient.core.db.OSystemDatabase;
+import com.orientechnologies.orient.core.db.OrientDBInternal;
 import com.orientechnologies.orient.core.db.document.OQueryDatabaseState;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.security.OSecuritySystem;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
-import com.orientechnologies.orient.core.sql.executor.*;
+import com.orientechnologies.orient.core.sql.executor.OQueryMetrics;
+import com.orientechnologies.orient.core.sql.executor.OResult;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
+import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
-import com.orientechnologies.orient.core.sql.parser.OLocalResultSet;
 import com.orientechnologies.orient.core.sql.parser.OLocalResultSetLifecycleDecorator;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.OEnterpriseLocalPaginatedStorage;
@@ -35,7 +40,13 @@ import com.orientechnologies.orient.server.network.protocol.http.ONetworkProtoco
 import com.orientechnologies.orient.server.network.protocol.http.command.OServerCommand;
 import com.orientechnologies.orient.server.plugin.OServerPlugin;
 import com.orientechnologies.orient.server.plugin.OServerPluginInfo;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -205,12 +216,14 @@ public class OEnterpriseServerImpl
 
   @Override
   public void onCreate(ODatabaseInternal iDatabase) {
-    OStorage storage = iDatabase.getStorage();
-    if (storages.get(storage.getName()) == null) {
-      if (storage instanceof OEnterpriseLocalPaginatedStorage) {
-        OEnterpriseLocalPaginatedStorage s = (OEnterpriseLocalPaginatedStorage) storage;
-        storages.put(storage.getName(), s);
-        dbListeners.forEach((l) -> l.onOpen(s));
+    if (!((ODatabaseDocumentInternal) iDatabase).isRemote()) {
+      OStorage storage = iDatabase.getStorage();
+      if (storages.get(storage.getName()) == null) {
+        if (storage instanceof OEnterpriseLocalPaginatedStorage) {
+          OEnterpriseLocalPaginatedStorage s = (OEnterpriseLocalPaginatedStorage) storage;
+          storages.put(storage.getName(), s);
+          dbListeners.forEach((l) -> l.onOpen(s));
+        }
       }
     }
     iDatabase.registerListener(this);
@@ -218,12 +231,14 @@ public class OEnterpriseServerImpl
 
   @Override
   public void onOpen(final ODatabaseInternal iDatabase) {
-    final OStorage storage = iDatabase.getStorage();
-    if (storage instanceof OEnterpriseLocalPaginatedStorage) {
-      OEnterpriseLocalPaginatedStorage s = (OEnterpriseLocalPaginatedStorage) storage;
-      if (storages.putIfAbsent(storage.getName(), s) == null) {
-        storages.put(storage.getName(), s);
-        dbListeners.forEach((l) -> l.onOpen(s));
+    if (!((ODatabaseDocumentInternal) iDatabase).isRemote()) {
+      final OStorage storage = iDatabase.getStorage();
+      if (storage instanceof OEnterpriseLocalPaginatedStorage) {
+        OEnterpriseLocalPaginatedStorage s = (OEnterpriseLocalPaginatedStorage) storage;
+        if (storages.putIfAbsent(storage.getName(), s) == null) {
+          storages.put(storage.getName(), s);
+          dbListeners.forEach((l) -> l.onOpen(s));
+        }
       }
     }
     iDatabase.registerListener(this);
@@ -234,11 +249,13 @@ public class OEnterpriseServerImpl
 
   @Override
   public void onDrop(final ODatabaseInternal iDatabase) {
-    final OStorage storage = iDatabase.getStorage();
-    if (storage instanceof OEnterpriseLocalPaginatedStorage) {
-      if (storages.remove(storage.getName()) != null) {
-        OEnterpriseLocalPaginatedStorage s = (OEnterpriseLocalPaginatedStorage) storage;
-        dbListeners.forEach((l) -> l.onDrop(s));
+    if (!((ODatabaseDocumentInternal) iDatabase).isRemote()) {
+      final OStorage storage = iDatabase.getStorage();
+      if (storage instanceof OEnterpriseLocalPaginatedStorage) {
+        if (storages.remove(storage.getName()) != null) {
+          OEnterpriseLocalPaginatedStorage s = (OEnterpriseLocalPaginatedStorage) storage;
+          dbListeners.forEach((l) -> l.onDrop(s));
+        }
       }
     }
   }
@@ -407,13 +424,6 @@ public class OEnterpriseServerImpl
   public void onClose(ODatabase iDatabase) {}
 
   @Override
-  public void onBeforeCommand(OCommandRequestText iCommand, OCommandExecutor executor) {}
-
-  @Override
-  public void onAfterCommand(
-      OCommandRequestText iCommand, OCommandExecutor executor, Object result) {}
-
-  @Override
   public void onCommandStart(ODatabase database, OResultSet result) {
     this.dbListeners.forEach((c -> c.onCommandStart(database, result)));
   }
@@ -428,28 +438,7 @@ public class OEnterpriseServerImpl
     Optional<QueryInfo> info = Optional.empty();
     if (resultSet instanceof OLocalResultSetLifecycleDecorator) {
       OResultSet oResultSet = ((OLocalResultSetLifecycleDecorator) resultSet).getInternal();
-      if (oResultSet instanceof OLocalResultSet) {
-        OLocalResultSet oLocalResultSet = (OLocalResultSet) oResultSet;
-        Optional<OExecutionPlan> plan = oLocalResultSet.getExecutionPlan();
-        info =
-            plan.map(
-                (p -> {
-                  String q = "";
-                  if (p instanceof OInternalExecutionPlan) {
-                    String stm = ((OInternalExecutionPlan) p).getGenericStatement();
-                    if (stm != null) {
-                      q = stm;
-                    }
-                  } else {
-                    q = p.toString();
-                  }
-                  return new QueryInfo(
-                      q,
-                      "sql",
-                      oLocalResultSet.getStartTime(),
-                      oLocalResultSet.getTotalExecutionTime());
-                }));
-      } else if (oResultSet instanceof OQueryMetrics) {
+      if (oResultSet instanceof OQueryMetrics) {
         OQueryMetrics oQueryMetrics = (OQueryMetrics) oResultSet;
         info =
             Optional.of(

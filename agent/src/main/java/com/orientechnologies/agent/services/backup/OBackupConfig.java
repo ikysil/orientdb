@@ -29,13 +29,19 @@ import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.parser.OSystemVariableResolver;
 import com.orientechnologies.orient.core.exception.OConfigurationException;
+import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.schedule.OCronExpression;
+import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.server.handler.OAutomaticBackup;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /** Created by Enrico Risa on 22/03/16. */
 public class OBackupConfig {
@@ -200,10 +206,14 @@ public class OBackupConfig {
   }
 
   public OBackupStrategy strategy(final ODocument cfg, final OBackupLogger logger) {
-    final ODocument full =
-        (ODocument) cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.FULL_BACKUP);
-    final ODocument incremental =
-        (ODocument) cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.INCREMENTAL_BACKUP);
+    OResult fullRess =
+        ((OResult) cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.FULL_BACKUP));
+    final OElement full = fullRess != null ? fullRess.toElement() : null;
+
+    OResult incrementRess =
+        ((OResult) cfg.eval(OBackupConfig.MODES + "." + OAutomaticBackup.MODE.INCREMENTAL_BACKUP));
+    final OElement incremental = incrementRess != null ? incrementRess.toElement() : null;
+
     OBackupStrategy strategy;
     if (full != null && incremental != null) {
       strategy = new OBackupStrategyMixBackup(cfg, logger);

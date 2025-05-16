@@ -31,30 +31,8 @@ import java.util.Set;
  * Manager of indexes.
  *
  * @author Luca Garulli (l.garulli--(at)--orientdb.com)
- * @deprecated Manual indexes are deprecated and will be removed
  */
-@Deprecated
 public interface OIndexManager {
-
-  /**
-   * Load index manager data from database.
-   *
-   * <p>IMPORTANT! Only for internal usage.
-   */
-  @Deprecated
-  void load();
-
-  /**
-   * Creates a document where index manager configuration is saved and creates a "dictionary" index.
-   *
-   * <p>IMPORTANT! Only for internal usage.
-   */
-  @Deprecated
-  void create();
-
-  @Deprecated
-  OIndexManager reload();
-
   /**
    * Drops all indexes and creates them from scratch.
    *
@@ -77,9 +55,7 @@ public interface OIndexManager {
    *
    * @param iName name of index
    * @return index if one registered in database or null otherwise.
-   * @deprecated Manual indexes are deprecated and will be removed
    */
-  @Deprecated
   OIndex getIndex(final String iName);
 
   /**
@@ -314,8 +290,6 @@ public interface OIndexManager {
    * @param clusterName cluster to add.
    * @param indexName name of index.
    */
-  @SuppressWarnings("DeprecatedIsStillUsed")
-  @Deprecated
   void addClusterToIndex(String clusterName, String indexName);
 
   /**
@@ -326,17 +300,7 @@ public interface OIndexManager {
    * @param clusterName cluster to remove.
    * @param indexName name of index.
    */
-  @SuppressWarnings("DeprecatedIsStillUsed")
-  @Deprecated
   void removeClusterFromIndex(String clusterName, String indexName);
-
-  /**
-   * Saves index manager data.
-   *
-   * <p>IMPORTANT! Only for internal usage.
-   */
-  @Deprecated
-  OIndexManager save();
 
   /**
    * Removes index from class-property map.

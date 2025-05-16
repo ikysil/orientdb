@@ -62,22 +62,17 @@ public class OAtomicOperationsManager {
   private final Object segmentLock = new Object();
   private final AtomicOperationIdGen idGen;
 
-  private final int operationsCacheLimit;
-
   private final OperationsFreezer atomicOperationsFreezer = new OperationsFreezer();
   private final OperationsFreezer componentOperationsFreezer = new OperationsFreezer();
   private final AtomicOperationsTable atomicOperationsTable;
 
   public OAtomicOperationsManager(
-      OAbstractPaginatedStorage storage,
-      int operationsCacheLimit,
-      AtomicOperationsTable atomicOperationsTable) {
+      OAbstractPaginatedStorage storage, AtomicOperationsTable atomicOperationsTable) {
     this.storage = storage;
     this.writeAheadLog = storage.getWALInstance();
     this.readCache = storage.getReadCache();
     this.writeCache = storage.getWriteCache();
 
-    this.operationsCacheLimit = operationsCacheLimit;
     this.idGen = storage.getIdGen();
     this.atomicOperationsTable = atomicOperationsTable;
   }

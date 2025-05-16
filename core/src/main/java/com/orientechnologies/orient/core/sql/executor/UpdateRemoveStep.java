@@ -2,7 +2,7 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OUpdateRemoveItem;
 import java.util.List;
 
@@ -10,9 +10,8 @@ import java.util.List;
 public class UpdateRemoveStep extends AbstractExecutionStep {
   private final List<OUpdateRemoveItem> items;
 
-  public UpdateRemoveStep(
-      List<OUpdateRemoveItem> items, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public UpdateRemoveStep(List<OUpdateRemoveItem> items) {
+    super();
     this.items = items;
   }
 
@@ -32,8 +31,8 @@ public class UpdateRemoveStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ UPDATE REMOVE");

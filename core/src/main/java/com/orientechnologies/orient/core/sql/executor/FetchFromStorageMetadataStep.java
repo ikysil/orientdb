@@ -8,7 +8,7 @@ import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.config.OStorageEntryConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.storage.OCluster;
 import com.orientechnologies.orient.core.storage.OStorage;
 import java.util.ArrayList;
@@ -24,8 +24,8 @@ public class FetchFromStorageMetadataStep extends AbstractExecutionStep {
   private static final OLogger logger =
       OLogManager.instance().logger(FetchFromStorageMetadataStep.class);
 
-  public FetchFromStorageMetadataStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FetchFromStorageMetadataStep() {
+    super();
   }
 
   @Override
@@ -100,7 +100,6 @@ public class FetchFromStorageMetadataStep extends AbstractExecutionStep {
             cluster.getRecordConflictStrategy() == null
                 ? null
                 : cluster.getRecordConflictStrategy().getName());
-        item.setProperty("tombstonesCount", cluster.getTombstonesCount());
         try {
           item.setProperty("encryption", cluster.encryption());
         } catch (Exception e) {
@@ -113,11 +112,11 @@ public class FetchFromStorageMetadataStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     String result = spaces + "+ FETCH STORAGE METADATA";
-    if (profilingEnabled) {
-      result += " (" + getCostFormatted() + ")";
+    if (ctx.isProfilingEnabled()) {
+      result += " (" + ctx.getCostFormatted(this) + ")";
     }
     return result;
   }

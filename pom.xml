@@ -159,7 +159,9 @@
         <implementation.build>${scmBranch}@r${buildNumber}</implementation.build>
         <blueprints.version>2.6.0</blueprints.version>
         <!-- | shared build/report plugins version -->
-        <surefire.version>3.5.2</surefire.version>
+        <surefire.version>3.5.3</surefire.version>
+        <failsafe.version>3.5.3</failsafe.version>
+        <jacoco.version>0.8.13</jacoco.version>
         <sonatypeOssDistMgmtSnapshotsUrl>https://oss.sonatype.org/content/repositories/snapshots/
         </sonatypeOssDistMgmtSnapshotsUrl>
 
@@ -170,7 +172,7 @@
         <javaassist.version>3.30.2-GA</javaassist.version>
         <jaxb.api.version>2.3.0</jaxb.api.version>
         <project.rootdir>${project.basedir}/</project.rootdir>
-        <graalvm.version>24.1.1</graalvm.version>
+        <graalvm.version>24.2.1</graalvm.version>
         <cloudbees.syslog.version>1.1.7</cloudbees.syslog.version>
     </properties>
 
@@ -179,7 +181,7 @@
             <plugins>
                 <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
-                    <version>3.4.0</version>
+                    <version>3.4.1</version>
                 </plugin>
 
                 <plugin>
@@ -204,6 +206,13 @@
                     <version>2.18.0</version>
                 </plugin>
 
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${failsafe.version}</version>
+                </plugin>
+
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
@@ -226,7 +235,7 @@
 
                 <plugin>
                     <artifactId>maven-install-plugin</artifactId>
-                    <version>3.1.3</version>
+                    <version>3.1.4</version>
                 </plugin>
 
                 <plugin>
@@ -237,7 +246,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
+                    <version>3.14.0</version>
                 </plugin>
 
                 <plugin>
@@ -446,7 +455,7 @@
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
-                <version>2.43.0</version>
+                <version>2.44.4</version>
                 <configuration>
                     <java>
                         <googleJavaFormat>
@@ -602,7 +611,7 @@
                         <plugin>
                             <groupId>org.apache.maven.plugins</groupId>
                             <artifactId>maven-failsafe-plugin</artifactId>
-                            <version>${surefire.version}</version>
+                            <version>${failsafe.version}</version>
                             <configuration>
                                 <systemPropertyVariables>
                                     <security.userPasswordSaltIterations>1</security.userPasswordSaltIterations>
@@ -710,10 +719,69 @@
             </build>
         </profile>
 
-		<profile>
-			<id>all</id>
+        <profile>
+            <id>coverage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <configuration>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>prepare-unit</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                </configuration>
+                            </execution>
+                            <!-- prepare agent before integration tests -->
+                            <execution>
+                                <id>prepare-it</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <destFile>${project.build.directory}/jacoco-it.exec</destFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>report</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>report-it</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>report-integration</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <modules>
+                <module>coverage</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>all</id>
             <modules>
                 <module>studio</module>
+                <module>benchmarks</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>perf</id>
+            <modules>
+                <module>benchmarks</module>
             </modules>
         </profile>
     </profiles>

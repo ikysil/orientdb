@@ -3,8 +3,8 @@ package com.orientechnologies.orient.server.network;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.orientechnologies.orient.client.remote.ORemoteClientPushThread;
 import com.orientechnologies.orient.client.remote.ORemotePushHandler;
-import com.orientechnologies.orient.client.remote.OStorageRemotePushThread;
 import com.orientechnologies.orient.client.remote.message.OBinaryPushRequest;
 import com.orientechnologies.orient.client.remote.message.OBinaryPushResponse;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
@@ -131,7 +131,7 @@ public class PushMessageUnitTest {
         .start();
     binary.start();
     assertTrue(requestWritten.await(10, TimeUnit.SECONDS));
-    OStorageRemotePushThread pushThread = new OStorageRemotePushThread(remote, "none", 10, 1000);
+    ORemoteClientPushThread pushThread = new ORemoteClientPushThread(remote, "none", 10, 1000);
     pushThread.start();
 
     assertTrue(executed.await(10, TimeUnit.SECONDS));
@@ -157,7 +157,7 @@ public class PushMessageUnitTest {
     thread.start();
     binary.start();
     assertTrue(requestWritten.await(10, TimeUnit.SECONDS));
-    OStorageRemotePushThread pushThread = new OStorageRemotePushThread(remote, "none", 10, 1000);
+    ORemoteClientPushThread pushThread = new ORemoteClientPushThread(remote, "none", 10, 1000);
     pushThread.start();
 
     assertTrue(executed.await(10, TimeUnit.SECONDS));

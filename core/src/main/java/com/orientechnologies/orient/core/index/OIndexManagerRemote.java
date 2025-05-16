@@ -31,12 +31,12 @@ import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.metadata.OMetadata;
-import com.orientechnologies.orient.core.metadata.OMetadataDefault;
 import com.orientechnologies.orient.core.metadata.OMetadataInternal;
+import com.orientechnologies.orient.core.metadata.OSessionMetadata;
 import com.orientechnologies.orient.core.record.ORecord;
+import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sharding.auto.OAutoShardingIndexFactory;
-import com.orientechnologies.orient.core.sql.OCommandExecutorSQLCreateIndex;
 import com.orientechnologies.orient.core.storage.OStorageInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,7 +62,7 @@ public class OIndexManagerRemote implements OIndexManagerAbstract {
   protected final Map<String, Map<OMultiKey, Set<OIndex>>> classPropertyIndex =
       new ConcurrentHashMap<>();
   protected Map<String, OIndex> indexes = new ConcurrentHashMap<>();
-  protected String defaultClusterName = OMetadataDefault.CLUSTER_INDEX_NAME;
+  protected String defaultClusterName = OSessionMetadata.CLUSTER_INDEX_NAME;
   protected final AtomicInteger writeLockNesting = new AtomicInteger();
   protected final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -109,11 +109,13 @@ public class OIndexManagerRemote implements OIndexManagerAbstract {
     throw new UnsupportedOperationException();
   }
 
-  public void addClusterToIndex(final String clusterName, final String indexName) {
+  public void addClusterToIndex(
+      ODatabaseDocumentInternal database, final String clusterName, final String indexName) {
     throw new UnsupportedOperationException();
   }
 
-  public void removeClusterFromIndex(final String clusterName, final String indexName) {
+  public void removeClusterFromIndex(
+      ODatabaseDocumentInternal database, final String clusterName, final String indexName) {
     throw new UnsupportedOperationException();
   }
 
@@ -416,9 +418,7 @@ public class OIndexManagerRemote implements OIndexManagerAbstract {
       createIndexDDL = iIndexDefinition.toCreateIndexDDL(iName, iType, engine);
     else createIndexDDL = new OSimpleKeyIndexDefinition().toCreateIndexDDL(iName, iType, engine);
 
-    if (metadata != null)
-      createIndexDDL +=
-          " " + OCommandExecutorSQLCreateIndex.KEYWORD_METADATA + " " + metadata.toJSON();
+    if (metadata != null) createIndexDDL += " metadata " + metadata.toJSON();
 
     acquireExclusiveLock();
     try {
@@ -596,6 +596,8 @@ public class OIndexManagerRemote implements OIndexManagerAbstract {
   }
 
   public void update(ODocument indexManager) {
+    ORecordInternal.setIdentity(
+        indexManager, new ORecordId(storage.getConfiguration().getIndexMgrRecordId()));
     if (!skipPush.get()) {
       realAcquireExclusiveLock();
       try {

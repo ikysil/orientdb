@@ -3,8 +3,6 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.Collections;
 import java.util.List;
@@ -21,15 +19,6 @@ public class OIsNotDefinedCondition extends OBooleanExpression {
 
   public OIsNotDefinedCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object elem = currentRecord.getRecord();
-    if (elem instanceof OElement) {
-      return !expression.isDefinedFor((OElement) elem);
-    }
-    return true;
   }
 
   @Override

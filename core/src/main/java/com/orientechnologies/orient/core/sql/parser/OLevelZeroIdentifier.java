@@ -8,6 +8,8 @@ import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.executor.AggregationContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,7 +46,7 @@ public class OLevelZeroIdentifier extends SimpleNode {
     }
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
+  public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     if (functionCall != null) {
       return functionCall.execute(iCurrentRecord, ctx);
     }
@@ -57,15 +59,15 @@ public class OLevelZeroIdentifier extends SimpleNode {
     throw new UnsupportedOperationException();
   }
 
-  public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
     if (functionCall != null) {
-      return functionCall.execute(iCurrentRecord, ctx);
+      return functionCall.getIndexKey(ctx);
     }
     if (collection != null) {
-      return collection.execute(iCurrentRecord, ctx);
+      return collection.getIndexKey(ctx);
     }
     if (Boolean.TRUE.equals(self)) {
-      return iCurrentRecord;
+      return Collections.singleton(null);
     }
     throw new UnsupportedOperationException();
   }

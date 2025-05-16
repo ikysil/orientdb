@@ -78,9 +78,6 @@ public class OSyncDatabaseTask extends OAbstractRemoteTask {
 
       try {
 
-        iManager.setDatabaseStatus(
-            getNodeSource(), databaseName, ODistributedServerManager.DB_STATUS.SYNCHRONIZING);
-
         logger.infoOut(
             iManager.getLocalNodeName(), getNodeSource(), "Deploying database %s...", databaseName);
 
@@ -154,14 +151,6 @@ public class OSyncDatabaseTask extends OAbstractRemoteTask {
             1,
             0,
             OFileUtils.getSizeAsNumber(chunk.buffer.length));
-
-        if (chunk.last) {
-          // NO MORE CHUNKS: SET THE NODE ONLINE (SYNCHRONIZING ENDED)
-          iManager.setDatabaseStatus(
-              iManager.getLocalNodeName(),
-              databaseName,
-              ODistributedServerManager.DB_STATUS.ONLINE);
-        }
 
         return chunk;
 

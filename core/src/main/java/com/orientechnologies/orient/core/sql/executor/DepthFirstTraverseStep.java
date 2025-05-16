@@ -4,7 +4,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORID;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OInteger;
 import com.orientechnologies.orient.core.sql.parser.OTraverseProjectionItem;
 import com.orientechnologies.orient.core.sql.parser.OWhereClause;
@@ -19,12 +19,8 @@ import java.util.Set;
 public class DepthFirstTraverseStep extends AbstractTraverseStep {
 
   public DepthFirstTraverseStep(
-      List<OTraverseProjectionItem> projections,
-      OWhereClause whileClause,
-      OInteger maxDepth,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(projections, whileClause, maxDepth, ctx, profilingEnabled);
+      List<OTraverseProjectionItem> projections, OWhereClause whileClause, OInteger maxDepth) {
+    super(projections, whileClause, maxDepth);
   }
 
   @Override
@@ -264,8 +260,8 @@ public class DepthFirstTraverseStep extends AbstractTraverseStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ DEPTH-FIRST TRAVERSE \n");

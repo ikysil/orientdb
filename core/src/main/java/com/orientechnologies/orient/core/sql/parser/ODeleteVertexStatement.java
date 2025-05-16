@@ -2,13 +2,9 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=true,TRACK_TOKENS=true,NODE_PREFIX=O,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package com.orientechnologies.orient.core.sql.parser;
 
-import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.sql.executor.ODeleteExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.ODeleteVertexExecutionPlanner;
-import com.orientechnologies.orient.core.sql.executor.OResultSet;
-import java.util.HashMap;
 import java.util.Map;
 
 public class ODeleteVertexStatement extends OStatement {
@@ -28,51 +24,9 @@ public class ODeleteVertexStatement extends OStatement {
     super(p, id);
   }
 
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Map params, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    ctx.setInputParameters(params);
-    ODeleteExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (ODeleteExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  @Override
-  public OResultSet execute(
-      ODatabaseSession db, Object[] args, OCommandContext parentCtx, boolean usePlanCache) {
-    OBasicCommandContext ctx = new OBasicCommandContext(db);
-    if (parentCtx != null) {
-      ctx.setParentWithoutOverridingChild(parentCtx);
-    }
-    Map<Object, Object> params = new HashMap<>();
-    if (args != null) {
-      for (int i = 0; i < args.length; i++) {
-        params.put(i, args[i]);
-      }
-    }
-    ctx.setInputParameters(params);
-    ODeleteExecutionPlan executionPlan;
-    if (usePlanCache) {
-      executionPlan = createExecutionPlan(ctx, false);
-    } else {
-      executionPlan = (ODeleteExecutionPlan) createExecutionPlanNoCache(ctx, false);
-    }
-    executionPlan.executeInternal(ctx);
-    return new OLocalResultSet(executionPlan, ctx);
-  }
-
-  public ODeleteExecutionPlan createExecutionPlan(OCommandContext ctx, boolean enableProfiling) {
+  public ODeleteExecutionPlan createExecutionPlan(OCommandContext ctx) {
     ODeleteVertexExecutionPlanner planner = new ODeleteVertexExecutionPlanner(this);
-    ODeleteExecutionPlan result = planner.createExecutionPlan(ctx, enableProfiling);
+    ODeleteExecutionPlan result = planner.createExecutionPlan(ctx);
     result.setStatement(this.originalStatement);
     result.setGenericStatement(this.toGenericStatement());
     return result;

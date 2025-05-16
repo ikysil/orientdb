@@ -16,14 +16,12 @@
 
 package com.orientechnologies.orient.test.database.auto;
 
-import com.orientechnologies.orient.client.db.ODatabaseHelper;
-import com.orientechnologies.orient.client.remote.OEngineRemote;
-import com.orientechnologies.orient.client.remote.OServerAdmin;
+import com.orientechnologies.orient.client.remote.OrientDBRemote;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
+import com.orientechnologies.orient.core.db.OrientDBInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
-import com.orientechnologies.orient.core.engine.memory.OEngineMemory;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.storage.cache.local.OWOWCache;
 import com.orientechnologies.orient.core.storage.disk.OLocalPaginatedStorage;
@@ -69,14 +67,17 @@ public class OSBTreeRidBagTest extends ORidBagTest {
         OGlobalConfiguration.RID_BAG_SBTREEBONSAI_TO_EMBEDDED_THRESHOLD.getValueAsInteger();
 
     if (database.isRemote()) {
-      OServerAdmin server =
-          new OServerAdmin(database.getURL())
-              .connect("root", ODatabaseHelper.getServerRootPassword());
-      server.setGlobalConfiguration(
-          OGlobalConfiguration.RID_BAG_EMBEDDED_TO_SBTREEBONSAI_THRESHOLD, -1);
-      server.setGlobalConfiguration(
-          OGlobalConfiguration.RID_BAG_SBTREEBONSAI_TO_EMBEDDED_THRESHOLD, -1);
-      server.close();
+      OrientDBRemote internal = (OrientDBRemote) OrientDBInternal.extract(baseContext);
+      internal.setGlobalConfiguration(
+          "root",
+          "root",
+          OGlobalConfiguration.RID_BAG_EMBEDDED_TO_SBTREEBONSAI_THRESHOLD,
+          String.valueOf(-1));
+      internal.setGlobalConfiguration(
+          "root",
+          "root",
+          OGlobalConfiguration.RID_BAG_SBTREEBONSAI_TO_EMBEDDED_THRESHOLD,
+          String.valueOf(1));
     }
 
     OGlobalConfiguration.RID_BAG_EMBEDDED_TO_SBTREEBONSAI_THRESHOLD.setValue(-1);
@@ -89,20 +90,22 @@ public class OSBTreeRidBagTest extends ORidBagTest {
     OGlobalConfiguration.RID_BAG_SBTREEBONSAI_TO_EMBEDDED_THRESHOLD.setValue(bottomThreshold);
 
     if (database.isRemote()) {
-      OServerAdmin server =
-          new OServerAdmin(database.getURL())
-              .connect("root", ODatabaseHelper.getServerRootPassword());
-      server.setGlobalConfiguration(
-          OGlobalConfiguration.RID_BAG_EMBEDDED_TO_SBTREEBONSAI_THRESHOLD, topThreshold);
-      server.setGlobalConfiguration(
-          OGlobalConfiguration.RID_BAG_SBTREEBONSAI_TO_EMBEDDED_THRESHOLD, bottomThreshold);
-      server.close();
+      OrientDBRemote internal = (OrientDBRemote) OrientDBInternal.extract(baseContext);
+      internal.setGlobalConfiguration(
+          "root",
+          "root",
+          OGlobalConfiguration.RID_BAG_EMBEDDED_TO_SBTREEBONSAI_THRESHOLD,
+          String.valueOf(topThreshold));
+      internal.setGlobalConfiguration(
+          "root",
+          "root",
+          OGlobalConfiguration.RID_BAG_SBTREEBONSAI_TO_EMBEDDED_THRESHOLD,
+          String.valueOf(bottomThreshold));
     }
   }
 
   public void testRidBagClusterDistribution() {
-    if (database.getStorage().getType().equals(OEngineRemote.NAME)
-        || database.getStorage().getType().equals(OEngineMemory.NAME)) return;
+    if (database.isRemote()) return;
 
     final int clusterIdOne = database.addCluster("clusterOne");
 
@@ -226,8 +229,7 @@ public class OSBTreeRidBagTest extends ORidBagTest {
   }
 
   public void testRidBagDelete() {
-    if (database.getStorage().getType().equals(OEngineRemote.NAME)
-        || database.getStorage().getType().equals(OEngineMemory.NAME)) return;
+    if (database.isRemote()) return;
 
     ODocument realDoc = new ODocument();
     ORidBag realDocRidBag = new ORidBag();

@@ -10,6 +10,8 @@ public interface OExecutionPlan {
 
   String prettyPrint(int depth, int indent);
 
+  String prettyPrint();
+
   OResult toResult();
 
   Set<String> getIndexes();

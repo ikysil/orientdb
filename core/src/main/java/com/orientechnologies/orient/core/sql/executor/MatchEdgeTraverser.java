@@ -4,7 +4,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OMatchPathItem;
 import com.orientechnologies.orient.core.sql.parser.ORid;
 import com.orientechnologies.orient.core.sql.parser.OWhereClause;
@@ -199,7 +199,7 @@ public class MatchEdgeTraverser {
         }
       }
       iCommandContext.setVariable("$currentMatch", previousMatch);
-      return OExecutionStream.resultIterator(result.iterator());
+      return OExecutionStream.resultCollection(result);
     }
   }
 
@@ -301,13 +301,13 @@ public class MatchEdgeTraverser {
   protected OExecutionStream traversePatternEdge(
       OIdentifiable startingPoint, OCommandContext iCommandContext) {
 
-    Object prevCurrent = iCommandContext.getVariable("$current");
-    iCommandContext.setVariable("$current", startingPoint);
+    OResult prevCurrent = iCommandContext.getCurrent();
+    iCommandContext.setCurrent(new OResultInternal(startingPoint));
     Object qR;
     try {
       qR = this.item.getMethod().execute(startingPoint, iCommandContext);
     } finally {
-      iCommandContext.setVariable("$current", prevCurrent);
+      iCommandContext.setCurrent(prevCurrent);
     }
 
     if (qR == null) {

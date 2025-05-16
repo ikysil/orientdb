@@ -5,7 +5,7 @@ import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.index.OIndexInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIndexIdentifier;
 import java.util.Collections;
 
@@ -21,12 +21,9 @@ public class CountFromIndexStep extends AbstractExecutionStep {
   /**
    * @param targetIndex the index name as it is parsed by the SQL parsed
    * @param alias the name of the property returned in the result-set
-   * @param ctx the query context
-   * @param profilingEnabled true to enable the profiling of the execution (for SQL PROFILE)
    */
-  public CountFromIndexStep(
-      OIndexIdentifier targetIndex, String alias, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CountFromIndexStep(OIndexIdentifier targetIndex, String alias) {
+    super();
     this.target = targetIndex;
     this.alias = alias;
   }
@@ -69,8 +66,8 @@ public class CountFromIndexStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     return spaces + "+ CALCULATE INDEX SIZE: " + target;
   }
 }

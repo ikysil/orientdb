@@ -230,7 +230,7 @@ public class CollateTest extends DocumentDBBaseTest {
     Assert.assertTrue(
         explain.getExecutionPlan().get().getIndexes().contains("collateCompositeIndexCS"));
 
-    if (!database.getStorage().isRemote()) {
+    if (!database.isRemote()) {
       final OIndexManagerAbstract indexManager = database.getMetadata().getIndexManagerInternal();
       final OIndex index = indexManager.getIndex(database, "collateCompositeIndexCS");
 
@@ -311,7 +311,7 @@ public class CollateTest extends DocumentDBBaseTest {
     OClass clazz = schema.createClass("collateTestViaSQL");
 
     clazz.createProperty("csp", OType.STRING);
-    clazz.createProperty("cip", OType.STRING);
+    clazz.createProperty("cip", OType.STRING).setCollate(OCaseInsensitiveCollate.NAME);
 
     database
         .command(

@@ -2,12 +2,12 @@ package com.orientechnologies.orient.core.sql.executor;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /** Created by luigidellaquila on 08/07/16. */
 public class EmptyStep extends AbstractExecutionStep {
-  public EmptyStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public EmptyStep() {
+    super();
   }
 
   @Override
@@ -16,7 +16,7 @@ public class EmptyStep extends AbstractExecutionStep {
     return OExecutionStream.empty();
   }
 
-  public OExecutionStep copy(OCommandContext ctx) {
+  public OExecutionStepInternal copy(OCommandContext ctx) {
     throw new UnsupportedOperationException();
   }
 

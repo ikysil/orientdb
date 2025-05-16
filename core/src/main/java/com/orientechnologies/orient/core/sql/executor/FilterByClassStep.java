@@ -6,7 +6,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.record.OElement;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import java.util.Optional;
 
@@ -16,8 +16,8 @@ public class FilterByClassStep extends AbstractExecutionStep {
   private OIdentifier identifier;
   private String className;
 
-  public FilterByClassStep(OIdentifier identifier, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FilterByClassStep(OIdentifier identifier) {
+    super();
     this.identifier = identifier;
     this.className = identifier.getStringValue();
   }
@@ -44,15 +44,15 @@ public class FilterByClassStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder result = new StringBuilder();
-    result.append(OExecutionStepInternal.getIndent(depth, indent));
+    result.append(OExecutionStepInternal.getIndent(ctx));
     result.append("+ FILTER ITEMS BY CLASS");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     result.append(" \n");
-    result.append(OExecutionStepInternal.getIndent(depth, indent));
+    result.append(OExecutionStepInternal.getIndent(ctx));
     result.append("  ");
     result.append(identifier.getStringValue());
     return result.toString();
@@ -82,7 +82,7 @@ public class FilterByClassStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new FilterByClassStep(this.identifier.copy(), ctx, this.profilingEnabled);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new FilterByClassStep(this.identifier.copy());
   }
 }

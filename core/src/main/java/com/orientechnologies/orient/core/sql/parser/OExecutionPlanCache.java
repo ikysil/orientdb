@@ -8,7 +8,6 @@ import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.OMetadataUpdateListener;
 import com.orientechnologies.orient.core.index.OIndexManagerAbstract;
 import com.orientechnologies.orient.core.metadata.schema.OSchemaShared;
-import com.orientechnologies.orient.core.sql.executor.OExecutionPlan;
 import com.orientechnologies.orient.core.sql.executor.OInternalExecutionPlan;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -72,7 +71,7 @@ public class OExecutionPlanCache implements OMetadataUpdateListener {
    * @param db the current DB instance
    * @return a statement executor from the cache
    */
-  public static OExecutionPlan get(
+  public static OInternalExecutionPlan get(
       String statement, OCommandContext ctx, ODatabaseDocumentInternal db) {
     if (db == null) {
       throw new IllegalArgumentException("DB cannot be null");
@@ -82,11 +81,12 @@ public class OExecutionPlanCache implements OMetadataUpdateListener {
     }
 
     OExecutionPlanCache resource = db.getSharedContext().getExecutionPlanCache();
-    OExecutionPlan result = resource.getInternal(statement, ctx, db);
+    OInternalExecutionPlan result = resource.getInternal(statement, ctx, db);
     return result;
   }
 
-  public static void put(String statement, OExecutionPlan plan, ODatabaseDocumentInternal db) {
+  public static void put(
+      String statement, OInternalExecutionPlan plan, ODatabaseDocumentInternal db) {
     if (db == null) {
       throw new IllegalArgumentException("DB cannot be null");
     }
@@ -98,7 +98,8 @@ public class OExecutionPlanCache implements OMetadataUpdateListener {
     resource.putInternal(statement, plan, db);
   }
 
-  public void putInternal(String statement, OExecutionPlan plan, ODatabaseDocumentInternal db) {
+  public void putInternal(
+      String statement, OInternalExecutionPlan plan, ODatabaseDocumentInternal db) {
     if (statement == null) {
       return;
     }
@@ -108,12 +109,10 @@ public class OExecutionPlanCache implements OMetadataUpdateListener {
     }
 
     synchronized (map) {
-      OInternalExecutionPlan internal = (OInternalExecutionPlan) plan;
       OBasicCommandContext ctx = new OBasicCommandContext(db);
-      internal = internal.copy(ctx);
+      plan = plan.copy(ctx);
       // this copy is never used, so it has to be closed to free resources
-      internal.close();
-      map.put(statement, internal);
+      map.put(statement, plan);
     }
   }
 
@@ -122,7 +121,7 @@ public class OExecutionPlanCache implements OMetadataUpdateListener {
    * @param ctx
    * @return the corresponding executor, taking it from the internal cache, if it exists
    */
-  public OExecutionPlan getInternal(
+  public OInternalExecutionPlan getInternal(
       String statement, OCommandContext ctx, ODatabaseDocumentInternal db) {
     OInternalExecutionPlan result;
 

@@ -9,7 +9,6 @@ import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
@@ -34,12 +33,6 @@ public class OBinaryCondition extends OBooleanExpression {
 
   public OBinaryCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    return operator.execute(
-        left.execute(currentRecord, ctx), right.execute(currentRecord, ctx), ctx);
   }
 
   @Override
@@ -213,7 +206,7 @@ public class OBinaryCondition extends OBooleanExpression {
 
   public List<OBinaryCondition> getIndexedFunctionConditions(
       OClass iSchemaClass, ODatabaseDocumentInternal database) {
-    if (left.isIndexedFunctionCal()) {
+    if (!left.isFunctionAll() && !left.isFunctionAny() && left.isIndexedFunctionCal()) {
       return Collections.singletonList(this);
     }
     return null;
@@ -524,13 +517,17 @@ public class OBinaryCondition extends OBooleanExpression {
     if (path.isPresent()) {
       OPath p = path.get();
       if (right.isEarlyCalculated(ctx)) {
-        Object value = right.execute((OResult) null, ctx);
         if (operator instanceof OEqualsCompareOperator) {
-          return info.findExactIndex(p, value, ctx);
+          Object vl = this.right.execute((OResult) null, ctx);
+          if (vl instanceof Collection<?>) {
+            // TODO: find a better way to check this.
+            return Optional.empty();
+          }
+          return info.findExact(p, this::rightValue, ctx);
         } else if (operator instanceof OContainsKeyOperator) {
-          return info.findByKeyIndex(p, value, ctx);
+          return info.findByKey(p, this::rightValueMap, ctx);
         } else if (operator.isRange()) {
-          return info.findAllowRangeIndex(p, operator.getOperation(), value, ctx);
+          return info.findAllowRange(p, operator.getOperation(), this::rightValue, ctx);
         }
       }
     }
@@ -538,109 +535,33 @@ public class OBinaryCondition extends OBooleanExpression {
     return Optional.empty();
   }
 
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
-    if (left.isBaseIdentifier()) {
-      if (info.getField().equals(left.getDefaultAlias().getStringValue())) {
-        if (right.isEarlyCalculated(info.getCtx())) {
-          if (operator instanceof OEqualsCompareOperator) {
-            Object vl = this.right.execute((OResult) null, ctx);
-            if (vl instanceof Collection<?>) {
-              return !((Collection) vl).isEmpty();
-            }
-            return true;
-          } else if (operator instanceof OContainsKeyOperator
-              && info.isMap()
-              && info.isIndexByKey()) {
-            return true;
-          } else if (info.allowsRange() && operator.isRange()) {
-            return true;
-          }
-          return false;
-        }
-      }
+  private Collection<Object> rightValue(OCommandContext ctx, boolean asc) {
+    return right.getIndexKey(ctx);
+  }
+
+  private Collection<Object> rightValueMap(OCommandContext ctx, boolean asc) {
+    List<Object> keys = new ArrayList<>();
+    for (Object key : right.getIndexKey(ctx)) {
+      keys.add(operator.createIndexValueMap(key).get());
     }
-    return false;
+    return keys;
   }
 
   @Override
-  public boolean createRangeWith(OBooleanExpression match) {
-    if (!(match instanceof OBinaryCondition)) {
-      return false;
-    }
-    OBinaryCondition metchingCondition = (OBinaryCondition) match;
-    if (!metchingCondition.getLeft().equals(this.getLeft())) {
-      return false;
-    }
-    OBinaryCompareOperator leftOperator = metchingCondition.getOperator();
-    OBinaryCompareOperator rightOperator = this.getOperator();
-    if (leftOperator instanceof OGeOperator || leftOperator instanceof OGtOperator) {
-      return rightOperator instanceof OLeOperator || rightOperator instanceof OLtOperator;
-    }
-    if (leftOperator instanceof OLeOperator || leftOperator instanceof OLtOperator) {
-      return rightOperator instanceof OGeOperator || rightOperator instanceof OGtOperator;
-    }
-    return false;
-  }
-
-  @Override
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    OBinaryCompareOperator operator = getOperator();
-    if ((operator instanceof OEqualsCompareOperator)
-        || (operator instanceof OGtOperator)
-        || (operator instanceof OGeOperator)
-        || (operator instanceof OContainsKeyOperator)
-        || (operator instanceof OContainsValueOperator)) {
-      return getRight();
-    } else if (additional != null) {
-      return additional.getRight();
+  public OBooleanExpression getIndexKeyCondition() {
+    if ("key".equals(getLeft().toString())) {
+      return this;
     } else {
       return null;
-      //      throw new UnsupportedOperationException("Cannot execute index query with " + this);
     }
   }
 
   @Override
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    OBinaryCompareOperator operator = this.getOperator();
-    if ((operator instanceof OEqualsCompareOperator)
-        || (operator instanceof OLtOperator)
-        || (operator instanceof OLeOperator)
-        || (operator instanceof OContainsKeyOperator)
-        || (operator instanceof OContainsValueOperator)) {
-      return getRight();
-    } else if (additional != null) {
-      return additional.getRight();
+  public OBooleanExpression getIndexRidCondition() {
+    if ("rid".equals(getLeft().toString())) {
+      return this;
     } else {
       return null;
-      //      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
-  }
-
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    OBinaryCompareOperator operator = getOperator();
-    if (operator.isGreater()) {
-      return operator.isInclude();
-    } else {
-      if (additional != null && additional.getOperator() != null) {
-        return additional.getOperator().isGreaterInclude();
-      } else {
-        return true;
-      }
-    }
-  }
-
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    OBinaryCompareOperator operator = getOperator();
-    if (operator.isLess()) {
-      return operator.isInclude();
-    } else {
-      if (additional != null && additional.getOperator() != null) {
-        return additional.getOperator().isLessInclude();
-      } else {
-        return true;
-      }
     }
   }
 }

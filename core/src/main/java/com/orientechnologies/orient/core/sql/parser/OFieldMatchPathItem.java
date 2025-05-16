@@ -5,6 +5,7 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -67,7 +68,7 @@ public class OFieldMatchPathItem extends OMatchPathItem {
       exp = new OSuffixIdentifier(field);
     }
     // TODO check possible results!
-    Object qR = this.exp.execute(startingPoint, iCommandContext);
+    Object qR = this.exp.execute(new OResultInternal(startingPoint), iCommandContext);
     return (qR instanceof Iterable && !(qR instanceof ODocument))
         ? (Iterable) qR
         : Collections.singleton((OIdentifiable) qR);

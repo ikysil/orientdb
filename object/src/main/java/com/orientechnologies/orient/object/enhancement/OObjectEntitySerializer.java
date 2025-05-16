@@ -55,7 +55,7 @@ import com.orientechnologies.orient.core.tx.OTransactionOptimistic;
 import com.orientechnologies.orient.object.db.OObjectDatabaseTx;
 import com.orientechnologies.orient.object.db.OObjectLazyMap;
 import com.orientechnologies.orient.object.enhancement.field.ODocumentFieldHandler;
-import com.orientechnologies.orient.object.metadata.schema.OSchemaProxyObject;
+import com.orientechnologies.orient.object.metadata.schema.OSessionSchemaObject;
 import com.orientechnologies.orient.object.serialization.OObjectSerializationThreadLocal;
 import com.orientechnologies.orient.object.serialization.OObjectSerializerContext;
 import com.orientechnologies.orient.object.serialization.OObjectSerializerHelper;
@@ -668,7 +668,7 @@ public class OObjectEntitySerializer {
       if (automaticSchemaGeneration
           && !currentClass.equals(Object.class)
           && !currentClass.equals(ODocument.class)) {
-        ((OSchemaProxyObject) db.getDatabaseOwner().getMetadata().getSchema())
+        ((OSessionSchemaObject) db.getDatabaseOwner().getMetadata().getSchema())
             .generateSchema(currentClass, db);
       }
       String iClassName = currentClass.getSimpleName();
@@ -1238,12 +1238,12 @@ public class OObjectEntitySerializer {
       }
     }
 
-    if (db.isMVCC() && !versionConfigured && db.getTransaction() instanceof OTransactionOptimistic)
+    if (!versionConfigured && db.getTransaction() instanceof OTransactionOptimistic)
       throw new OTransactionException(
           "Cannot involve an object of class '"
               + pojoClass
               + "' in an Optimistic Transaction commit because it does not define @Version or"
-              + " @OVersion and therefore cannot handle MVCC");
+              + " @OVersion and therefore cannot handle optimist locking");
 
     String fieldName;
     Object fieldValue;

@@ -5,13 +5,11 @@ package com.orientechnologies.orient.core.sql.parser;
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.executor.OIndexSearchInfo;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexCandidate;
 import com.orientechnologies.orient.core.sql.executor.metadata.OIndexFinder;
 import com.orientechnologies.orient.core.sql.executor.metadata.OPath;
-import com.orientechnologies.orient.core.sql.operator.OQueryOperatorEquals;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -129,30 +127,7 @@ public class OContainsCondition extends OBooleanExpression {
     if (left == null && right == null) {
       return true;
     } else {
-      return OQueryOperatorEquals.equals(left, right);
-    }
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftValue = left.execute(currentRecord, ctx);
-    if (right != null) {
-      Object rightValue = right.execute(currentRecord, ctx);
-      return execute(leftValue, rightValue);
-    } else {
-      if (!OMultiValue.isMultiValue(leftValue)) {
-        return false;
-      }
-      Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
-      while (iter.hasNext()) {
-        Object item = iter.next();
-        if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
-          return true;
-        } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {
-          return true;
-        }
-      }
-      return false;
+      return OEqualsCompareOperator.equals(left, right);
     }
   }
 
@@ -177,7 +152,8 @@ public class OContainsCondition extends OBooleanExpression {
       Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
       while (iter.hasNext()) {
         Object item = iter.next();
-        if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
+        if (item instanceof OIdentifiable
+            && condition.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
           return true;
         } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {
           return true;
@@ -215,7 +191,8 @@ public class OContainsCondition extends OBooleanExpression {
         Iterator<Object> iter = OMultiValue.getMultiValueIterator(leftValue);
         while (iter.hasNext()) {
           Object item = iter.next();
-          if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
+          if (item instanceof OIdentifiable
+              && condition.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
             return true;
           } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {
             return true;
@@ -255,7 +232,8 @@ public class OContainsCondition extends OBooleanExpression {
         boolean found = false;
         while (iter.hasNext()) {
           Object item = iter.next();
-          if (item instanceof OIdentifiable && condition.evaluate((OIdentifiable) item, ctx)) {
+          if (item instanceof OIdentifiable
+              && condition.evaluate(new OResultInternal((OIdentifiable) item), ctx)) {
             found = true;
             break;
           } else if (item instanceof OResult && condition.evaluate((OResult) item, ctx)) {
@@ -458,64 +436,19 @@ public class OContainsCondition extends OBooleanExpression {
     return true;
   }
 
-  @Override
-  public boolean isIndexAware(OIndexSearchInfo info, OCommandContext ctx) {
-    if (left.isBaseIdentifier()) {
-      if (info.getField().equals(left.getDefaultAlias().getStringValue())) {
-        if (right.isEarlyCalculated(info.getCtx())) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   public Optional<OIndexCandidate> findIndex(OIndexFinder info, OCommandContext ctx) {
     Optional<OPath> path = left.getPath();
     if (path.isPresent()) {
       if (right != null && right.isEarlyCalculated(ctx)) {
-        Object value = right.execute((OResult) null, ctx);
-        return info.findExactIndex(path.get(), value, ctx);
+        return info.findExact(path.get(), this::rightValue, ctx);
       }
     }
 
     return Optional.empty();
   }
 
-  @Override
-  public OExpression resolveKeyFrom(OBinaryCondition additional) {
-    if (right != null) {
-      return right;
-    } else {
-      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
-  }
-
-  @Override
-  public OExpression resolveKeyTo(OBinaryCondition additional) {
-    if (right != null) {
-      return right;
-    } else {
-      throw new UnsupportedOperationException("Cannot execute index query with " + this);
-    }
-  }
-
-  @Override
-  public boolean isKeyFromIncluded(OBinaryCondition additional) {
-    if (additional != null && additional.getOperator() != null) {
-      return additional.getOperator().isGreaterInclude();
-    } else {
-      return true;
-    }
-  }
-
-  @Override
-  public boolean isKeyToIncluded(OBinaryCondition additional) {
-    if (additional != null && additional.getOperator() != null) {
-      return additional.getOperator().isLessInclude();
-    } else {
-      return true;
-    }
+  private Collection<Object> rightValue(OCommandContext ctx, boolean asc) {
+    return right.getIndexKey(ctx);
   }
 }
 /* JavaCC - OriginalChecksum=bad1118296ea74860e88d66bfe9fa222 (do not edit this line) */

@@ -5,15 +5,12 @@ import static com.orientechnologies.orient.core.config.OGlobalConfiguration.CLIE
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.orientechnologies.orient.client.remote.OStorageRemote;
+import com.orientechnologies.orient.client.remote.ORemoteClient;
 import com.orientechnologies.orient.client.remote.db.document.ODatabaseDocumentRemote;
-import com.orientechnologies.orient.core.config.OGlobalConfiguration;
-import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabasePool;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.OrientDB;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.setup.LocalTestSetup;
 import com.orientechnologies.orient.setup.ServerRun;
 import com.orientechnologies.orient.setup.SetupConfig;
@@ -35,7 +32,6 @@ public class SimpleConnectionStrategiesIT {
 
   @BeforeClass
   public static void before() {
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     config = new SimpleDServerConfig();
     server0 = SimpleDServerConfig.SERVER0;
     server1 = SimpleDServerConfig.SERVER1;
@@ -55,7 +51,6 @@ public class SimpleConnectionStrategiesIT {
     remote.close();
 
     setup.teardown();
-    ODatabaseDocumentTx.closeAll();
   }
 
   @Test
@@ -71,12 +66,12 @@ public class SimpleConnectionStrategiesIT {
     Set<String> urls = new HashSet<>();
     ODatabaseSession session =
         remote1.open(SimpleConnectionStrategiesIT.class.getSimpleName(), "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session).getSession().getDebugLastHost());
     session.close();
 
     ODatabaseSession session1 =
         remote1.open(SimpleConnectionStrategiesIT.class.getSimpleName(), "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session1).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session1).getSession().getDebugLastHost());
     session1.close();
 
     assertEquals(urls.stream().count(), 2);
@@ -97,10 +92,10 @@ public class SimpleConnectionStrategiesIT {
                 .build());
     Set<String> urls = new HashSet<>();
     ODatabaseSession session = remote1.open(databaseName, "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session).getSession().getDebugLastHost());
 
     ODatabaseSession session1 = remote1.open(databaseName, "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session1).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session1).getSession().getDebugLastHost());
     session1.close();
 
     session.activateOnCurrentThread();
@@ -112,10 +107,10 @@ public class SimpleConnectionStrategiesIT {
     try (ODatabasePool pool = new ODatabasePool(remote1, databaseName, "admin", "admin")) {
 
       ODatabaseSession sessionP = pool.acquire();
-      poolUrls.add(((ODatabaseDocumentRemote) sessionP).getSessionMetadata().getDebugLastHost());
+      poolUrls.add(((ODatabaseDocumentRemote) sessionP).getSession().getDebugLastHost());
 
       ODatabaseSession sessionP1 = pool.acquire();
-      poolUrls.add(((ODatabaseDocumentRemote) sessionP1).getSessionMetadata().getDebugLastHost());
+      poolUrls.add(((ODatabaseDocumentRemote) sessionP1).getSession().getDebugLastHost());
       sessionP1.close();
       sessionP.activateOnCurrentThread();
       sessionP.close();
@@ -137,10 +132,10 @@ public class SimpleConnectionStrategiesIT {
     Set<String> urls = new HashSet<>();
     ODatabaseSession session = remote1.open(databaseName, "admin", "admin");
     session.query("select count(*) from ORole").close();
-    urls.add(((ODatabaseDocumentRemote) session).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session).getSession().getDebugLastHost());
 
     session.query("select count(*) from ORole").close();
-    urls.add(((ODatabaseDocumentRemote) session).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session).getSession().getDebugLastHost());
 
     session.close();
     assertEquals(urls.stream().count(), 2);
@@ -155,7 +150,7 @@ public class SimpleConnectionStrategiesIT {
             OrientDBConfig.builder().addConfig(CLIENT_CONNECTION_FETCH_HOST_LIST, false).build());
     ODatabaseSession session = remote.open(databaseName, "admin", "admin");
     assertEquals(
-        ((OStorageRemote) ((ODatabaseDocumentInternal) session).getStorage())
+        ((ORemoteClient) ((ODatabaseDocumentRemote) session).getRemoteClient())
             .getServerURLs()
             .size(),
         1);
@@ -168,7 +163,7 @@ public class SimpleConnectionStrategiesIT {
             OrientDBConfig.builder().addConfig(CLIENT_CONNECTION_FETCH_HOST_LIST, true).build());
     ODatabaseSession session1 = remote1.open(databaseName, "admin", "admin");
     assertTrue(
-        ((OStorageRemote) ((ODatabaseDocumentInternal) session1).getStorage())
+        ((ORemoteClient) ((ODatabaseDocumentRemote) session1).getRemoteClient())
                 .getServerURLs()
                 .size()
             > 1);
@@ -186,7 +181,7 @@ public class SimpleConnectionStrategiesIT {
     ODatabasePool pool = new ODatabasePool(remote, databaseName, "admin", "admin");
     ODatabaseSession session = pool.acquire();
     assertEquals(
-        ((OStorageRemote) ((ODatabaseDocumentInternal) session).getStorage())
+        ((ORemoteClient) ((ODatabaseDocumentRemote) session).getRemoteClient())
             .getServerURLs()
             .size(),
         1);
@@ -201,7 +196,7 @@ public class SimpleConnectionStrategiesIT {
     ODatabasePool pool1 = new ODatabasePool(remote1, databaseName, "admin", "admin");
     ODatabaseSession session1 = pool1.acquire();
     assertTrue(
-        ((OStorageRemote) ((ODatabaseDocumentInternal) session1).getStorage())
+        ((ORemoteClient) ((ODatabaseDocumentRemote) session1).getRemoteClient())
                 .getServerURLs()
                 .size()
             > 1);
@@ -224,7 +219,7 @@ public class SimpleConnectionStrategiesIT {
     for (int i = 0; i < 10; i++) {
       ODatabaseSession session =
           remote1.open(SimpleConnectionStrategiesIT.class.getSimpleName(), "admin", "admin");
-      urls.add(((ODatabaseDocumentRemote) session).getSessionMetadata().getDebugLastHost());
+      urls.add(((ODatabaseDocumentRemote) session).getSession().getDebugLastHost());
       session.close();
     }
 
@@ -239,7 +234,7 @@ public class SimpleConnectionStrategiesIT {
       ODatabaseSession session2 =
           remote1.open(SimpleConnectionStrategiesIT.class.getSimpleName(), "admin", "admin");
       session2.query("select from OUSer").close();
-      urls.add(((ODatabaseDocumentRemote) session2).getSessionMetadata().getDebugLastHost());
+      urls.add(((ODatabaseDocumentRemote) session2).getSession().getDebugLastHost());
       session2.close();
     }
 

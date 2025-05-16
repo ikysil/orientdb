@@ -22,7 +22,7 @@ package com.orientechnologies.orient.client.remote.message;
 import com.orientechnologies.common.serialization.types.OBinarySerializer;
 import com.orientechnologies.common.serialization.types.OIntegerSerializer;
 import com.orientechnologies.orient.client.remote.OBinaryResponse;
-import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
+import com.orientechnologies.orient.client.remote.ORemoteClientSession;
 import com.orientechnologies.orient.client.remote.TreeEntry;
 import com.orientechnologies.orient.core.serialization.serializer.record.ORecordSerializer;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelDataInput;
@@ -54,7 +54,7 @@ public class OSBTFetchEntriesMajorResponse<K, V> implements OBinaryResponse {
   }
 
   @Override
-  public void read(OChannelDataInput network, OStorageRemoteSession session) throws IOException {
+  public void read(OChannelDataInput network, ORemoteClientSession session) throws IOException {
     byte[] stream = network.readBytes();
     int offset = 0;
     final int count = OIntegerSerializer.INSTANCE.deserializeLiteral(stream, 0);

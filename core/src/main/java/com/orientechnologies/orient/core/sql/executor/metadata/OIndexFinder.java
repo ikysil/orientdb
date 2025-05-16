@@ -17,16 +17,49 @@ public interface OIndexFinder {
     public boolean isRange() {
       return this == Gt || this == Lt || this == Ge || this == Le;
     }
+
+    boolean isInclude() {
+      return this == Ge || this == Le;
+    }
+
+    boolean isL() {
+      return this == Lt || this == Le;
+    }
+
+    boolean isG() {
+      return this == Gt || this == Ge;
+    }
+
+    boolean canRangeWith(Operation other) {
+      if (this.isRange() && other.isRange()) {
+        if (this.isL()) {
+          return other.isG();
+        } else {
+          return other.isL();
+        }
+      } else {
+        return false;
+      }
+    }
   }
 
-  Optional<OIndexCandidate> findExactIndex(OPath fieldName, Object value, OCommandContext ctx);
+  Optional<OIndexCandidate> findExact(OPath fieldName, OIndexKeySource value, OCommandContext ctx);
 
-  Optional<OIndexCandidate> findByKeyIndex(OPath fieldName, Object value, OCommandContext ctx);
+  Optional<OIndexCandidate> findNull(OPath fieldName, OCommandContext ctx);
 
-  Optional<OIndexCandidate> findAllowRangeIndex(
-      OPath fieldName, Operation operation, Object value, OCommandContext ctx);
+  Optional<OIndexCandidate> findByKey(OPath fieldName, OIndexKeySource value, OCommandContext ctx);
 
-  Optional<OIndexCandidate> findByValueIndex(OPath fieldName, Object value, OCommandContext ctx);
+  Optional<OIndexCandidate> findAllowRange(
+      OPath fieldName, Operation operation, OIndexKeySource value, OCommandContext ctx);
 
-  Optional<OIndexCandidate> findFullTextIndex(OPath fieldName, Object value, OCommandContext ctx);
+  Optional<OIndexCandidate> findRange(
+      OPath fieldName, OIndexKeySource first, OIndexKeySource second, OCommandContext ctx);
+
+  Optional<OIndexCandidate> findByValue(
+      OPath fieldName, OIndexKeySource value, OCommandContext ctx);
+
+  Optional<OIndexCandidate> findFullText(
+      OPath fieldName, OIndexKeySource value, OCommandContext ctx);
+
+  Optional<OIndexCandidate> findAny(OPath oPath, OIndexKeySource value, OCommandContext ctx);
 }

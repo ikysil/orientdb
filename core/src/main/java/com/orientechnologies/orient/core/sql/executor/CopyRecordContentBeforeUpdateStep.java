@@ -7,7 +7,7 @@ import com.orientechnologies.orient.core.query.live.OLiveQueryHookV2;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 
 /**
  * Reads an upstream result set and returns a new result set that contains copies of the original
@@ -19,8 +19,8 @@ import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream
  * @author Luigi Dell'Aquila (l.dellaquila-(at)-orientdb.com)
  */
 public class CopyRecordContentBeforeUpdateStep extends AbstractExecutionStep {
-  public CopyRecordContentBeforeUpdateStep(OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CopyRecordContentBeforeUpdateStep() {
+    super();
   }
 
   @Override
@@ -39,7 +39,7 @@ public class CopyRecordContentBeforeUpdateStep extends AbstractExecutionStep {
         prevValue.setProperty(
             "@class", ODocumentInternal.getImmutableSchemaClass(((ODocument) rec)).getName());
       }
-      if (!result.toElement().getIdentity().isNew()) {
+      if (!result.getIdentity().map((i) -> i.isNew()).orElse(false)) {
         for (String propName : result.getPropertyNames()) {
           prevValue.setProperty(
               propName, OLiveQueryHookV2.unboxRidbags(result.getProperty(propName)));
@@ -53,13 +53,13 @@ public class CopyRecordContentBeforeUpdateStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ COPY RECORD CONTENT BEFORE UPDATE");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     return result.toString();
   }

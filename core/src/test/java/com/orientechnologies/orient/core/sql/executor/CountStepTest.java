@@ -3,7 +3,7 @@ package com.orientechnologies.orient.core.sql.executor;
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OBasicCommandContext;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
@@ -19,10 +19,10 @@ public class CountStepTest {
   @Test
   public void shouldCountRecords() {
     OCommandContext context = new OBasicCommandContext();
-    CountStep step = new CountStep(context, false);
+    CountStep step = new CountStep();
 
     AbstractExecutionStep previous =
-        new AbstractExecutionStep(context, false) {
+        new AbstractExecutionStep() {
           boolean done = false;
 
           @Override
@@ -36,7 +36,7 @@ public class CountStepTest {
               }
               done = true;
             }
-            return OExecutionStream.resultIterator(result.iterator());
+            return OExecutionStream.resultCollection(result);
           }
         };
 

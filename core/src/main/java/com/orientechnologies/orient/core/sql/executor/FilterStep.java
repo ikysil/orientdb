@@ -4,8 +4,7 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExpireResultSet;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OWhereClause;
 
 /** Created by luigidellaquila on 12/07/16. */
@@ -14,13 +13,8 @@ public class FilterStep extends AbstractExecutionStep {
   private OWhereClause whereClause;
   private final boolean locked;
 
-  public FilterStep(
-      OWhereClause whereClause,
-      OCommandContext ctx,
-      long timeoutMillis,
-      boolean profilingEnabled,
-      boolean locked) {
-    super(ctx, profilingEnabled);
+  public FilterStep(OWhereClause whereClause, long timeoutMillis, boolean locked) {
+    super();
     this.whereClause = whereClause;
     this.timeoutMillis = timeoutMillis;
     this.locked = locked;
@@ -35,7 +29,7 @@ public class FilterStep extends AbstractExecutionStep {
     OExecutionStream resultSet = prev.get().start(ctx);
     resultSet = resultSet.filter(this::filterMap);
     if (timeoutMillis > 0) {
-      resultSet = new OExpireResultSet(resultSet, timeoutMillis, this::sendTimeout);
+      resultSet = resultSet.timeout(timeoutMillis, this::fail);
     }
     return resultSet;
   }
@@ -51,17 +45,21 @@ public class FilterStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
+  public String prettyPrint(OPrintContext ctx) {
     StringBuilder result = new StringBuilder();
-    result.append(OExecutionStepInternal.getIndent(depth, indent) + "+ FILTER ITEMS WHERE ");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    result.append(OExecutionStepInternal.getIndent(ctx) + "+ FILTER ITEMS WHERE ");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     result.append("\n");
-    result.append(OExecutionStepInternal.getIndent(depth, indent));
+    result.append(OExecutionStepInternal.getIndent(ctx));
     result.append("  ");
     result.append(whereClause.toString());
     return result.toString();
+  }
+
+  private void fail() {
+    throw new OTimeoutException("Timeout expired");
   }
 
   @Override
@@ -91,7 +89,7 @@ public class FilterStep extends AbstractExecutionStep {
   }
 
   @Override
-  public OExecutionStep copy(OCommandContext ctx) {
-    return new FilterStep(this.whereClause.copy(), ctx, timeoutMillis, profilingEnabled, locked);
+  public OExecutionStepInternal copy(OCommandContext ctx) {
+    return new FilterStep(this.whereClause.copy(), timeoutMillis, locked);
   }
 }

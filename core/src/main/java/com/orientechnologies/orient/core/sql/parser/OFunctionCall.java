@@ -14,6 +14,8 @@ import com.orientechnologies.orient.core.sql.functions.OIndexableSQLFunction;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
 import com.orientechnologies.orient.core.sql.functions.graph.OSQLFunctionMove;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -90,41 +92,39 @@ public class OFunctionCall extends SimpleNode {
     builder.append(")");
   }
 
-  public Object execute(Object targetObjects, OCommandContext ctx) {
+  public Object execute(OResult targetObjects, OCommandContext ctx) {
     return execute(targetObjects, ctx, name.getStringValue());
   }
 
-  private Object execute(Object targetObjects, OCommandContext ctx, String name) {
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
+    Object result = execute(null, ctx, name.getStringValue());
+    if (result instanceof Collection) {
+      return (Collection) result;
+    }
+    return Collections.singleton(result);
+  }
+
+  private Object execute(OResult targetObjects, OCommandContext ctx, String name) {
     List<Object> paramValues = new ArrayList<Object>();
 
     Object record = null;
 
     if (record == null) {
-      if (targetObjects instanceof OIdentifiable) {
-        record = (OIdentifiable) targetObjects;
-      } else if (targetObjects instanceof OResult) {
+      if (targetObjects != null) {
         record = ((OResult) targetObjects).toElement();
-      } else {
-        record = targetObjects;
       }
     }
     if (record == null) {
-      Object current = ctx == null ? null : ctx.getVariable("$current");
+      OResult current = ctx == null ? null : ctx.getCurrent();
       if (current != null) {
-        if (current instanceof OIdentifiable) {
-          record = current;
-        } else if (current instanceof OResult) {
-          record = ((OResult) current).toElement();
-        } else {
-          record = current;
-        }
+        record = ((OResult) current).toElement();
       }
     }
     for (OExpression expr : this.params) {
       if (targetObjects instanceof OResult) {
         paramValues.add(expr.execute((OResult) targetObjects, ctx));
       } else if (record instanceof OIdentifiable) {
-        paramValues.add(expr.execute((OIdentifiable) record, ctx));
+        paramValues.add(expr.execute(new OResultInternal((OIdentifiable) record), ctx));
       } else if (record instanceof OResult) {
         paramValues.add(expr.execute((OResult) record, ctx));
       } else if (record == null) {

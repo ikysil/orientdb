@@ -36,6 +36,7 @@ import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.index.OIndexDefinition;
 import com.orientechnologies.orient.core.index.OIndexDefinitionFactory;
 import com.orientechnologies.orient.core.index.OIndexException;
+import com.orientechnologies.orient.core.index.OIndexManager;
 import com.orientechnologies.orient.core.index.OIndexManagerAbstract;
 import com.orientechnologies.orient.core.metadata.schema.clusterselection.OClusterSelectionStrategy;
 import com.orientechnologies.orient.core.metadata.security.ORole;
@@ -1463,7 +1464,7 @@ public abstract class OClassImpl implements OClass {
 
     if (!hasClusterId(clusterId)) return;
 
-    database.command("alter cluster `" + oldName + "` NAME \"" + newName + "\"").close();
+    database.command("alter cluster `" + oldName + "` NAME " + newName + "").close();
   }
 
   protected void onlyAddPolymorphicClusterId(int clusterId) {
@@ -1627,8 +1628,7 @@ public abstract class OClassImpl implements OClass {
 
       for (final OIndex index : getIndexes()) indexesToRemove.add(index.getName());
 
-      final OIndexManagerAbstract indexManager =
-          getDatabase().getMetadata().getIndexManagerInternal();
+      final OIndexManager indexManager = getDatabase().getMetadata().getIndexManager();
       for (final String indexName : indexesToRemove)
         indexManager.removeClusterFromIndex(clusterName, indexName);
     }

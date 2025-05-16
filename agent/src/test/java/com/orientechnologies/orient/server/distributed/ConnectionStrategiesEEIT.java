@@ -7,11 +7,9 @@ import com.orientechnologies.common.concur.ONeedRetryException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.client.remote.db.document.ODatabaseDocumentRemote;
-import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.OrientDB;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.server.OServer;
 import java.io.IOException;
@@ -32,7 +30,6 @@ public class ConnectionStrategiesEEIT {
 
   @Before
   public void before() throws Exception {
-    OGlobalConfiguration.SERVER_BACKWARD_COMPATIBILITY.setValue(false);
     server0 = OServer.startFromClasspathConfig("orientdb-simple-dserver-config-0.xml");
     server1 = OServer.startFromClasspathConfig("orientdb-simple-dserver-config-1.xml");
     server2 = OServer.startFromClasspathConfig("orientdb-simple-dserver-config-2.xml");
@@ -79,16 +76,16 @@ public class ConnectionStrategiesEEIT {
     Set<String> urls = new HashSet<>();
     ODatabaseSession session =
         remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session).getSession().getDebugLastHost());
     session.close();
 
     ODatabaseSession session1 =
         remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session1).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session1).getSession().getDebugLastHost());
     session1.close();
     ODatabaseSession session3 =
         remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session3).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session3).getSession().getDebugLastHost());
     session3.close();
 
     assertEquals(urls.stream().filter((x) -> x.contains("2424")).count(), 1);
@@ -102,7 +99,7 @@ public class ConnectionStrategiesEEIT {
     for (int i = 0; i < 10; i++) {
       ODatabaseSession session2 =
           remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-      urls.add(((ODatabaseDocumentRemote) session2).getSessionMetadata().getDebugLastHost());
+      urls.add(((ODatabaseDocumentRemote) session2).getSession().getDebugLastHost());
       for (int ji = 0; ji < 100; ji++) {
         session2.save(session2.newVertex());
       }
@@ -130,7 +127,7 @@ public class ConnectionStrategiesEEIT {
       try (OResultSet res = session2.query("select count(*) as count from V")) {
         assertEquals((long) res.next().getProperty("count"), 1000l);
       }
-      urls.add(((ODatabaseDocumentRemote) session2).getSessionMetadata().getDebugLastHost());
+      urls.add(((ODatabaseDocumentRemote) session2).getSession().getDebugLastHost());
       session2.close();
     }
 
@@ -159,7 +156,7 @@ public class ConnectionStrategiesEEIT {
     Set<String> urls = new HashSet<>();
     ODatabaseSession session =
         remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session).getSession().getDebugLastHost());
     session.close();
 
     long CYCLES = 10l;
@@ -169,7 +166,7 @@ public class ConnectionStrategiesEEIT {
     for (int i = 0; i < CYCLES; i++) {
       ODatabaseSession session2 =
           remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-      urls.add(((ODatabaseDocumentRemote) session2).getSessionMetadata().getDebugLastHost());
+      urls.add(((ODatabaseDocumentRemote) session2).getSession().getDebugLastHost());
       for (int ji = 0; ji < V_PER_CYCLE; ji++) {
         for (int retry = 0; retry < 10; retry++) {
           try {
@@ -185,7 +182,7 @@ public class ConnectionStrategiesEEIT {
 
     ODatabaseSession session1 =
         remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-    urls.add(((ODatabaseDocumentRemote) session1).getSessionMetadata().getDebugLastHost());
+    urls.add(((ODatabaseDocumentRemote) session1).getSession().getDebugLastHost());
     session1.close();
 
     assertEquals(urls.stream().filter((x) -> x.contains("2424")).count(), 1);
@@ -199,7 +196,7 @@ public class ConnectionStrategiesEEIT {
     for (int i = 0; i < CYCLES; i++) {
       ODatabaseSession session2 =
           remote1.open(ConnectionStrategiesEEIT.class.getSimpleName(), "admin", "admin");
-      urls.add(((ODatabaseDocumentRemote) session2).getSessionMetadata().getDebugLastHost());
+      urls.add(((ODatabaseDocumentRemote) session2).getSession().getDebugLastHost());
       for (int ji = 0; ji < V_PER_CYCLE; ji++) {
         for (int retry = 0; retry < 10; retry++) {
           try {
@@ -240,7 +237,7 @@ public class ConnectionStrategiesEEIT {
       try (OResultSet res = session2.query("select count(*) as count from V")) {
         assertEquals(CYCLES * V_PER_CYCLE * 2, (long) res.next().getProperty("count"));
       }
-      urls.add(((ODatabaseDocumentRemote) session2).getSessionMetadata().getDebugLastHost());
+      urls.add(((ODatabaseDocumentRemote) session2).getSession().getDebugLastHost());
       session2.close();
     }
 
@@ -260,6 +257,5 @@ public class ConnectionStrategiesEEIT {
     server0.shutdown();
     server1.shutdown();
     server2.shutdown();
-    ODatabaseDocumentTx.closeAll();
   }
 }

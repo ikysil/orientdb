@@ -734,21 +734,6 @@ public class OMultiValue {
     return false;
   }
 
-  public static int indexOf(final Object iObject, final Object iItem) {
-    if (iObject == null) return -1;
-
-    if (iObject instanceof List) return ((List) iObject).indexOf(iItem);
-    else if (iObject.getClass().isArray()) {
-      final int size = Array.getLength(iObject);
-      for (int i = 0; i < size; ++i) {
-        final Object item = Array.get(iObject, i);
-        if (item != null && item.equals(iItem)) return i;
-      }
-    }
-
-    return -1;
-  }
-
   public static Object toSet(final Object o) {
     if (o instanceof Set<?>) return o;
     else if (o instanceof Collection<?>) return new HashSet<Object>((Collection<?>) o);

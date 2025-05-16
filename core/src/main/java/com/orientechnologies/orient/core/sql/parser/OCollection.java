@@ -3,12 +3,12 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,18 +55,18 @@ public class OCollection extends SimpleNode {
     this.expressions.add(exp);
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
-    List<Object> result = new ArrayList<Object>();
-    for (OExpression exp : expressions) {
-      result.add(exp.execute(iCurrentRecord, ctx));
-    }
-    return result;
-  }
-
   public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     List<Object> result = new ArrayList<Object>();
     for (OExpression exp : expressions) {
       result.add(convert(exp.execute(iCurrentRecord, ctx)));
+    }
+    return result;
+  }
+
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
+    List<Object> result = new ArrayList<Object>();
+    for (OExpression exp : expressions) {
+      result.addAll(exp.getIndexKey(ctx));
     }
     return result;
   }

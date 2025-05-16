@@ -5,7 +5,7 @@ import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import com.orientechnologies.orient.core.sql.parser.OCluster;
 
 /**
@@ -23,23 +23,21 @@ public class CheckClusterTypeStep extends AbstractExecutionStep {
   private String clusterName;
   private String targetClass;
 
-  public CheckClusterTypeStep(
-      String targetClusterName, String clazz, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CheckClusterTypeStep(String targetClusterName, String clazz) {
+    super();
     this.clusterName = targetClusterName;
     this.targetClass = clazz;
   }
 
-  public CheckClusterTypeStep(
-      OCluster targetCluster, String clazz, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public CheckClusterTypeStep(OCluster targetCluster, String clazz) {
+    super();
     this.cluster = targetCluster;
     this.targetClass = clazz;
   }
 
   @Override
   public OExecutionStream internalStart(OCommandContext context) throws OTimeoutException {
-    getPrev().ifPresent(x -> x.start(context).close(ctx));
+    getPrev().ifPresent(x -> x.start(context).close(context));
     ODatabaseDocumentInternal db = (ODatabaseDocumentInternal) context.getDatabase();
 
     int clusterId;
@@ -77,13 +75,13 @@ public class CheckClusterTypeStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ CHECK TARGET CLUSTER FOR CLASS");
-    if (profilingEnabled) {
-      result.append(" (" + getCostFormatted() + ")");
+    if (ctx.isProfilingEnabled()) {
+      result.append(" (" + ctx.getCostFormatted(this) + ")");
     }
     result.append("\n");
     result.append(spaces);

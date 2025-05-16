@@ -3,8 +3,6 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
@@ -123,7 +121,7 @@ public class OMethodCall extends SimpleNode {
       String name,
       List<OExpression> iParams,
       Iterable<OIdentifiable> iPossibleResults) {
-    Object val = ctx.getVariable("$current");
+    OResult val = ctx.getCurrent();
     if (val == null && targetObjects == null) {
       return null;
     }
@@ -159,24 +157,12 @@ public class OMethodCall extends SimpleNode {
       Iterable<OIdentifiable> iPossibleResults,
       List<Object> paramValues) {
     if (graphFunction instanceof OSQLFunctionFiltered) {
-      Object current = ctx.getVariable("$current");
-      if (current instanceof OResult) {
-        current = ((OResult) current).getElement().orElse(null);
-      }
+      OResult current = ctx.getCurrent();
       return ((OSQLFunctionFiltered) graphFunction)
-          .execute(
-              targetObjects,
-              (OIdentifiable) current,
-              null,
-              paramValues.toArray(),
-              iPossibleResults,
-              ctx);
+          .execute(targetObjects, current, null, paramValues.toArray(), iPossibleResults, ctx);
     } else {
-      Object current = ctx.getVariable("$current");
-      if (current instanceof OIdentifiable) {
-        return graphFunction.execute(
-            targetObjects, (OIdentifiable) current, null, paramValues.toArray(), ctx);
-      } else if (current instanceof OResult) {
+      OResult current = ctx.getCurrent();
+      if (current != null) {
         return graphFunction.execute(
             targetObjects,
             ((OResult) current).getElement().orElse(null),
@@ -195,7 +181,7 @@ public class OMethodCall extends SimpleNode {
       String name,
       List<OExpression> iParams,
       Iterable<OIdentifiable> iPossibleResults) {
-    Object val = ctx.getVariable("$current");
+    OResult val = ctx.getCurrent();
     if (val == null && targetObjects == null) {
       return null;
     }
@@ -209,13 +195,15 @@ public class OMethodCall extends SimpleNode {
     List<Object> paramValues = new ArrayList<Object>();
     for (OExpression expr : iParams) {
       if (val instanceof OIdentifiable) {
-        paramValues.add(expr.execute((OIdentifiable) val, ctx));
+        paramValues.add(expr.execute(new OResultInternal((OIdentifiable) val), ctx));
       } else if (val instanceof OResult) {
         paramValues.add(expr.execute((OResult) val, ctx));
       } else if (targetObjects instanceof OIdentifiable) {
-        paramValues.add(expr.execute((OIdentifiable) targetObjects, ctx));
+        paramValues.add(expr.execute(new OResultInternal((OIdentifiable) targetObjects), ctx));
       } else if (targetObjects instanceof OResult) {
         paramValues.add(expr.execute((OResult) targetObjects, ctx));
+      } else if (val == null) {
+        paramValues.add(expr.execute((OResult) null, ctx));
       } else {
         throw new OCommandExecutionException("Invalild value for $current: " + val);
       }
@@ -265,10 +253,6 @@ public class OMethodCall extends SimpleNode {
     }
 
     throw new UnsupportedOperationException("Invalid reverse traversal: " + methodName);
-  }
-
-  public static ODatabaseDocumentInternal getDatabase() {
-    return ODatabaseRecordThreadLocal.instance().get();
   }
 
   public boolean needsAliases(Set<String> aliases) {

@@ -17,8 +17,6 @@ package com.orientechnologies.security.auditing;
 
 import com.orientechnologies.common.parser.OVariableParser;
 import com.orientechnologies.common.parser.OVariableParserListener;
-import com.orientechnologies.orient.core.command.OCommandExecutor;
-import com.orientechnologies.orient.core.command.OCommandRequestText;
 import com.orientechnologies.orient.core.db.ODatabase;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseListener;
@@ -259,15 +257,6 @@ public class OAuditingHook extends ORecordHookAbstract implements ODatabaseListe
 
   @Override
   public void onClose(ODatabase iDatabase) {}
-
-  @Override
-  public void onBeforeCommand(OCommandRequestText iCommand, OCommandExecutor executor) {}
-
-  @Override
-  public void onAfterCommand(
-      OCommandRequestText iCommand, OCommandExecutor executor, Object result) {
-    logCommand(iCommand.getText());
-  }
 
   @Override
   public boolean onCorruptionRepairDatabase(

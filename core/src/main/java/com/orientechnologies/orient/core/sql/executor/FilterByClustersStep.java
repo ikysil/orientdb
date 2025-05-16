@@ -5,7 +5,7 @@ import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -13,9 +13,8 @@ import java.util.stream.Collectors;
 public class FilterByClustersStep extends AbstractExecutionStep {
   private Set<String> clusters;
 
-  public FilterByClustersStep(
-      Set<String> filterClusters, OCommandContext ctx, boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+  public FilterByClustersStep(Set<String> filterClusters) {
+    super();
     this.clusters = filterClusters;
   }
 
@@ -51,10 +50,10 @@ public class FilterByClustersStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    return OExecutionStepInternal.getIndent(depth, indent)
+  public String prettyPrint(OPrintContext ctx) {
+    return OExecutionStepInternal.getIndent(ctx)
         + "+ FILTER ITEMS BY CLUSTERS \n"
-        + OExecutionStepInternal.getIndent(depth, indent)
+        + OExecutionStepInternal.getIndent(ctx)
         + "  "
         + clusters.stream().collect(Collectors.joining(", "));
   }

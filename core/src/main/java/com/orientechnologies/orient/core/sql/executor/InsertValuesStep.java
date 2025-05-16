@@ -4,8 +4,8 @@ import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.executor.resultset.OExecutionStream;
-import com.orientechnologies.orient.core.sql.executor.resultset.OMapResult;
+import com.orientechnologies.orient.core.sql.executor.stream.OExecutionStream;
+import com.orientechnologies.orient.core.sql.executor.stream.OMapResult;
 import com.orientechnologies.orient.core.sql.parser.OExpression;
 import com.orientechnologies.orient.core.sql.parser.OIdentifier;
 import com.orientechnologies.orient.core.sql.parser.OUpdateItem;
@@ -17,11 +17,8 @@ public class InsertValuesStep extends AbstractExecutionStep {
   private final List<List<OExpression>> values;
 
   public InsertValuesStep(
-      List<OIdentifier> identifierList,
-      List<List<OExpression>> valueExpressions,
-      OCommandContext ctx,
-      boolean profilingEnabled) {
-    super(ctx, profilingEnabled);
+      List<OIdentifier> identifierList, List<List<OExpression>> valueExpressions) {
+    super();
     this.identifiers = identifierList;
     this.values = valueExpressions;
   }
@@ -67,8 +64,8 @@ public class InsertValuesStep extends AbstractExecutionStep {
   }
 
   @Override
-  public String prettyPrint(int depth, int indent) {
-    String spaces = OExecutionStepInternal.getIndent(depth, indent);
+  public String prettyPrint(OPrintContext ctx) {
+    String spaces = OExecutionStepInternal.getIndent(ctx);
     StringBuilder result = new StringBuilder();
     result.append(spaces);
     result.append("+ SET VALUES \n");

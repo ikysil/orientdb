@@ -43,16 +43,14 @@ public class OTransactionOptimisticServer extends OTransactionOptimistic {
   public OTransactionOptimisticServer(
       ODatabaseDocumentInternal database,
       int txId,
-      boolean usingLong,
       List<ORecordOperationRequest> operations,
       List<IndexChange> indexChanges) {
     super(database);
     if (database.getTransaction().isActive()) {
       this.newObjectCounter =
-          ((OTransactionRealAbstract) database.getTransaction()).getNewObjectCounter();
+          ((OTransactionOptimistic) database.getTransaction()).getNewObjectCounter();
     }
     clientTxId = txId;
-    this.setUsingLog(usingLong);
     this.operations = operations;
     this.indexChanges = indexChanges;
     if (database.getTransaction().isActive()) {

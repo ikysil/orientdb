@@ -25,8 +25,8 @@ import com.orientechnologies.common.exception.OSystemException;
 import com.orientechnologies.common.io.OIOException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
-import com.orientechnologies.orient.client.remote.OStorageRemoteNodeSession;
-import com.orientechnologies.orient.client.remote.OStorageRemoteSession;
+import com.orientechnologies.orient.client.remote.ORemoteClientNodeSession;
+import com.orientechnologies.orient.client.remote.ORemoteClientSession;
 import com.orientechnologies.orient.client.remote.message.OError37Response;
 import com.orientechnologies.orient.core.OConstants;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
@@ -375,14 +375,13 @@ public class OChannelBinaryAsynchClient extends OChannelBinary {
     }
   }
 
-  public void beginRequest(final byte iCommand, final OStorageRemoteSession session)
+  public void beginRequest(final byte iCommand, final ORemoteClientSession session)
       throws IOException {
-    final OStorageRemoteNodeSession nodeSession = session.getServerSession(getServerURL());
+    final ORemoteClientNodeSession nodeSession = session.getServerSession(getServerURL());
     beginRequest(iCommand, nodeSession);
   }
 
-  public void beginRequest(byte iCommand, OStorageRemoteNodeSession nodeSession)
-      throws IOException {
+  public void beginRequest(byte iCommand, ORemoteClientNodeSession nodeSession) throws IOException {
     if (nodeSession == null)
       throw new OIOException("Invalid session for URL '" + getServerURL() + "'");
 

@@ -4,12 +4,12 @@ package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.sql.executor.AggregationContext;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import com.orientechnologies.orient.core.sql.executor.OResultInternal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -85,7 +85,7 @@ public class OArrayConcatExpression extends SimpleNode {
     return result;
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, OCommandContext ctx) {
+  public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
     Object result = childExpressions.get(0).execute(iCurrentRecord, ctx);
     for (int i = 1; i < childExpressions.size(); i++) {
       result = apply(result, childExpressions.get(i).execute(iCurrentRecord, ctx));
@@ -93,12 +93,12 @@ public class OArrayConcatExpression extends SimpleNode {
     return result;
   }
 
-  public Object execute(OResult iCurrentRecord, OCommandContext ctx) {
-    Object result = childExpressions.get(0).execute(iCurrentRecord, ctx);
-    for (int i = 1; i < childExpressions.size(); i++) {
-      result = apply(result, childExpressions.get(i).execute(iCurrentRecord, ctx));
+  public Collection<Object> getIndexKey(OCommandContext ctx) {
+    Object value = execute(null, ctx);
+    if (value instanceof Collection) {
+      return (Collection<Object>) value;
     }
-    return result;
+    return Collections.singleton(value);
   }
 
   public boolean isEarlyCalculated(OCommandContext ctx) {

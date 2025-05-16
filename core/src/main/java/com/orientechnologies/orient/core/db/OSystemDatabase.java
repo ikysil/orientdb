@@ -164,9 +164,11 @@ public class OSystemDatabase {
   private synchronized void checkServerId() {
     ODatabaseDocumentInternal db = openSystemDatabase();
     try {
+
       OClass clazz = db.getClass(SERVER_INFO_CLASS);
       if (clazz == null) {
-        clazz = db.createClass(SERVER_INFO_CLASS);
+        db.createClassIfNotExist(SERVER_INFO_CLASS);
+        clazz = db.getClass(SERVER_INFO_CLASS);
       }
       OElement info;
       if (clazz.count() == 0) {

@@ -3,7 +3,6 @@
 package com.orientechnologies.orient.core.sql.parser;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.sql.executor.OResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,23 +28,6 @@ public class ONotInCondition extends OBooleanExpression {
 
   public ONotInCondition(OrientSql p, int id) {
     super(p, id);
-  }
-
-  @Override
-  public boolean evaluate(OIdentifiable currentRecord, OCommandContext ctx) {
-    Object leftVal = left.execute(currentRecord, ctx);
-    Object rightVal = null;
-    if (rightStatement != null) {
-      rightVal = OInCondition.executeQuery(rightStatement, ctx);
-    } else if (rightParam != null) {
-      rightVal = rightParam.getValue(ctx.getInputParameters());
-    } else if (rightMathExpression != null) {
-      rightVal = rightMathExpression.execute(currentRecord, ctx);
-    }
-    if (rightVal == null) {
-      return true;
-    }
-    return !OInCondition.evaluateExpression(leftVal, rightVal);
   }
 
   @Override
