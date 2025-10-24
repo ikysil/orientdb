@@ -19,7 +19,7 @@ public class ReplicationVersionIncrementedByOneIT extends BareBoneBase1ClientTes
   protected void dbClient1(BareBonesServer[] servers) {
     OrientDB orientdb = servers[0].getServer().getContext();
     orientdb.createIfNotExists(getDatabaseName(), ODatabaseType.PLOCAL);
-    ODatabaseDocument graph = orientdb.open(getDatabaseName(), "admin", "admin");
+    ODatabaseDocument graph = orientdb.open(getDatabaseName(), "admin", "adminpwd");
     if (!graph.getMetadata().getSchema().existsClass("vertextype"))
       graph.createClass("vertextype", "V");
     if (!graph.getMetadata().getSchema().existsClass("edgetype"))
@@ -29,19 +29,19 @@ public class ReplicationVersionIncrementedByOneIT extends BareBoneBase1ClientTes
 
     try {
       OVertex v1 = graph.newVertex("vertextype");
-      v1.save();
+      graph.save(v1);
       graph.commit();
       graph.begin();
       assertEquals(1, v1.getVersion());
 
       OVertex v2 = graph.newVertex("vertextype");
-      v2.save();
+      graph.save(v2);
       graph.commit();
       graph.begin();
       assertEquals(1, v2.getVersion());
 
       v1.addEdge(v2, "edgetype");
-      v1.save();
+      graph.save(v1);
       graph.commit();
       graph.begin();
       assertEquals(2, v1.getVersion());

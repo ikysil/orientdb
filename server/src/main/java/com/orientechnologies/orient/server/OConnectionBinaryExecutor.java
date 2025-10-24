@@ -38,7 +38,6 @@ import com.orientechnologies.orient.core.fetch.remote.ORemoteFetchContext;
 import com.orientechnologies.orient.core.fetch.remote.ORemoteFetchListener;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.metadata.security.OSecurityUser;
 import com.orientechnologies.orient.core.query.live.OLiveQueryHookV2;
 import com.orientechnologies.orient.core.record.ORecord;
@@ -68,6 +67,7 @@ import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinaryProt
 import com.orientechnologies.orient.server.distributed.ODistributedConfiguration;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
 import com.orientechnologies.orient.server.distributed.ORemoteServerController;
+import com.orientechnologies.orient.server.distributed.config.OClusterConfiguration;
 import com.orientechnologies.orient.server.network.protocol.binary.HandshakeInfo;
 import com.orientechnologies.orient.server.network.protocol.binary.ONetworkProtocolBinary;
 import com.orientechnologies.orient.server.plugin.OServerPlugin;
@@ -224,19 +224,21 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
   @Override
   public OBinaryResponse executeDistributedStatus(ODistributedStatusRequest request) {
     final ODocument req = request.getStatus();
-    ODocument clusterConfig = new ODocument();
+    OClusterConfiguration clusterConfig;
 
     final String operation = req.field("operation");
     if (operation == null) throw new IllegalArgumentException("Cluster operation is null");
 
     if (operation.equals("status")) {
       final OServerPlugin plugin = server.getPlugin("cluster");
-      if (plugin != null && plugin instanceof ODistributedServerManager)
+      if (plugin != null && plugin instanceof ODistributedServerManager) {
         clusterConfig = ((ODistributedServerManager) plugin).getClusterConfiguration();
+      } else {
+        clusterConfig = new OClusterConfiguration();
+      }
     } else
       throw new IllegalArgumentException("Cluster operation '" + operation + "' is not supported");
-
-    return new ODistributedStatusResponse(clusterConfig);
+    return new ODistributedStatusResponse(clusterConfig.getDocument());
   }
 
   @Override
@@ -314,24 +316,22 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
       if (record != null) {
         byte[] bytes = getRecordBytes(connection, record);
         final Set<ORecord> recordsToSend = new HashSet<>();
-        if (record != null) {
-          if (fetchPlanString.length() > 0) {
-            // BUILD THE SERVER SIDE RECORD TO ACCES TO THE FETCH
-            // PLAN
-            if (record instanceof ODocument) {
-              final OFetchPlan fetchPlan = OFetchHelper.buildFetchPlan(fetchPlanString);
+        if (fetchPlanString.length() > 0) {
+          // BUILD THE SERVER SIDE RECORD TO ACCES TO THE FETCH
+          // PLAN
+          if (record instanceof ODocument) {
+            final OFetchPlan fetchPlan = OFetchHelper.buildFetchPlan(fetchPlanString);
 
-              final ODocument doc = (ODocument) record;
-              final OFetchListener listener =
-                  new ORemoteFetchListener() {
-                    @Override
-                    protected void sendRecord(ORecord iLinked) {
-                      recordsToSend.add(iLinked);
-                    }
-                  };
-              final OFetchContext context = new ORemoteFetchContext();
-              OFetchHelper.fetch(doc, doc, fetchPlan, listener, context, "");
-            }
+            final ODocument doc = (ODocument) record;
+            final OFetchListener listener =
+                new ORemoteFetchListener() {
+                  @Override
+                  protected void sendRecord(ORecord iLinked) {
+                    recordsToSend.add(iLinked);
+                  }
+                };
+            final OFetchContext context = new ORemoteFetchContext();
+            OFetchHelper.fetch(doc, doc, fetchPlan, listener, context, "");
           }
         }
         response =
@@ -961,7 +961,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     connection.getData().setSerializationImpl(request.getRecordFormat());
 
     connection.setTokenBased(request.isTokenBased());
-    connection.getData().supportsLegacyPushMessages = request.isSupportPush();
     connection.getData().collectStats = request.isCollectStats();
 
     if (!request.isTokenBased()
@@ -1001,7 +1000,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     connection.getData().setSerializer(handshakeInfo.getSerializer());
 
     connection.setTokenBased(true);
-    connection.getData().supportsLegacyPushMessages = false;
     connection.getData().collectStats = true;
 
     connection.setServerUser(
@@ -1046,7 +1044,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
               + " sessions");
     }
     connection.setTokenBased(request.isUseToken());
-    connection.getData().supportsLegacyPushMessages = request.isSupportsPush();
     connection.getData().collectStats = request.isCollectStats();
 
     try {
@@ -1084,7 +1081,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
 
     final OServerPlugin plugin = server.getPlugin("cluster");
     byte[] distriConf = null;
-    ODocument distributedCfg;
+    OClusterConfiguration distributedCfg;
     if (plugin instanceof ODistributedServerManager) {
       distributedCfg = ((ODistributedServerManager) plugin).getClusterConfiguration();
 
@@ -1093,9 +1090,9 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
               .getDatabaseConfiguration(connection.getDatabase().getName());
       if (dbCfg != null) {
         // ENHANCE SERVER CFG WITH DATABASE CFG
-        distributedCfg.field("database", dbCfg.getDocument(), OType.EMBEDDED);
+        distributedCfg.setDatabaseConfiguration(dbCfg);
       }
-      distriConf = getRecordBytes(connection, distributedCfg);
+      distriConf = getRecordBytes(connection, distributedCfg.getDocument());
     }
 
     String[] clusterNames = new String[clusters.size()];
@@ -1128,7 +1125,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
   @Override
   public OBinaryResponse executeDatabaseOpen37(OOpen37Request request) {
     connection.setTokenBased(true);
-    connection.getData().supportsLegacyPushMessages = false;
     connection.getData().collectStats = true;
     connection.getData().driverName = handshakeInfo.getDriverName();
     connection.getData().driverVersion = handshakeInfo.getDriverVersion();
@@ -1579,7 +1575,8 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
   public OBinaryResponse executeSubscribeDistributedConfiguration(
       OSubscribeDistributedConfigurationRequest request) {
     OPushManager manager = server.getPushManager();
-    manager.subscribeDistributeConfig((ONetworkProtocolBinary) connection.getProtocol());
+    manager.subscribeDistributeConfig(
+        (ONetworkProtocolBinary) connection.getProtocol(), connection);
 
     OrientDBInternal databases = server.getDatabases();
     Set<String> dbs = databases.listLodadedDatabases();
@@ -1600,7 +1597,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
       OSubscribeStorageConfigurationRequest request) {
     OPushManager manager = server.getPushManager();
     manager.subscribeStorageConfiguration(
-        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol());
+        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol(), connection);
     return new OSubscribeStorageConfigurationResponse();
   }
 
@@ -1608,7 +1605,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
   public OBinaryResponse executeSubscribeSchema(OSubscribeSchemaRequest request) {
     OPushManager manager = server.getPushManager();
     manager.subscribeSchema(
-        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol());
+        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol(), connection);
     return new OSubscribeSchemaResponse();
   }
 
@@ -1616,7 +1613,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
   public OBinaryResponse executeSubscribeIndexManager(OSubscribeIndexManagerRequest request) {
     OPushManager manager = server.getPushManager();
     manager.subscribeIndexManager(
-        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol());
+        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol(), connection);
     return new OSubscribeIndexManagerResponse();
   }
 
@@ -1624,7 +1621,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
   public OBinaryResponse executeSubscribeFunctions(OSubscribeFunctionsRequest request) {
     OPushManager manager = server.getPushManager();
     manager.subscribeFunctions(
-        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol());
+        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol(), connection);
     return new OSubscribeFunctionsResponse();
   }
 
@@ -1632,7 +1629,7 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
   public OBinaryResponse executeSubscribeSequences(OSubscribeSequencesRequest request) {
     OPushManager manager = server.getPushManager();
     manager.subscribeSequences(
-        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol());
+        connection.getDatabase(), (ONetworkProtocolBinary) connection.getProtocol(), connection);
     return new OSubscribeSequencesResponse();
   }
 
@@ -1678,7 +1675,6 @@ public final class OConnectionBinaryExecutor implements OBinaryRequestExecutor {
     connection.getData().clientId = "OrientDB Distributed";
     connection.getData().setSerializer(ORecordSerializerNetworkV37.INSTANCE);
     connection.setTokenBased(true);
-    connection.getData().supportsLegacyPushMessages = false;
     connection.getData().collectStats = false;
     int chosenProtocolVersion =
         Math.min(

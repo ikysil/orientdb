@@ -123,7 +123,7 @@ public class OInsertStatementExecutionTest extends BaseMemoryDatabase {
       ODocument doc = db.newInstance(className1);
       doc.setProperty("name", "name" + i);
       doc.setProperty("surname", "surname" + i);
-      doc.save();
+      db.save(doc);
     }
     OResultSet result = db.command("insert into " + className2 + " from select from " + className1);
     printExecutionPlan(result);
@@ -166,7 +166,7 @@ public class OInsertStatementExecutionTest extends BaseMemoryDatabase {
       ODocument doc = db.newInstance(className1);
       doc.setProperty("name", "name" + i);
       doc.setProperty("surname", "surname" + i);
-      doc.save();
+      db.save(doc);
     }
     OResultSet result =
         db.command("insert into " + className2 + " ( select from " + className1 + ")");
@@ -508,6 +508,19 @@ public class OInsertStatementExecutionTest extends BaseMemoryDatabase {
       assertEquals(item.getProperty("key"), "one");
       assertEquals(item.getProperty("rid"), new ORecordId(5, 0));
       assertFalse(result.hasNext());
+    }
+  }
+
+  @Test
+  public void insertEmbeddedFloatTest() {
+    db.command("CREATE CLASS floatTest");
+    db.command("INSERT INTO floatTest set data={\"@type\":\"d\",producedQuantity: 35.927675}")
+        .close();
+
+    try (OResultSet result = db.query("SELECT FROM floatTest ")) {
+      OResult item = result.next();
+      OResult data = item.getProperty("data");
+      assertEquals(35.927675D, ((Number) data.getProperty("producedQuantity")).doubleValue(), 0D);
     }
   }
 }

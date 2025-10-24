@@ -2,7 +2,7 @@
 <orient-server>
     <handlers>
         <handler
-                class="com.orientechnologies.orient.server.hazelcast.OHazelcastPlugin">
+                class="com.orientechnologies.orient.server.distributed.impl.ODistributedPlugin">
             <parameters>
                 <parameter value="europe0" name="nodeName"/>
                 <parameter value="true" name="enabled"/>
@@ -82,10 +82,5 @@
         <!-- PROFILER: configures the profiler as <seconds-for-snapshot>,<archive-snapshot-size>,<summary-size> -->
         <entry name="profiler.enabled" value="true"/>
         <!-- <entry name="profiler.config" value="30,10,10" /> -->
-
-        <!-- LOG: enable/Disable logging. Levels are: finer, fine, finest, info,
-            warning -->
-        <entry name="log.console.level" value="info"/>
-        <entry name="log.file.level" value="fine"/>
     </properties>
 </orient-server>

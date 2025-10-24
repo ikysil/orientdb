@@ -83,8 +83,10 @@
 
     <modules>
         <module>test-commons</module>
-        <module>client</module>
         <module>core</module>
+        <module>client</module>
+        <module>polyglot</module>
+        <module>nashorn</module>
         <module>object</module>
         <module>server</module>
         <module>security</module>
@@ -114,23 +116,18 @@
         <url>https://github.com/orientechnologies/orientdb/actions</url>
     </ciManagement>
     <distributionManagement>
-        <repository>
-            <id>sonatype-nexus-staging</id>
-            <name>OrientDB Maven2 Repository</name>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-        </repository>
         <snapshotRepository>
-            <id>sonatype-nexus-snapshots</id>
-            <name>OrientDB Maven2 Snapshot Repository</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <id>central-snapshots</id>
+            <name>Central Portal Snapshots</name>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
             <uniqueVersion>false</uniqueVersion>
         </snapshotRepository>
     </distributionManagement>
     <repositories>
         <repository>
-            <id>sonatype-nexus-snapshots</id>
-            <name>Sonatype Nexus Snapshots</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <id>central-snapshots</id>
+            <name>Central Portal Snapshots</name>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
             <releases>
                 <enabled>false</enabled>
             </releases>
@@ -159,9 +156,9 @@
         <implementation.build>${scmBranch}@r${buildNumber}</implementation.build>
         <blueprints.version>2.6.0</blueprints.version>
         <!-- | shared build/report plugins version -->
-        <surefire.version>3.5.3</surefire.version>
-        <failsafe.version>3.5.3</failsafe.version>
-        <jacoco.version>0.8.13</jacoco.version>
+        <surefire.version>3.5.4</surefire.version>
+        <failsafe.version>3.5.4</failsafe.version>
+        <jacoco.version>0.8.14</jacoco.version>
         <sonatypeOssDistMgmtSnapshotsUrl>https://oss.sonatype.org/content/repositories/snapshots/
         </sonatypeOssDistMgmtSnapshotsUrl>
 
@@ -170,18 +167,33 @@
         <!--<license.location>https://github.com/orientechnologies/orientdb/raw/develop/ODB-ASL-LICENSE.txt</license.location>-->
         <heapSize>2048m</heapSize>
         <javaassist.version>3.30.2-GA</javaassist.version>
-        <jaxb.api.version>2.3.0</jaxb.api.version>
+        <jaxb.version>4.0.6</jaxb.version>
+        <jackson.version>2.20.0</jackson.version>
         <project.rootdir>${project.basedir}/</project.rootdir>
-        <graalvm.version>24.2.1</graalvm.version>
+        <graalvm.version>24.2.2</graalvm.version>
         <cloudbees.syslog.version>1.1.7</cloudbees.syslog.version>
+        <maven.central.plugin.version>0.9.0</maven.central.plugin.version>
+        <junit.version>4.13.2</junit.version>
+        <mockito.version>5.20.0</mockito.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>commons-lang</groupId>
+                <artifactId>commons-lang</artifactId>
+                <version>2.6</version>
+                <scope>runtime</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <pluginManagement>
             <plugins>
                 <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
-                    <version>3.4.1</version>
+                    <version>3.5.0</version>
                 </plugin>
 
                 <plugin>
@@ -203,7 +215,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>versions-maven-plugin</artifactId>
-                    <version>2.18.0</version>
+                    <version>2.19.1</version>
                 </plugin>
 
 
@@ -240,13 +252,13 @@
 
                 <plugin>
                     <artifactId>maven-deploy-plugin</artifactId>
-                    <version>3.1.2</version>
+                    <version>3.1.4</version>
                 </plugin>
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.14.0</version>
+                    <version>3.14.1</version>
                 </plugin>
 
                 <plugin>
@@ -276,7 +288,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.8.0</version>
+                    <version>3.12.0</version>
                     <configuration>
                         <doclint>none</doclint>
                         <maxmemory>2G</maxmemory>
@@ -292,7 +304,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
-                    <version>3.26.0</version>
+                    <version>3.28.0</version>
                 </plugin>
 
                 <plugin>
@@ -311,7 +323,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>animal-sniffer-maven-plugin</artifactId>
-                    <version>1.24</version>
+                    <version>1.26</version>
                     <configuration>
                         <!--
                         Keep aligned with the maven-compiler-plugins source/target, ATM this is 1.6,
@@ -353,7 +365,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>license-maven-plugin</artifactId>
-                    <version>2.5.0</version>
+                    <version>2.7.0</version>
 
                     <configuration>
                         <licenseMerges>
@@ -455,7 +467,7 @@
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
-                <version>2.44.4</version>
+                <version>2.46.1</version>
                 <configuration>
                     <java>
                         <googleJavaFormat>
@@ -482,7 +494,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
@@ -498,6 +510,15 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>${maven.central.plugin.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                </configuration>
             </plugin>
         </plugins>
 
@@ -559,7 +580,6 @@
                             <target>${maven.compiler.target}</target>
                             <showDeprecation>false</showDeprecation>
                             <showWarnings>true</showWarnings>
-                            <optimize>true</optimize>
                         </configuration>
                     </plugin>
                 </plugins>

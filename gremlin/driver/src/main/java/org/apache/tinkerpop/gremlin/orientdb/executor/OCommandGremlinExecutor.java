@@ -19,19 +19,22 @@
  */
 package org.apache.tinkerpop.gremlin.orientdb.executor;
 
+import com.orientechnologies.common.concur.resource.OResourcePool;
+import com.orientechnologies.common.concur.resource.OResourcePoolListener;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.util.OCommonConst;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.command.script.OAbstractScriptExecutor;
-import com.orientechnologies.orient.core.command.script.OCommandExecutorUtility;
 import com.orientechnologies.orient.core.command.script.OCommandScriptException;
 import com.orientechnologies.orient.core.command.script.OScriptInjection;
 import com.orientechnologies.orient.core.command.script.OScriptManager;
 import com.orientechnologies.orient.core.command.script.OScriptResultHandler;
 import com.orientechnologies.orient.core.command.script.formatter.OGroovyScriptFormatter;
 import com.orientechnologies.orient.core.command.script.transformer.OScriptTransformer;
+import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
+import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
@@ -44,8 +47,12 @@ import com.orientechnologies.orient.core.sql.executor.OResultSetReady;
 import com.orientechnologies.orient.core.sql.executor.OToResultContextImpl;
 import groovy.lang.MissingPropertyException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import javax.script.Bindings;
 import javax.script.Invocable;
 import javax.script.ScriptContext;
@@ -78,13 +85,16 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
     implements OScriptInjection, OScriptResultHandler {
 
   public static final String GREMLIN_GROOVY = "gremlin-groovy";
+  public static final String GREMLIN = "gremlin";
   private final OScriptManager scriptManager;
   private GremlinGroovyScriptEngineFactory factory;
+  protected ConcurrentMap<String, OResourcePool<ODatabaseSession, ScriptEngine>> pooledEngines =
+      new ConcurrentHashMap<>();
 
   private OScriptTransformer transformer;
 
-  public OCommandGremlinExecutor(OScriptManager scriptManager, OScriptTransformer transformer) {
-    super("gremlin");
+  public OCommandGremlinExecutor(String language, OScriptManager scriptManager) {
+    super(language);
     factory = new GremlinGroovyScriptEngineFactory();
     CachedGremlinScriptEngineManager customizationManager = new CachedGremlinScriptEngineManager();
     Map<String, Object> compilerConfigs = new HashMap<>();
@@ -95,16 +105,15 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
         GroovyCompilerGremlinPlugin.build().compilerConfigurationOptions(compilerConfigs).create());
     factory.setCustomizerManager(customizationManager);
     this.scriptManager = scriptManager;
-    this.transformer = new OGremlinTransformer(transformer);
+    this.transformer = new OGremlinTransformer();
 
     initCustomTransformer(this.transformer);
 
     scriptManager.registerInjection(this);
 
-    scriptManager.registerFormatter(GREMLIN_GROOVY, new OGroovyScriptFormatter());
-    scriptManager.registerEngine(GREMLIN_GROOVY, factory);
+    scriptManager.registerFormatter(language, new OGroovyScriptFormatter());
 
-    scriptManager.registerResultHandler(GREMLIN_GROOVY, this);
+    scriptManager.registerResultHandler(language, this);
   }
 
   private void initCustomTransformer(OScriptTransformer transformer) {
@@ -195,16 +204,15 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
 
     final OScriptManager scriptManager = db.getSharedContext().getOrientDB().getScriptManager();
 
-    final ScriptEngine scriptEngine =
-        scriptManager.acquireDatabaseEngine(db.getName(), f.getLanguage());
+    final ScriptEngine scriptEngine = getEngine(db);
     try {
       final Bindings binding =
-          scriptManager.bind(
-              scriptEngine,
+          bind(
               scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE),
               db,
               context,
-              iArgs);
+              iArgs,
+              scriptManager);
 
       try {
         final Object result;
@@ -227,8 +235,7 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
           final Object[] args = iArgs == null ? null : iArgs.values().toArray();
           result = scriptEngine.eval(scriptManager.getFunctionInvoke(f, args), binding);
         }
-        return OCommandExecutorUtility.transformResult(
-            scriptManager.handleResult(f.getLanguage(), result, scriptEngine, binding, db));
+        return scriptManager.handleResult(f.getLanguage(), result, scriptEngine, binding, db);
 
       } catch (ScriptException e) {
         throw OException.wrapException(
@@ -243,10 +250,10 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
         throw e;
 
       } finally {
-        scriptManager.unbind(scriptEngine, binding, context, iArgs);
+        unbind(binding, context, iArgs, scriptManager);
       }
     } finally {
-      scriptManager.releaseDatabaseEngine(f.getLanguage(), db.getName(), scriptEngine);
+      releaseGremlinEngine(db.getName(), scriptEngine);
     }
   }
 
@@ -266,16 +273,14 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
   }
 
   protected final ScriptEngine acquireGremlinEngine(final OrientGraph graph) {
-
-    final ScriptEngine engine =
-        scriptManager.acquireDatabaseEngine(graph.getRawDatabase().getName(), GREMLIN_GROOVY);
+    final ScriptEngine engine = getEngine((ODatabaseSession) graph.getRawDatabase());
     Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
     bindGraph(graph, bindings);
     return engine;
   }
 
   protected void releaseGremlinEngine(String dbName, ScriptEngine engine) {
-    scriptManager.releaseDatabaseEngine(GREMLIN_GROOVY, dbName, engine);
+    pooledEngines.get(dbName).returnResource(engine);
   }
 
   private void bindGraph(OrientGraph graph, Bindings bindings) {
@@ -317,7 +322,7 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
   }
 
   @Override
-  public void bind(ScriptEngine engine, Bindings binding, ODatabaseDocument database) {
+  public void bind(Bindings binding, ODatabaseDocument database) {
 
     OrientGraph graph = acquireGraph(database);
 
@@ -325,8 +330,63 @@ public class OCommandGremlinExecutor extends OAbstractScriptExecutor
   }
 
   @Override
-  public void unbind(ScriptEngine engine, Bindings binding) {
+  public void unbind(Bindings binding) {
     unbindGraph(binding);
+  }
+
+  private ScriptEngine createEngine(ODatabaseSession db) {
+    final ScriptEngine scriptEngine = factory.getScriptEngine();
+    final String library =
+        scriptManager.getLibrary(ODatabaseRecordThreadLocal.instance().get(), language);
+
+    if (library != null)
+      try {
+        scriptEngine.eval(library);
+      } catch (ScriptException e) {
+        OAbstractScriptExecutor.throwErrorMessage(e, library);
+      }
+    return scriptEngine;
+  }
+
+  private ScriptEngine getEngine(ODatabaseSession database) {
+
+    OResourcePool<ODatabaseSession, ScriptEngine> p =
+        pooledEngines.computeIfAbsent(
+            database.getName(),
+            (key) -> {
+              int poolSize =
+                  database.getConfiguration().getValueAsInteger(OGlobalConfiguration.SCRIPT_POOL);
+              return new OResourcePool<ODatabaseSession, ScriptEngine>(
+                  poolSize,
+                  new OResourcePoolListener<ODatabaseSession, ScriptEngine>() {
+
+                    public ScriptEngine createNewResource(ODatabaseSession iKey) {
+                      return createEngine(iKey);
+                    }
+
+                    public boolean reuseResource(ODatabaseSession iKey, ScriptEngine iValue) {
+                      return true;
+                    }
+                  });
+            });
+
+    return p.getResource(database, 0L);
+  }
+
+  @Override
+  public void close(String iDatabaseName) {
+    OResourcePool<ODatabaseSession, ScriptEngine> pool = pooledEngines.remove(iDatabaseName);
+    if (pool != null) {
+      pool.close();
+    }
+  }
+
+  @Override
+  public void closeAll() {
+    Set<String> dbNames = new HashSet<>(pooledEngines.keySet());
+    for (String db : dbNames) {
+      close(db);
+    }
   }
 
   @Override

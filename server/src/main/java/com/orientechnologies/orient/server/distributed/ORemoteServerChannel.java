@@ -26,8 +26,10 @@ import com.orientechnologies.orient.client.remote.message.ODistributedConnectReq
 import com.orientechnologies.orient.client.remote.message.ODistributedConnectResponse;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
+import com.orientechnologies.orient.core.db.ONetworkMessage;
 import com.orientechnologies.orient.core.metadata.security.OToken;
 import com.orientechnologies.orient.core.metadata.security.binary.OBinaryTokenSerializer;
+import com.orientechnologies.orient.enterprise.channel.OSocketFactory;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinaryProtocol;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -55,13 +57,10 @@ public class ORemoteServerChannel {
   private final String server;
   private OChannelBinarySynchClient channel;
   private int protocolVersion;
-  private ODistributedRequest prevRequest;
-  private ODistributedResponse prevResponse;
   private final String localNodeName;
 
   private static final int MAX_RETRY = 3;
   private static final String CLIENT_TYPE = "OrientDB Server";
-  private static final boolean COLLECT_STATS = false;
   private int sessionId = -1;
   private byte[] sessionToken;
   private OToken tokenInstance = null;
@@ -72,6 +71,7 @@ public class ORemoteServerChannel {
   private volatile int totalConsecutiveErrors = 0;
   private static final int MAX_CONSECUTIVE_ERRORS = 10;
   private final ExecutorService executor;
+  private final OSocketFactory factory;
 
   public ORemoteServerChannel(
       final ORemoteServerAvailabilityCheck check,
@@ -109,7 +109,7 @@ public class ORemoteServerChannel {
         };
 
     executor = OThreadPoolExecutors.newSingleThreadPool("ORemoteServerChannel", 10, reject);
-
+    factory = new OSocketFactory(contextConfig);
     connect();
   }
 
@@ -175,6 +175,19 @@ public class ORemoteServerChannel {
         });
   }
 
+  public void sendMessage(final ONetworkMessage message) {
+    executeNetworkOperation(
+        OChannelBinaryProtocol.DISTRIBUTED_MESSAGE,
+        () -> {
+          message.serialize(channel.getDataOutput());
+          channel.flush();
+          return null;
+        },
+        "Cannot send distributed request " + message.getClass(),
+        MAX_RETRY,
+        true);
+  }
+
   public void sendRequest(final ODistributedRequest request) {
     executeNetworkOperation(
         OChannelBinaryProtocol.DISTRIBUTED_REQUEST,
@@ -186,7 +199,6 @@ public class ORemoteServerChannel {
         "Cannot send distributed request " + request.getClass(),
         MAX_RETRY,
         true);
-    this.prevRequest = request;
   }
 
   public void sendResponse(final ODistributedResponse response) {
@@ -205,13 +217,13 @@ public class ORemoteServerChannel {
             + response.getClass(),
         MAX_RETRY,
         true);
-    this.prevResponse = response;
   }
 
   public void connect() throws IOException {
     networkClose();
     channel =
         new OChannelBinarySynchClient(
+            factory,
             remoteHost,
             remotePort,
             null,

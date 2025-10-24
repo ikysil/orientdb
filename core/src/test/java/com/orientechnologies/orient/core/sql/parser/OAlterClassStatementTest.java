@@ -72,6 +72,28 @@ public class OAlterClassStatementTest extends OParserTestAbstract {
     checkRightSyntax("ALTER CLASS Person DEFAULTCLUSTER foo");
     checkRightSyntax("ALTER CLASS Person DEFAULTCLUSTER 15");
 
+    checkRightSyntax("ALTER CLASS Person allocation add node1 clusters [test, test1]");
+    checkRightSyntax("ALTER CLASS Person allocation remove node2 clusters [test, test1]");
+
+    checkRightSyntax(
+        "ALTER CLASS Person allocation add node1 clusters [test, test1], remove node2 clusters"
+            + " [test, test1]");
+
+    checkRightSyntax(
+        "ALTER CLASS Person allocation add node1 clusters [test, test1], add node3 clusters [test4,"
+            + " test5] ");
+
+    checkRightSyntax(
+        "ALTER CLASS Person allocation remove node1 clusters [test, test1], add node3 clusters"
+            + " [test4, test5] ");
+
+    checkRightSyntax(
+        "ALTER CLASS Person allocation remove node1 clusters [test, test1], remove node3 clusters"
+            + " [test4, test5] ");
+    checkRightSyntax(
+        "ALTER CLASS Person allocation remove node1 clusters [test, test1], remove node3 clusters"
+            + " [test4, test5], remove node5 clusters [testa, testb] ");
+
     checkWrongSyntax("ALTER CLASS Foo NAME Bar baz");
 
     checkWrongSyntax("ALTER CLASS Foo SUPERCLASS *Bar");

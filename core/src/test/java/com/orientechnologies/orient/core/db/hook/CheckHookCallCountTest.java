@@ -55,8 +55,8 @@ public class CheckHookCallCountTest extends BaseMemoryDatabase {
     ODocument doc = new ODocument(oClass);
     doc.field("a", 2);
     doc.field("b", 2);
-    doc.save();
-    doc.reload();
+    db.save(doc);
+    db.reload(doc);
     assertEquals(Integer.valueOf(2), doc.field("a"));
     assertEquals(Integer.valueOf(2), doc.field("b"));
     assertNull(doc.field("c"));
@@ -87,7 +87,7 @@ public class CheckHookCallCountTest extends BaseMemoryDatabase {
             return DISTRIBUTED_EXECUTION_MODE.SOURCE_NODE;
           }
         });
-    doc.reload();
+    db.reload(doc);
     assertEquals(Integer.valueOf(2), doc.field("a"));
     assertEquals(Integer.valueOf(2), doc.field("b"));
     assertEquals(Integer.valueOf(4), doc.field("c"));
@@ -95,7 +95,7 @@ public class CheckHookCallCountTest extends BaseMemoryDatabase {
     doc = new ODocument(oClass);
     doc.field("a", 3);
     doc.field("b", 3);
-    doc.save(); // FAILING here: infinite recursion
+    db.save(doc); // FAILING here: infinite recursion
 
     assertEquals(Integer.valueOf(3), doc.field("a"));
     assertEquals(Integer.valueOf(3), doc.field("b"));

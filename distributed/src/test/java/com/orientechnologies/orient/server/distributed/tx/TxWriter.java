@@ -106,7 +106,7 @@ public class TxWriter {
             OVertex myVertex = targetPerGroup.get(config.vertexGroupId);
             for (Integer gId : allGroupIds) {
               if (!gId.equals(config.vertexGroupId)) {
-                createEdge(myVertex, targetPerGroup.get(gId), edgeClassNames.get(gId));
+                createEdge(session, myVertex, targetPerGroup.get(gId), edgeClassNames.get(gId));
               }
             }
           }
@@ -148,13 +148,14 @@ public class TxWriter {
   private static OVertex createVertex(ODatabaseSession graph, String id) {
     OVertex v = graph.newVertex("Person");
     v.setProperty("id", id);
-    v.save();
+    graph.save(v);
     return v;
   }
 
-  private static OEdge createEdge(OVertex v1, OVertex v2, String edgeClassname) {
+  private static OEdge createEdge(
+      ODatabaseSession session, OVertex v1, OVertex v2, String edgeClassname) {
     OEdge e = v1.addEdge(v2, edgeClassname);
-    e.save();
+    session.save(e);
     return e;
   }
 }

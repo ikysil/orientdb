@@ -22,9 +22,10 @@ import com.orientechnologies.orient.server.distributed.OLoggerDistributed;
 import com.orientechnologies.orient.server.distributed.OModifiableDistributedConfiguration;
 import com.orientechnologies.orient.server.distributed.impl.ODatabaseDocumentDistributed;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /** Created by tglman on 22/06/17. */
@@ -519,24 +520,20 @@ public class OClassDistributed extends OClassEmbedded {
 
   public int getClusterForNewInstance(ODatabaseDocumentDistributed db, ODocument doc) {
     ODistributedServerManager manager = db.getDistributedManager();
-    if (bestClusterIds == null) readConfiguration(db, manager);
-    else {
-      ODistributedConfiguration cfg = manager.getDatabaseConfiguration(db.getName());
-      if (lastVersion != cfg.getVersion()) {
-        // DISTRIBUTED CFG IS CHANGED: GET BEST CLUSTER AGAIN
-        readConfiguration(db, manager);
-
-        logger.infoNode(
-            manager.getLocalNodeName(),
-            "New cluster list for class '%s': %s (dCfgVersion=%d)",
-            getName(),
-            Arrays.toString(bestClusterIds),
-            lastVersion);
+    if (bestClusterIds == null) {
+      if (this.allocation == null) {
+        final Set<String> availableNodes = manager.getAvailableNodeNames(db.getName());
+        ODistributedConfiguration cfg = db.getDistributedConfiguration();
+        availableNodes.removeIf(
+            (node) -> cfg.getServerRole(node) != ODistributedConfiguration.ROLES.MASTER);
+        autoAssignClusterOwnership(db, availableNodes, true);
       }
+      bestClusterFromAllocation(db, manager);
     }
-
     final int size = bestClusterIds.length;
-    if (size == 0) return -1;
+    if (size == 0) {
+      return super.getClusterSelection().getCluster(this, doc);
+    }
 
     if (size == 1)
       // ONLY ONE: RETURN IT
@@ -545,6 +542,28 @@ public class OClassDistributed extends OClassEmbedded {
     final int cluster = super.getClusterSelection().getCluster(this, bestClusterIds, doc);
 
     return cluster;
+  }
+
+  private void bestClusterFromAllocation(
+      ODatabaseDocumentDistributed db, ODistributedServerManager manager) {
+    String nodeName = manager.getLocalNodeName();
+    List<String> cls;
+    if (getAllocation() != null && getAllocation().getAllocationClusters(nodeName) != null) {
+      cls = new ArrayList<>(getAllocation().getAllocationClusters(nodeName));
+    } else {
+      cls = Collections.emptyList();
+    }
+
+    int[] clusterIds = getClusterIds();
+    final List<String> clusterNames = new ArrayList<String>(clusterIds.length);
+    for (int c : clusterIds) clusterNames.add(db.getClusterNameById(c).toLowerCase(Locale.ENGLISH));
+
+    cls.retainAll(clusterNames);
+
+    final int[] newBestClusters = new int[cls.size()];
+    int i = 0;
+    for (String c : cls) newBestClusters[i++] = db.getClusterIdByName(c);
+    this.bestClusterIds = newBestClusters;
   }
 
   public ODistributedConfiguration readConfiguration(
@@ -563,8 +582,7 @@ public class OClassDistributed extends OClassEmbedded {
     if (bestClusters.isEmpty()) {
       // REBALANCE THE CLUSTERS
       final OModifiableDistributedConfiguration modifiableCfg = cfg.modify();
-      manager.reassignClustersOwnership(
-          manager.getLocalNodeName(), db.getName(), modifiableCfg, true);
+      manager.reassignClustersOwnership(manager.getLocalNodeName(), db.getName(), true);
 
       cfg = modifiableCfg;
 
@@ -625,5 +643,70 @@ public class OClassDistributed extends OClassEmbedded {
 
   protected boolean isDistributedCommand(ODatabaseDocumentInternal database) {
     return !database.isLocalEnv();
+  }
+
+  @Override
+  public void addAllocations(
+      ODatabaseDocumentInternal database, String node, List<String> clusters) {
+    database.checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_UPDATE);
+
+    acquireSchemaWriteLock();
+    try {
+
+      if (isDistributedCommand(database)) {
+        String cls =
+            String.join(",", clusters.stream().map((x) -> String.format("`%s`", x)).toList());
+        final String cmd =
+            String.format("alter class `%s` allocation add `%s` clusters[%s]", name, node, cls);
+        owner.sendCommand(database, cmd);
+      } else super.addAllocations(database, node, clusters);
+    } finally {
+      releaseSchemaWriteLock();
+    }
+  }
+
+  @Override
+  public void removeAllocations(
+      ODatabaseDocumentInternal database, String node, List<String> clusters) {
+    database.checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_UPDATE);
+
+    acquireSchemaWriteLock();
+    try {
+      if (isDistributedCommand(database)) {
+        String cls =
+            String.join(",", clusters.stream().map((x) -> String.format("`%s`", x)).toList());
+        final String cmd =
+            String.format("alter class `%s` allocation remove `%s` clusters[%s]", name, node, cls);
+        owner.sendCommand(database, cmd);
+      } else super.removeAllocations(database, node, clusters);
+    } finally {
+      releaseSchemaWriteLock();
+    }
+  }
+
+  @Override
+  public void removeAllocations(ODatabaseDocumentInternal database, List<String> clusters) {
+    database.checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_UPDATE);
+
+    acquireSchemaWriteLock();
+    try {
+      if (this.allocation != null) {
+        for (String node : allocation.getDefinedNodes()) {
+          List<String> existing = new ArrayList<>(allocation.getAllocationClusters(node));
+          existing.retainAll(clusters);
+          if (!existing.isEmpty()) {
+            removeAllocations(database, node, existing);
+          }
+        }
+      }
+    } finally {
+      releaseSchemaWriteLock();
+    }
+  }
+
+  @Override
+  public void releaseSchemaWriteLock(ODatabaseDocumentInternal database, boolean iSave) {
+    super.releaseSchemaWriteLock(database, iSave);
+    this.bestClusterIds = null;
   }
 }

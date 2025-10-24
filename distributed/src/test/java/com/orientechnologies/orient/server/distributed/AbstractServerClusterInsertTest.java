@@ -203,7 +203,7 @@ public abstract class AbstractServerClusterInsertTest extends AbstractDistribute
 
       ODocument doc = loadRecord(database, i);
       doc.field("updated", true);
-      doc.save();
+      database.save(doc);
     }
 
     protected void checkRecord(ODatabaseDocument database, int i) {
@@ -246,13 +246,13 @@ public abstract class AbstractServerClusterInsertTest extends AbstractDistribute
       checkClusterStrategy(database);
 
       doc.field("updated", true);
-      doc.save();
+      database.save(doc);
     }
 
     protected void checkRecord(ODatabaseDocument database, ODocument doc) {
       checkClusterStrategy(database);
 
-      doc.reload();
+      database.reload(doc);
       Assert.assertEquals(doc.field("updated"), Boolean.TRUE);
     }
 
@@ -265,14 +265,14 @@ public abstract class AbstractServerClusterInsertTest extends AbstractDistribute
     protected void deleteRecord(ODatabaseDocument database, ODocument doc) {
       checkClusterStrategy(database);
 
-      doc.delete();
+      database.delete(doc);
     }
 
     protected void checkRecordIsDeleted(ODatabaseDocument database, ODocument doc) {
       checkClusterStrategy(database);
 
       try {
-        doc.reload();
+        database.reload(doc);
         Assert.fail("Record found while it should be deleted");
       } catch (ORecordNotFoundException e) {
       }
@@ -317,9 +317,12 @@ public abstract class AbstractServerClusterInsertTest extends AbstractDistribute
     ODatabaseDocument database = getDatabase();
 
     try {
-      new ODocument("Customer").fields("name", "Jay", "surname", "Miner").save();
-      new ODocument("Customer").fields("name", "Luke", "surname", "Skywalker").save();
-      new ODocument("Provider").fields("name", "Yoda", "surname", "Nothing").save();
+      ODocument d = new ODocument("Customer").fields("name", "Jay", "surname", "Miner");
+      database.save(d);
+      new ODocument("Customer").fields("name", "Luke", "surname", "Skywalker");
+      database.save(d);
+      new ODocument("Provider").fields("name", "Yoda", "surname", "Nothing");
+      database.save(d);
     } finally {
       database.close();
     }

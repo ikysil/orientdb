@@ -55,14 +55,14 @@ public class ServerClusterGraphIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
       try {
         g.createVertexClass("Post");
         g.createVertexClass("User");
         g.createEdgeClass("Own");
 
-        g.newVertex("User").save();
+        g.save(g.newVertex("User"));
 
         g.command("insert into Post (content, timestamp) values('test', 1)").close();
       } finally {
@@ -76,7 +76,7 @@ public class ServerClusterGraphIT extends AbstractServerClusterTest {
           serverInstance
               .get(s)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
       try (OResultSet result = g2.command("select from Post")) {
 
@@ -93,7 +93,7 @@ public class ServerClusterGraphIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       try {
         g.command("create edge Own from (select from User) to (select from Post)").close();
       } finally {
@@ -107,7 +107,7 @@ public class ServerClusterGraphIT extends AbstractServerClusterTest {
           serverInstance
               .get(s)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
       try {
 

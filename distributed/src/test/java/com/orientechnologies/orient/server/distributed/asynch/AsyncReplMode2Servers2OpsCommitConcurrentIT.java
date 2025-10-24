@@ -28,9 +28,9 @@ public class AsyncReplMode2Servers2OpsCommitConcurrentIT extends BareBoneBase2Se
     // OGlobalConfiguration.LOG_CONSOLE_LEVEL.setValue("FINEST");
     OrientDB orientdb = servers[0].getServer().getContext();
     orientdb.createIfNotExists(getDatabaseName(), ODatabaseType.PLOCAL);
-    ODatabaseDocument graph = orientdb.open(getDatabaseName(), "admin", "admin");
+    ODatabaseDocument graph = orientdb.open(getDatabaseName(), "admin", "adminpwd");
     OVertex vertex1 = graph.newVertex("vertextype");
-    vertex1.save();
+    graph.save(vertex1);
     graph.commit();
     graph.close();
 
@@ -53,7 +53,7 @@ public class AsyncReplMode2Servers2OpsCommitConcurrentIT extends BareBoneBase2Se
     }
 
     ODatabaseSession graph =
-        servers[0].getServer().getContext().open(getDatabaseName(), "admin", "admin");
+        servers[0].getServer().getContext().open(getDatabaseName(), "admin", "adminpwd");
 
     OVertex vertex1 = ((OElement) graph.getRecord(vertex1Id)).asVertex().get();
 
@@ -65,7 +65,7 @@ public class AsyncReplMode2Servers2OpsCommitConcurrentIT extends BareBoneBase2Se
           try {
             OVertex vertex2 = graph.newVertex("vertextype");
             vertex1.addEdge(vertex2, "edgetype");
-            vertex1.save();
+            graph.save(vertex1);
             graph.commit();
 
             System.out.println(
@@ -84,13 +84,13 @@ public class AsyncReplMode2Servers2OpsCommitConcurrentIT extends BareBoneBase2Se
                     + " retry: "
                     + retry);
             graph.rollback();
-            vertex1.reload();
+            graph.reload(vertex1);
           }
         }
       }
 
       // STATISTICALLY HERE AT LEAST ONE CONFLICT HAS BEEN RECEIVED
-      vertex1.reload();
+      graph.reload(vertex1);
 
       Assert.assertTrue(vertex1.getRecord().getVersion() > TOTAL + 1);
       Assert.assertEquals(TOTAL, i);

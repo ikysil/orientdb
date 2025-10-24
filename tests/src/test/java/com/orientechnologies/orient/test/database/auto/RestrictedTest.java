@@ -56,8 +56,8 @@ public class RestrictedTest extends DocumentDBBaseTest {
         .getMetadata()
         .getSchema()
         .createClass("CMSDocument", database.getMetadata().getSchema().getClass("ORestricted"));
-    adminRecord = new ODocument("CMSDocument").field("user", "admin").save();
-    adminRecord.reload();
+    adminRecord = database.save(new ODocument("CMSDocument").field("user", "admin"));
+    database.reload(adminRecord);
 
     readerUser = database.getMetadata().getSecurity().getUser("reader");
     readerRole = database.getMetadata().getSecurity().getRole("reader");
@@ -73,8 +73,8 @@ public class RestrictedTest extends DocumentDBBaseTest {
   @Test(dependsOnMethods = "testFilteredQuery")
   public void testCreateAsWriter() throws IOException {
     reopendb("writer", "writer");
-    writerRecord = new ODocument("CMSDocument").field("user", "writer").save();
-    writerRecord.reload();
+    writerRecord = database.save(new ODocument("CMSDocument").field("user", "writer"));
+    database.reload(writerRecord);
   }
 
   @Test(dependsOnMethods = "testCreateAsWriter")
@@ -110,7 +110,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
     reopendb("writer", "writer");
     adminRecord.field("user", "writer-hacker");
     try {
-      adminRecord.save();
+      database.save(adminRecord);
     } catch (OSecurityException e) {
       // OK AS EXCEPTION
     } catch (ORecordNotFoundException e) {
@@ -127,7 +127,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
   public void testFilteredDirectDeleteAsWriter() throws IOException {
     reopendb("writer", "writer");
     try {
-      adminRecord.delete();
+      database.delete(adminRecord);
     } catch (OSecurityException e) {
       // OK AS EXCEPTION
     } catch (ORecordNotFoundException e) {
@@ -136,7 +136,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
     database.close();
 
     reopendb("admin", "admin");
-    adminRecord.reload();
+    database.reload(adminRecord);
     Assert.assertEquals(adminRecord.field("user"), "admin");
   }
 
@@ -148,7 +148,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
       Set<OIdentifiable> allows = adminRecord.field(OSecurityShared.ALLOW_ALL_FIELD);
       allows.add(
           database.getMetadata().getSecurity().getUser(database.getUser().getName()).getIdentity());
-      adminRecord.save();
+      database.save(adminRecord);
     } catch (OSecurityException e) {
       // OK AS EXCEPTION
     } catch (ORecordNotFoundException e) {
@@ -157,16 +157,16 @@ public class RestrictedTest extends DocumentDBBaseTest {
     database.close();
 
     reopendb("admin", "admin");
-    adminRecord.reload();
+    database.reload(adminRecord);
   }
 
   @Test(dependsOnMethods = "testFilteredHackingAllowFieldAsWriter")
   public void testAddReaderAsRole() throws IOException {
     reopendb("writer", "writer");
     Set<OIdentifiable> allows =
-        ((ODocument) writerRecord.reload()).field(OSecurityShared.ALLOW_ALL_FIELD);
+        ((ODocument) database.reload(writerRecord)).field(OSecurityShared.ALLOW_ALL_FIELD);
     allows.add(readerRole.getIdentity());
-    writerRecord.save();
+    database.save(writerRecord);
   }
 
   @Test(dependsOnMethods = "testAddReaderAsRole")
@@ -189,7 +189,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
     Assert.assertEquals(
         ((Collection<?>) writerRecord.field(ORestrictedOperation.ALLOW_ALL.getFieldName())).size(),
         1);
-    writerRecord.save();
+    database.save(writerRecord);
   }
 
   @Test(dependsOnMethods = "testWriterRoleCanRemoveReader")
@@ -206,7 +206,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
         .getMetadata()
         .getSecurity()
         .allowUser(writerRecord, ORestrictedOperation.ALLOW_READ, "reader");
-    writerRecord.save();
+    database.save(writerRecord);
   }
 
   @Test(dependsOnMethods = "testWriterAddReaderUserOnlyForRead")
@@ -226,7 +226,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
         .getMetadata()
         .getSecurity()
         .denyUser(writerRecord, ORestrictedOperation.ALLOW_READ, "reader");
-    writerRecord.save();
+    database.save(writerRecord);
   }
 
   @Test(dependsOnMethods = "testWriterRemoveReaderUserOnlyForRead")
@@ -251,7 +251,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
         .getMetadata()
         .getSecurity()
         .allowRole(writerRecord, ORestrictedOperation.ALLOW_READ, "writer");
-    writerRecord.save();
+    database.save(writerRecord);
   }
 
   @Test(dependsOnMethods = "testWriterRoleCanSeeWriterDocument")
@@ -301,7 +301,7 @@ public class RestrictedTest extends DocumentDBBaseTest {
         .getSchema()
         .createClass(
             "TestUpdateRestricted", database.getMetadata().getSchema().getClass("ORestricted"));
-    adminRecord = new ODocument("TestUpdateRestricted").field("user", "admin").save();
+    adminRecord = database.save(new ODocument("TestUpdateRestricted").field("user", "admin"));
 
     database.close();
 

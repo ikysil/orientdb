@@ -324,7 +324,7 @@ public class LocalPaginatedStorageRestoreFromWAL {
           }
           docOne.field("stringSet", stringSet);
 
-          docOne.save();
+          db.save(docOne);
 
           firstDocs.add(docOne.getIdentity());
 
@@ -338,7 +338,7 @@ public class LocalPaginatedStorageRestoreFromWAL {
             }
 
             docTwo.field("stringList", stringList);
-            docTwo.save();
+            db.save(docTwo);
 
             testTwoList.add(docTwo.getIdentity());
           }
@@ -355,7 +355,7 @@ public class LocalPaginatedStorageRestoreFromWAL {
             }
 
             docOne.field("linkMap", linkMap);
-            docOne.save();
+            db.save(docOne);
           }
 
           boolean deleteDoc = random.nextDouble() <= 0.2;

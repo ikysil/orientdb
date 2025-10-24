@@ -19,8 +19,10 @@
  */
 package com.orientechnologies.orient.server.distributed;
 
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
-import com.orientechnologies.orient.core.tx.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionIdPromise;
 import com.orientechnologies.orient.core.tx.OTransactionSequenceStatus;
 import com.orientechnologies.orient.core.tx.OTxMetadataHolder;
 import com.orientechnologies.orient.core.tx.ValidationResult;
@@ -62,13 +64,13 @@ public interface ODistributedDatabase {
 
   void processRequest(ODistributedRequest request, boolean waitForAcceptingRequests);
 
-  ValidationResult validate(OTransactionId id);
+  ValidationResult validate(OTransactionIdPromise id);
 
   Optional<OTransactionSequenceStatus> status();
 
-  void rollback(OTransactionId id);
+  void rollback(OTransactionIdPromise id);
 
-  OTxMetadataHolder commit(OTransactionId id);
+  OTxMetadataHolder commit(OTransactionIdPromise id);
 
   ODistributedTxContext registerTxContext(
       final ODistributedRequestId reqId, ODistributedTxContext ctx);
@@ -85,7 +87,9 @@ public interface ODistributedDatabase {
 
   long getProcessedRequests();
 
-  Optional<OTransactionId> nextId();
+  Optional<OTransactionIdPromise> nextId();
+
+  Optional<ORawPair<OTransactionIdPromise, OTransactionIdPromise>> nextDDLId();
 
   List<OTransactionId> missingTransactions(OTransactionSequenceStatus lastState);
 

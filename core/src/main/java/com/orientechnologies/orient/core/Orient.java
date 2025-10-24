@@ -402,39 +402,8 @@ public class Orient extends OListenerManger<OOrientListener> {
   }
 
   public TimerTask scheduleTask(final Runnable task, final Date firstTime, final long period) {
-    engineLock.readLock().lock();
-    try {
-      final TimerTask timerTask =
-          new TimerTask() {
-            @Override
-            public void run() {
-              try {
-                task.run();
-              } catch (Exception e) {
-                logger.error(
-                    "Error during execution of task %s", e, task.getClass().getSimpleName());
-              } catch (Error e) {
-                logger.error(
-                    "Error during execution of task %s", e, task.getClass().getSimpleName());
-                throw e;
-              }
-            }
-          };
-
-      if (active) {
-        if (period > 0) {
-          timer.schedule(timerTask, firstTime, period);
-        } else {
-          timer.schedule(timerTask, firstTime);
-        }
-      } else {
-        logger.warn("OrientDB engine is down. Task will not be scheduled.");
-      }
-
-      return timerTask;
-    } finally {
-      engineLock.readLock().unlock();
-    }
+    return scheduleTask(
+        task, Math.max(0, firstTime.getTime() - System.currentTimeMillis()), period);
   }
 
   public boolean isActive() {
@@ -552,11 +521,11 @@ public class Orient extends OListenerManger<OOrientListener> {
     return shutdownHook != null;
   }
 
-  public Iterator<ODatabaseLifecycleListener> getDbLifecycleListeners() {
+  public synchronized Iterator<ODatabaseLifecycleListener> getDbLifecycleListeners() {
     return new LinkedHashSet<>(dbLifecycleListeners.keySet()).iterator();
   }
 
-  public void addDbLifecycleListener(final ODatabaseLifecycleListener iListener) {
+  public synchronized void addDbLifecycleListener(final ODatabaseLifecycleListener iListener) {
     final Map<ODatabaseLifecycleListener, ODatabaseLifecycleListener.PRIORITY> tmp =
         new LinkedHashMap<ODatabaseLifecycleListener, ODatabaseLifecycleListener.PRIORITY>(
             dbLifecycleListeners);
@@ -574,7 +543,7 @@ public class Orient extends OListenerManger<OOrientListener> {
     }
   }
 
-  public void removeDbLifecycleListener(final ODatabaseLifecycleListener iListener) {
+  public synchronized void removeDbLifecycleListener(final ODatabaseLifecycleListener iListener) {
     dbLifecycleListeners.remove(iListener);
   }
 

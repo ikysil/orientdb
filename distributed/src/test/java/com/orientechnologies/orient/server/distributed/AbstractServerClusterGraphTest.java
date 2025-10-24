@@ -165,7 +165,7 @@ public abstract class AbstractServerClusterGraphTest extends AbstractServerClust
             serverInstance.get(0).getServerInstance().getContext(),
             getDatabaseName(),
             "admin",
-            "admin",
+            "adminpwd",
             OrientDBConfig.defaultConfig());
     setFactorySettings(dbPool);
     super.executeTest();
@@ -191,11 +191,11 @@ public abstract class AbstractServerClusterGraphTest extends AbstractServerClust
 
   protected void updateVertex(ODatabaseDocument graph, OVertex v) {
     v.setProperty("updated", true);
-    v.save();
+    graph.save(v);
   }
 
   protected void checkVertex(ODatabaseDocument graph, OVertex v) {
-    v.reload();
+    graph.reload(v);
     Assert.assertEquals(v.getProperty("updated"), Boolean.TRUE);
   }
 }

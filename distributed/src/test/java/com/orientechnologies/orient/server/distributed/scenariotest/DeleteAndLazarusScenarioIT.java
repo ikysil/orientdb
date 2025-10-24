@@ -88,9 +88,10 @@ public class DeleteAndLazarusScenarioIT extends AbstractScenarioTest {
       dbServer1.activateOnCurrentThread();
 
       System.out.print("Inserting record r1...");
-      new ODocument("Person")
-          .fields("id", "R001", "firstName", "Luke", "lastName", "Skywalker")
-          .save();
+      ODocument doc =
+          new ODocument("Person")
+              .fields("id", "R001", "firstName", "Luke", "lastName", "Skywalker");
+      dbServer1.save(doc);
       System.out.println("Done.");
     } catch (Exception e) {
       e.printStackTrace();
@@ -136,7 +137,7 @@ public class DeleteAndLazarusScenarioIT extends AbstractScenarioTest {
       dbServer3 = getDatabase(2);
       r1onServer3.field("firstName", "Darth");
       r1onServer3.field("lastName", "Vader");
-      r1onServer3.save();
+      dbServer3.save(r1onServer3);
       System.out.println(r1onServer3.getRecord().toString());
     } catch (Exception e) {
       e.printStackTrace();

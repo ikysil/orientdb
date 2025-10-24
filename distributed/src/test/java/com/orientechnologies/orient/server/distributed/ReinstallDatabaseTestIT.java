@@ -42,8 +42,8 @@ public class ReinstallDatabaseTestIT {
 
     OrientDB remote = setup.createRemote(server0, "root", "test", OrientDBConfig.defaultConfig());
     remote.execute(
-        "create database ? plocal users(admin identified by 'admin' role admin)", DATABASE_NAME);
-    ODatabaseSession session = remote.open(DATABASE_NAME, "admin", "admin");
+        "create database ? plocal users(admin identified by 'adminpwd' role admin)", DATABASE_NAME);
+    ODatabaseSession session = remote.open(DATABASE_NAME, "admin", "adminpwd");
     session.createClass("Person");
     session.createClass("Person1");
     OElement doc = session.newElement("Person");
@@ -57,7 +57,7 @@ public class ReinstallDatabaseTestIT {
   public void testWritingWhileReinstall() throws InterruptedException {
     List<String> ids = Arrays.asList(server0, server1);
     OrientDB remote1 = setup.createRemote(ids, "root", "test", OrientDBConfig.defaultConfig());
-    ODatabaseSession session = remote1.open(DATABASE_NAME, "admin", "admin");
+    ODatabaseSession session = remote1.open(DATABASE_NAME, "admin", "adminpwd");
     try (OResultSet result = session.query("select from Person")) {
       assertEquals(1, result.stream().count());
     }
@@ -67,10 +67,10 @@ public class ReinstallDatabaseTestIT {
       session.begin();
       OElement person = session.newElement("Person");
       person.setProperty("id", i);
-      person.save();
+      session.save(person);
       person = session.newElement("Person1");
       person.setProperty("id", i);
-      person.save();
+      session.save(person);
       session.commit();
     }
     OServer server2Instance = setup.getServer(server2).getServerInstance();
@@ -95,10 +95,10 @@ public class ReinstallDatabaseTestIT {
       session.begin();
       OElement person = session.newElement("Person");
       person.setProperty("id", i);
-      person.save();
+      session.save(person);
       person = session.newElement("Person1");
       person.setProperty("id", i);
-      person.save();
+      session.save(person);
       session.commit();
     }
     latch.await();
@@ -123,7 +123,7 @@ public class ReinstallDatabaseTestIT {
     // TODO: this case is not yet sorted out, will be in next versions
     //    remote1 = new OrientDB("remote:localhost:2426", "root", "test",
     // OrientDBConfig.defaultConfig());
-    //    session = remote1.open(DATABASE_NAME, "admin", "admin");
+    //    session = remote1.open(DATABASE_NAME, "admin", "adminpwd");
     //    try (OResultSet result = session.query("select from Person")) {
     //      assertEquals(first + second + 1, result.stream().count());
     //    }

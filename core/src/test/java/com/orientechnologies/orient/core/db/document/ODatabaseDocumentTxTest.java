@@ -33,7 +33,7 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     OClass testSuperclass = db.getMetadata().getSchema().createClass("TestSuperclass");
     db.getMetadata().getSchema().createClass("TestSubclass", testSuperclass);
 
-    ODocument toDelete = new ODocument("TestSubclass").field("id", 1).save();
+    ODocument toDelete = db.save(new ODocument("TestSubclass").field("id", 1));
 
     // 1 SUB, 0 SUPER
     Assert.assertEquals(db.countClass("TestSubclass", false), 1);
@@ -43,8 +43,8 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
 
     db.begin();
     try {
-      new ODocument("TestSuperclass").field("id", 1).save();
-      new ODocument("TestSubclass").field("id", 1).save();
+      db.save(new ODocument("TestSuperclass").field("id", 1));
+      db.save(new ODocument("TestSubclass").field("id", 1));
       // 2 SUB, 1 SUPER
 
       Assert.assertEquals(db.countClass("TestSuperclass", false), 1);
@@ -52,7 +52,8 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
       Assert.assertEquals(db.countClass("TestSubclass", false), 2);
       Assert.assertEquals(db.countClass("TestSubclass", true), 2);
 
-      toDelete.delete().save();
+      db.delete(toDelete);
+      db.save(toDelete);
       // 1 SUB, 1 SUPER
 
       Assert.assertEquals(db.countClass("TestSuperclass", false), 1);
@@ -251,7 +252,7 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     db.createClass(className);
     final OElement v = db.newInstance(className);
     v.setProperty("count", 0);
-    v.save();
+    db.save(v);
 
     int nThreads = 4;
     List<Thread> threads = new ArrayList<>();
@@ -283,7 +284,7 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     for (Thread t : threads) {
       t.join();
     }
-    v.reload();
+    db.reload(v);
     Assert.assertEquals(nThreads, (int) v.getProperty("count"));
   }
 
@@ -293,7 +294,7 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     db.createClass(className);
     final OElement v = db.newInstance(className);
     v.setProperty("count", 0);
-    v.save();
+    db.save(v);
 
     int nThreads = 4;
     List<Thread> threads = new ArrayList<>();
@@ -327,7 +328,7 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     for (Thread t : threads) {
       t.join();
     }
-    v.reload();
+    db.reload(v);
     Assert.assertEquals(nThreads, (int) v.getProperty("count"));
   }
 
@@ -337,12 +338,12 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     db.createClass(className, "V");
     OVertex doc1 = db.newVertex(className);
     doc1.setProperty("name", "a");
-    doc1.save();
+    db.save(doc1);
 
     OVertex doc2 = db.newVertex(className);
     doc2.setProperty("name", "b");
     doc2.setProperty("linked", doc1);
-    doc2.save();
+    db.save(doc2);
 
     try (OResultSet rs = db.query("SELECT FROM " + className + " WHERE name = 'b'")) {
       Assert.assertTrue(rs.hasNext());
@@ -367,11 +368,11 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     vc.createProperty("in_testEdge", OType.LINK);
     OVertex doc1 = db.newVertex(vertexClass);
     doc1.setProperty("name", "first");
-    doc1.save();
+    db.save(doc1);
 
     OVertex doc2 = db.newVertex(vertexClass);
     doc2.setProperty("name", "second");
-    doc2.save();
+    db.save(doc2);
     db.newEdge(doc1, doc2, "testEdge");
 
     try (OResultSet rs = db.query("SELECT out() as o FROM " + vertexClass)) {
@@ -394,15 +395,15 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     vc.createProperty("in_testEdge", OType.LINK);
     OVertex doc1 = db.newVertex(vertexClass);
     doc1.setProperty("name", "first");
-    doc1.save();
+    db.save(doc1);
 
     OVertex doc2 = db.newVertex(vertexClass);
     doc2.setProperty("name", "second");
-    doc2.save();
+    db.save(doc2);
 
     OVertex doc3 = db.newVertex(vertexClass);
     doc3.setProperty("name", "third");
-    doc3.save();
+    db.save(doc3);
 
     db.newEdge(doc1, doc2, "testEdge");
     db.newEdge(doc1, doc3, "testEdge");
@@ -427,15 +428,15 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     vc.createProperty("in_testEdge", OType.LINK);
     OVertex doc1 = db.newVertex(vertexClass);
     doc1.setProperty("name", "first");
-    doc1.save();
+    db.save(doc1);
 
     OVertex doc2 = db.newVertex(vertexClass);
     doc2.setProperty("name", "second");
-    doc2.save();
+    db.save(doc2);
 
     OVertex doc3 = db.newVertex(vertexClass);
     doc3.setProperty("name", "third");
-    doc3.save();
+    db.save(doc3);
 
     db.newEdge(doc1, doc2, "testEdge");
     db.newEdge(doc1, doc3, "testEdge");
@@ -449,7 +450,7 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
     db.begin();
 
     ODocument document = new ODocument(className);
-    document.save();
+    db.save(document);
     ORecordIteratorClassDescendentOrder<ODocument> reverseIterator =
         new ORecordIteratorClassDescendentOrder<ODocument>(
             (ODatabaseDocumentInternal) db, (ODatabaseDocumentInternal) db, className, true);
@@ -468,17 +469,17 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
 
     OVertex v1 = db.newVertex(V);
     v1.setProperty("name", "root");
-    v1.save();
+    db.save(v1);
 
     for (int i = 0; i < 10; i++) {
       OVertex v2 = db.newVertex(V);
       v2.setProperty("name", "foo");
-      v2.save();
+      db.save(v2);
 
       OElement edge = db.newElement(E);
       edge.setProperty("out", v1);
       edge.setProperty("in", v2);
-      edge.save();
+      db.save(edge);
 
       Collection out = v1.getProperty("out_" + E);
       if (out == null) {
@@ -486,7 +487,7 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
       }
       out.add(edge);
       v1.setProperty("out_" + E, out);
-      v1.save();
+      db.save(v1);
 
       Collection in = v2.getProperty("in_" + E);
       if (in == null) {
@@ -494,14 +495,14 @@ public class ODatabaseDocumentTxTest extends BaseMemoryDatabase {
       }
       in.add(edge);
       v2.setProperty("in_" + E, in);
-      v2.save();
+      db.save(v2);
     }
 
     db.begin();
     OResultSet rs = db.query("select from " + V + " where name = 'root'");
     while (rs.hasNext()) {
       OResult item = rs.next();
-      item.getVertex().get().delete();
+      db.delete(item.getVertex().get());
     }
     rs.close();
     db.commit();

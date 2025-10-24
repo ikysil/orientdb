@@ -56,7 +56,7 @@ public abstract class AbstractServerClusterSQLGraphTest extends AbstractServerCl
               serverInstance.get(serverId).getServerInstance().getContext(),
               getDatabaseName(),
               "admin",
-              "admin",
+              "adminpwd",
               OrientDBConfig.defaultConfig());
       String name = Integer.toString(serverId);
 
@@ -194,7 +194,7 @@ public abstract class AbstractServerClusterSQLGraphTest extends AbstractServerCl
     try (final OResultSet result = graph.query("select from " + v.getIdentity())) {
       assertTrue(result.hasNext());
       final OVertex vertex = result.next().getVertex().get();
-      vertex.reload();
+      graph.reload(vertex);
 
       assertTrue(Boolean.TRUE.equals(vertex.getProperty("updated")));
     }

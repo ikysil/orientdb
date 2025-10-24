@@ -8,8 +8,10 @@ import com.orientechnologies.orient.core.metadata.schema.OIndexConfigProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchemaEmbedded;
 import com.orientechnologies.orient.core.metadata.schema.OViewConfig;
 import com.orientechnologies.orient.core.metadata.schema.OViewIndexConfig;
+import com.orientechnologies.orient.server.distributed.ODistributedConfiguration.ROLES;
 import com.orientechnologies.orient.server.distributed.impl.ODatabaseDocumentDistributed;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /** Created by tglman on 22/06/17. */
@@ -29,23 +31,15 @@ public class OSchemaDistributed extends OSchemaEmbedded {
   }
 
   public void acquireSchemaWriteLock(ODatabaseDocumentInternal database) {
-    if (executeThroughDistributedStorage(database)) {
-      ((ODatabaseDocumentDistributed) database).acquireDistributedExclusiveLock(0);
-    } else {
+    if (!executeThroughDistributedStorage(database)) {
       super.acquireSchemaWriteLock(database);
     }
   }
 
   @Override
   public void releaseSchemaWriteLock(ODatabaseDocumentInternal database, final boolean iSave) {
-    try {
-      if (!executeThroughDistributedStorage(database)) {
-        super.releaseSchemaWriteLock(database, iSave);
-      }
-    } finally {
-      if (executeThroughDistributedStorage(database)) {
-        ((ODatabaseDocumentDistributed) database).releaseDistributedExclusiveLock();
-      }
+    if (!executeThroughDistributedStorage(database)) {
+      super.releaseSchemaWriteLock(database, iSave);
     }
   }
 
@@ -191,6 +185,20 @@ public class OSchemaDistributed extends OSchemaEmbedded {
         }
       }
       sendCommand(database, cmd.toString());
+
+      Set<String> nodes =
+          ((ODatabaseDocumentDistributed) database)
+              .getDistributedManager()
+              .getAvailableNodeNames(database.getName());
+
+      nodes.removeIf(
+          (x) -> {
+            return ((ODatabaseDocumentDistributed) database)
+                    .getDistributedConfiguration()
+                    .getServerRole(x)
+                != ROLES.MASTER;
+          });
+      ((OClassDistributed) getClass(className)).autoAssignClusterOwnership(database, nodes, false);
 
     } else {
       createClassInternal(database, className, clusterIds, superClassesList);

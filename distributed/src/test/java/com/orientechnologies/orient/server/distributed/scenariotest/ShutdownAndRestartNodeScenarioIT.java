@@ -121,7 +121,7 @@ public class ShutdownAndRestartNodeScenarioIT extends AbstractScenarioTest {
           new OrientDB(
               "remote:" + serverInstances.get(2).getBinaryProtocolAddress() + "/",
               OrientDBConfig.defaultConfig());
-      final ODatabaseDocument dbServer3 = orientDB.open(getDatabaseName(), "admin", "admin");
+      final ODatabaseDocument dbServer3 = orientDB.open(getDatabaseName(), "admin", "adminpwd");
 
       try {
 
@@ -139,7 +139,7 @@ public class ShutdownAndRestartNodeScenarioIT extends AbstractScenarioTest {
         // trying write on server3, writes must be served from the first available node
         try {
           dbServer3.activateOnCurrentThread();
-          new ODocument("Person").fields("name", "Joe", "surname", "Black").save();
+          dbServer3.save(new ODocument("Person").fields("name", "Joe", "surname", "Black"));
           this.initialCount++;
           try (OResultSet result = dbServer3.query("select count(*) as count from Person")) {
             assertEquals(1, ((Number) result.next().getProperty("count")).intValue());
@@ -206,7 +206,7 @@ public class ShutdownAndRestartNodeScenarioIT extends AbstractScenarioTest {
     public Void call() throws Exception {
 
       OrientDB orientDB = serverInstances.get(0).getServerInstance().getContext();
-      final ODatabaseDocument dbServer1 = orientDB.open(getDatabaseName(), "admin", "admin");
+      final ODatabaseDocument dbServer1 = orientDB.open(getDatabaseName(), "admin", "adminpwd");
 
       try {
 
@@ -248,7 +248,8 @@ public class ShutdownAndRestartNodeScenarioIT extends AbstractScenarioTest {
         System.out.print("Insert operation in the database...");
         dbServer1.activateOnCurrentThread();
         try {
-          new ODocument("Person").fields("id", "L-001", "name", "John", "surname", "Black").save();
+          dbServer1.save(
+              new ODocument("Person").fields("id", "L-001", "name", "John", "surname", "Black"));
           fail("Error: record inserted with 2 server running and writeWuorum=3.");
         } catch (Exception e) {
           e.printStackTrace();
@@ -264,7 +265,7 @@ public class ShutdownAndRestartNodeScenarioIT extends AbstractScenarioTest {
           assertEquals(0, result.stream().count());
         }
         OrientDB orientDB1 = serverInstances.get(1).getServerInstance().getContext();
-        final ODatabaseDocument dbServer2 = orientDB1.open(getDatabaseName(), "admin", "admin");
+        final ODatabaseDocument dbServer2 = orientDB1.open(getDatabaseName(), "admin", "adminpwd");
         dbServer2.activateOnCurrentThread();
         try (OResultSet result = dbServer2.query("select from Person where id='L-001'")) {
           assertEquals(0, result.stream().count());

@@ -49,7 +49,7 @@ public class FunctionsTest extends DocumentDBBaseTest {
             .get();
 
     final ODocument record = result.getRecord();
-    record.reload();
+    database.reload(record);
 
     final List<String> parameters = record.field("parameters");
 
@@ -81,7 +81,7 @@ public class FunctionsTest extends DocumentDBBaseTest {
 
     ODocument func = f.getRecord();
     func.field("code", "return 2;");
-    func.save();
+    database.save(func);
 
     try (OResultSet res2 = database.command("select testCache() as testCache")) {
       Assert.assertEquals(res2.next().<Object>getProperty("testCache"), 2);

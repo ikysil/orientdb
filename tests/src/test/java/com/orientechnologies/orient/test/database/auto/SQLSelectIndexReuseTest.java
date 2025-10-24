@@ -160,7 +160,7 @@ public class SQLSelectIndexReuseTest extends AbstractIndexReuseTest {
         document.field("fEmbeddedSet", embeddedSet);
         document.field("fEmbeddedSetTwo", embeddedSet);
 
-        document.save();
+        database.save(document);
       }
     }
     database.close();
@@ -2845,12 +2845,12 @@ public class SQLSelectIndexReuseTest extends AbstractIndexReuseTest {
     final ODocument docOne = new ODocument("sqlSelectIndexReuseTestChildClass");
     docOne.field("prop0", 0);
     docOne.field("prop1", 1);
-    docOne.save();
+    database.save(docOne);
 
     final ODocument docTwo = new ODocument("sqlSelectIndexReuseTestChildClass");
     docTwo.field("prop0", 2);
     docTwo.field("prop1", 3);
-    docTwo.save();
+    database.save(docTwo);
 
     final List<OResult> result =
         database
@@ -2881,27 +2881,26 @@ public class SQLSelectIndexReuseTest extends AbstractIndexReuseTest {
       klazz.createProperty("a", OType.STRING);
       klazz.createIndex("a", "NOTUNIQUE", "a");
     }
-
-    database
-        .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
-        .field("a", "a")
-        .field("b", "b")
-        .save();
-    database
-        .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
-        .field("a", "a")
-        .field("b", "b")
-        .save();
-    database
-        .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
-        .field("a", "a")
-        .field("b", "e")
-        .save();
-    database
-        .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
-        .field("a", "c")
-        .field("b", "c")
-        .save();
+    database.save(
+        database
+            .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
+            .field("a", "a")
+            .field("b", "b"));
+    database.save(
+        database
+            .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
+            .field("a", "a")
+            .field("b", "b"));
+    database.save(
+        database
+            .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
+            .field("a", "a")
+            .field("b", "e"));
+    database.save(
+        database
+            .<ODocument>newInstance("CountFunctionWithNotUniqueIndexTest")
+            .field("a", "c")
+            .field("b", "c"));
 
     OResult result =
         (OResult)
@@ -2931,28 +2930,27 @@ public class SQLSelectIndexReuseTest extends AbstractIndexReuseTest {
       klazz.createProperty("a", OType.STRING);
       klazz.createIndex("testCountFunctionWithUniqueIndex", "NOTUNIQUE", "a");
     }
-
-    database
-        .<ODocument>newInstance("CountFunctionWithUniqueIndexTest")
-        .field("a", "a")
-        .field("b", "c")
-        .save();
-    database
-        .<ODocument>newInstance("CountFunctionWithUniqueIndexTest")
-        .field("a", "a")
-        .field("b", "c")
-        .save();
-    database
-        .<ODocument>newInstance("CountFunctionWithUniqueIndexTest")
-        .field("a", "a")
-        .field("b", "e")
-        .save();
-    ODocument doc =
+    database.save(
         database
             .<ODocument>newInstance("CountFunctionWithUniqueIndexTest")
             .field("a", "a")
-            .field("b", "b")
-            .save();
+            .field("b", "c"));
+    database.save(
+        database
+            .<ODocument>newInstance("CountFunctionWithUniqueIndexTest")
+            .field("a", "a")
+            .field("b", "c"));
+    database.save(
+        database
+            .<ODocument>newInstance("CountFunctionWithUniqueIndexTest")
+            .field("a", "a")
+            .field("b", "e"));
+    ODocument doc =
+        database.save(
+            database
+                .<ODocument>newInstance("CountFunctionWithUniqueIndexTest")
+                .field("a", "a")
+                .field("b", "b"));
 
     OResult result =
         (OResult)
@@ -2965,7 +2963,7 @@ public class SQLSelectIndexReuseTest extends AbstractIndexReuseTest {
                 .get(0);
 
     Assert.assertEquals(result.<Long>getProperty("count"), 2l);
-    doc.delete();
+    database.delete(doc);
 
     Assert.assertEquals(profiler.getCounter("db.demo.query.indexUsed"), oldIndexUsage + 1);
     Assert.assertEquals(

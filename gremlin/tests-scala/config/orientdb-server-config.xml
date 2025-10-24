@@ -2,7 +2,7 @@
 <orient-server>
     <handlers>
 
-        <handler class="com.orientechnologies.orient.server.hazelcast.OHazelcastPlugin">
+        <handler class="com.orientechnologies.orient.server.distributed.impl.ODistributedPlugin">
             <parameters>
                 <parameter value="${distributed}" name="enabled"/>
                 <parameter value="${ORIENTDB_HOME}/config/default-distributed-db-config.json" name="configuration.db.default"/>
@@ -89,10 +89,6 @@
     </users>
     <properties>
         <entry name="security.userPasswordSaltIterations" value="1"/>
-        <entry value="1" name="db.pool.min"/>
-        <entry value="50" name="db.pool.max"/>
         <entry value="true" name="profiler.enabled"/>
-        <entry value="info" name="log.console.level"/>
-        <entry value="fine" name="log.file.level"/>
     </properties>
 </orient-server>

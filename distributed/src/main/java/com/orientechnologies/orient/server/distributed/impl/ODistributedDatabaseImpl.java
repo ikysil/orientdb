@@ -26,6 +26,7 @@ import com.orientechnologies.common.concur.lock.OInterruptedException;
 import com.orientechnologies.common.profiler.OProfiler;
 import com.orientechnologies.common.thread.OSourceTraceExecutorService;
 import com.orientechnologies.common.thread.OThreadPoolExecutors;
+import com.orientechnologies.common.util.ORawPair;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
@@ -34,7 +35,9 @@ import com.orientechnologies.orient.core.db.OSystemDatabase;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.impl.local.OSyncSource;
-import com.orientechnologies.orient.core.tx.OTransactionId;
+import com.orientechnologies.orient.core.transaction.ONodeId;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionIdPromise;
 import com.orientechnologies.orient.core.tx.OTransactionSequenceStatus;
 import com.orientechnologies.orient.core.tx.OTxMetadataHolder;
 import com.orientechnologies.orient.core.tx.ValidationResult;
@@ -97,7 +100,7 @@ public class ODistributedDatabaseImpl implements ODistributedDatabase {
   private AtomicLong totalReceivedRequests = new AtomicLong();
   private TimerTask txTimeoutTask = null;
   private volatile boolean running = true;
-  private volatile boolean parsing = true;
+  private volatile boolean parsing = false;
   private AtomicLong operationsRunnig = new AtomicLong(0);
   private ODistributedSynchronizedSequence sequenceManager;
   private ExecutorService requestExecutor;
@@ -134,7 +137,8 @@ public class ODistributedDatabaseImpl implements ODistributedDatabase {
             .getValueAsInteger(DISTRIBUTED_TRANSACTION_SEQUENCE_SET_SIZE);
     recordPromiseManager = new OTxPromiseManager<>();
     indexKeyPromiseManager = new OTxPromiseManager<>();
-    sequenceManager = new ODistributedSynchronizedSequence(localNodeName, sequenceSize);
+    sequenceManager =
+        new ODistributedSynchronizedSequence(new ONodeId(localNodeName), sequenceSize);
   }
 
   public void initProfilerHooks() {
@@ -445,18 +449,18 @@ public class ODistributedDatabaseImpl implements ODistributedDatabase {
     }
   }
 
-  public ValidationResult validate(OTransactionId id) {
+  public ValidationResult validate(OTransactionIdPromise id) {
     // this check should happen only of destination nodes
-    return sequenceManager.validateTransactionId(id);
+    return sequenceManager.validate(id);
   }
 
   @Override
-  public OTxMetadataHolder commit(OTransactionId id) {
+  public OTxMetadataHolder commit(OTransactionIdPromise id) {
     return sequenceManager.notifySuccess(id);
   }
 
   @Override
-  public void rollback(OTransactionId id) {
+  public void rollback(OTransactionIdPromise id) {
     sequenceManager.notifyFailure(id);
   }
 
@@ -471,8 +475,12 @@ public class ODistributedDatabaseImpl implements ODistributedDatabase {
   }
 
   @Override
-  public Optional<OTransactionId> nextId() {
+  public Optional<OTransactionIdPromise> nextId() {
     return sequenceManager.next();
+  }
+
+  public Optional<ORawPair<OTransactionIdPromise, OTransactionIdPromise>> nextDDLId() {
+    return sequenceManager.nextDDL();
   }
 
   @Override
@@ -886,10 +894,6 @@ public class ODistributedDatabaseImpl implements ODistributedDatabase {
   }
 
   public Set<String> getAvailableNodesButLocal(ODatabaseSession database) {
-    final Set<String> nodes = context.getDistributedConfiguration(database).getServers(null);
-
-    // REMOVE CURRENT NODE BECAUSE IT HAS BEEN ALREADY EXECUTED LOCALLY
-    nodes.remove(localNodeName);
-    return nodes;
+    return context.getDistributedManager().getAvailableNodeNotLocalNames(databaseName);
   }
 }

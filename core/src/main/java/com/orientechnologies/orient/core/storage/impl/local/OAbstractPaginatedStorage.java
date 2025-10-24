@@ -165,9 +165,9 @@ import com.orientechnologies.orient.core.storage.ridbag.sbtree.OIndexRIDContaine
 import com.orientechnologies.orient.core.storage.ridbag.sbtree.OSBTreeCollectionManager;
 import com.orientechnologies.orient.core.storage.ridbag.sbtree.OSBTreeCollectionManagerShared;
 import com.orientechnologies.orient.core.storage.ridbag.sbtree.OSBTreeRidBag;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
 import com.orientechnologies.orient.core.tx.OTransactionAbstract;
 import com.orientechnologies.orient.core.tx.OTransactionData;
-import com.orientechnologies.orient.core.tx.OTransactionId;
 import com.orientechnologies.orient.core.tx.OTransactionIndexChanges;
 import com.orientechnologies.orient.core.tx.OTransactionInternal;
 import com.orientechnologies.orient.core.tx.OTxMetadataHolder;
@@ -1545,8 +1545,7 @@ public abstract class OAbstractPaginatedStorage
               // status
               //noinspection ConstantConditions
               OTransactionId txId =
-                  new OTransactionId(
-                      Optional.empty(), data.getId().getPosition(), data.getId().getSequence());
+                  new OTransactionId(data.getId().getPosition(), data.getId().getSequence());
               if (transactionsToRead.contains(txId)) {
                 long unitId = ((OAtomicUnitStartMetadataRecord) record).getOperationUnitId();
                 units.put(unitId, new OTransactionData(txId));
@@ -5375,8 +5374,8 @@ public abstract class OAbstractPaginatedStorage
       if (restoreLog != null) {
         final OLogSequenceNumber beginLsn = restoreLog.begin();
         restoreFrom(restoreLog, beginLsn);
+        restoreLog.close();
       }
-      restoreLog.close();
 
       if (maxLsn != null && writeAheadLog != null) {
         writeAheadLog.moveLsnAfter(maxLsn);

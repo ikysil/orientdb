@@ -4,6 +4,7 @@ import static com.orientechnologies.orient.core.config.OGlobalConfiguration.FILE
 import static com.orientechnologies.orient.core.config.OGlobalConfiguration.FILE_DELETE_RETRY;
 
 import com.orientechnologies.common.concur.OOfflineNodeException;
+import com.orientechnologies.common.concur.lock.OInterruptedException;
 import com.orientechnologies.common.concur.lock.OModificationOperationProhibitedException;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.Orient;
@@ -15,6 +16,9 @@ import com.orientechnologies.orient.core.db.ODatabaseLifecycleListener;
 import com.orientechnologies.orient.core.db.ODatabasePoolInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
+import com.orientechnologies.orient.core.db.ODatabaseTask;
+import com.orientechnologies.orient.core.db.ODatabaseType;
+import com.orientechnologies.orient.core.db.ONetworkMessage;
 import com.orientechnologies.orient.core.db.OSharedContext;
 import com.orientechnologies.orient.core.db.OSharedContextEmbedded;
 import com.orientechnologies.orient.core.db.OSystemDatabase;
@@ -24,32 +28,43 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentEmbedded;
 import com.orientechnologies.orient.core.exception.ODatabaseException;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.disk.OLocalPaginatedStorage;
-import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinary;
-import com.orientechnologies.orient.server.OClientConnection;
+import com.orientechnologies.orient.core.transaction.ONodeId;
+import com.orientechnologies.orient.distributed.context.ONodeState;
+import com.orientechnologies.orient.distributed.context.coordination.message.ONodeFirstConnect;
+import com.orientechnologies.orient.distributed.context.coordination.message.ONodeStateNetwork;
+import com.orientechnologies.orient.distributed.context.coordination.message.OProposeOp;
+import com.orientechnologies.orient.distributed.context.coordination.message.OStructuralMessage;
+import com.orientechnologies.orient.distributed.context.coordination.result.OAcceptResult;
+import com.orientechnologies.orient.distributed.context.topology.ODiscoverAction;
 import com.orientechnologies.orient.server.OServer;
 import com.orientechnologies.orient.server.OServerAware;
 import com.orientechnologies.orient.server.distributed.ODistributedConfiguration;
+import com.orientechnologies.orient.server.distributed.ODistributedMessageService;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager.DB_STATUS;
 import com.orientechnologies.orient.server.distributed.OLoggerDistributed;
 import com.orientechnologies.orient.server.distributed.OModifiableDistributedConfiguration;
+import com.orientechnologies.orient.server.distributed.ORemoteServerController;
 import com.orientechnologies.orient.server.distributed.impl.ODatabaseDocumentDistributed;
 import com.orientechnologies.orient.server.distributed.impl.ODatabaseDocumentDistributedPooled;
 import com.orientechnologies.orient.server.distributed.impl.ODistributedConfigurationManager;
 import com.orientechnologies.orient.server.distributed.impl.ODistributedDatabaseImpl;
+import com.orientechnologies.orient.server.distributed.impl.ODistributedMessageServiceImpl;
 import com.orientechnologies.orient.server.distributed.impl.ODistributedPlugin;
 import com.orientechnologies.orient.server.distributed.impl.ONewDeltaSyncImporter;
+import com.orientechnologies.orient.server.distributed.impl.ORemoteServerManager;
 import com.orientechnologies.orient.server.distributed.impl.metadata.OSharedContextDistributed;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 /** Created by tglman on 08/08/17. */
 public class OrientDBDistributed extends OrientDBEmbedded implements OServerAware {
@@ -57,12 +72,16 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       OLoggerDistributed.logger(OrientDBDistributed.class);
   private volatile OServer server;
   private volatile ODistributedPlugin plugin;
-  protected final ConcurrentHashMap<String, ODistributedConfigurationManager> configurations =
+  private final ConcurrentHashMap<String, ODistributedConfigurationManager> configurations =
       new ConcurrentHashMap<String, ODistributedConfigurationManager>();
+
+  private final ODistributedMessageServiceImpl messageService;
+  // TODO: this require the node name to be instantiate.
+  private ONodeState nodeState = null;
 
   public OrientDBDistributed(String directoryPath, OrientDBConfig config, Orient instance) {
     super(directoryPath, config, instance);
-    // This now is simple but should be replaced by a factory depending to the protocol version
+    messageService = new ODistributedMessageServiceImpl(this);
   }
 
   @Override
@@ -92,7 +111,9 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     if (plugin == null) {
       synchronized (this) {
         if (plugin == null) {
-          if (server != null && server.isActive()) plugin = server.getPlugin("cluster");
+          if (server != null && server.isActive()) {
+            plugin = server.getPlugin("cluster");
+          }
         }
       }
     }
@@ -100,9 +121,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
   }
 
   protected OSharedContext createSharedContext(OStorage storage) {
-    if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
-        || plugin == null
-        || !plugin.isEnabled()) {
+    if (isDistributedDisabled(storage.getName())) {
       return new OSharedContextEmbedded(storage, this);
     }
     return new OSharedContextDistributed(storage, this);
@@ -110,9 +129,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
 
   protected ODatabaseDocumentEmbedded newSessionInstance(OStorage storage, OrientDBConfig config) {
     ODatabaseDocumentEmbedded embedded;
-    if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
-        || plugin == null
-        || !plugin.isEnabled()) {
+    if (isDistributedDisabled(storage.getName())) {
       embedded = new ODatabaseDocumentEmbedded(storage);
       embedded.init(config, getOrCreateSharedContext(storage));
     } else {
@@ -124,14 +141,16 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     return embedded;
   }
 
+  protected boolean isDistributedDisabled(String storage) {
+    return OSystemDatabase.SYSTEM_DB_NAME.equals(storage) || plugin == null || !plugin.isEnabled();
+  }
+
   @Override
   protected ODatabaseDocumentEmbedded newCreateSessionInstance(
       OStorage storage, OrientDBConfig config) {
     ODatabaseDocumentEmbedded embedded;
 
-    if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
-        || plugin == null
-        || !plugin.isEnabled()) {
+    if (isDistributedDisabled(storage.getName())) {
       embedded = new ODatabaseDocumentEmbedded(storage);
       OSharedContext sharedContext = getOrCreateSharedContext(storage);
       embedded.internalCreate(config, sharedContext);
@@ -147,9 +166,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
   protected ODatabaseDocumentEmbedded newPooledSessionInstance(
       ODatabasePoolInternal pool, OStorage storage, OSharedContext sharedContext) {
     ODatabaseDocumentEmbedded embedded;
-    if (OSystemDatabase.SYSTEM_DB_NAME.equals(storage.getName())
-        || plugin == null
-        || !plugin.isEnabled()) {
+    if (isDistributedDisabled(storage.getName())) {
       embedded = new ODatabaseDocumentEmbeddedPooled(pool, storage);
       embedded.init(pool.getConfig(), getOrCreateSharedContext(storage));
     } else {
@@ -297,10 +314,34 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
             plugin.dropOnAllServers(name);
             return null;
           });
+      //      dropFlow(name);
       plugin.dropConfig(name);
     } else {
       super.drop(name, user, password);
     }
+  }
+
+  private void dropFlow(String name) {
+    distributedOperation(new ODropDbMessage(name));
+  }
+
+  public void sendMessage(Set<ONodeId> set, OStructuralMessage op) {
+    ONetworkMessageStructural message = new ONetworkMessageStructural(this, op);
+    ORemoteServerManager remote = getPlugin().getRemoteServerManager();
+    for (ONodeId node : set) {
+      if (node.equals(getNodeState().getNodeId())) {
+        this.receiveMessage(op);
+      } else {
+        ORemoteServerController rem = remote.getRemoteServer(node.getNode());
+        if (rem != null) {
+          rem.sendMessage(message);
+        }
+      }
+    }
+  }
+
+  public void receiveMessage(OStructuralMessage op) {
+    this.execute(() -> op.execute(this));
   }
 
   private boolean checkDbAvailable(String name) {
@@ -308,7 +349,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       return true;
     }
     if (OSystemDatabase.SYSTEM_DB_NAME.equals(name)) return true;
-    DB_STATUS dbStatus = plugin.getDatabaseStatus(plugin.getLocalNodeName(), name);
+    DB_STATUS dbStatus = plugin.getDatabaseStatus(getNodeName(), name);
     return dbStatus == DB_STATUS.ONLINE || dbStatus == DB_STATUS.BACKUP;
   }
 
@@ -345,8 +386,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       if (exists(name, user, password)) {
         return super.open(name, user, password);
       }
-      throw new OOfflineNodeException(
-          "database " + name + " not online on " + plugin.getLocalNodeName());
+      throw new OOfflineNodeException("database " + name + " not online on " + getNodeName());
     }
   }
 
@@ -360,16 +400,8 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       if (exists(name, user, password)) {
         return super.open(name, user, password, config);
       }
-      throw new OOfflineNodeException(
-          "database " + name + " not online on " + plugin.getLocalNodeName());
+      throw new OOfflineNodeException("database " + name + " not online on " + getNodeName());
     }
-  }
-
-  @Override
-  public void coordinatedRequest(
-      OClientConnection connection, int requestType, int clientTxId, OChannelBinary channel)
-      throws IOException {
-    throw new UnsupportedOperationException("old implementation do not support new flow");
   }
 
   public static void dropStorageFiles(OLocalPaginatedStorage storage) {
@@ -409,8 +441,7 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
 
   @Override
   public boolean deltaSync(String dbName, InputStream backupStream, OrientDBConfig config) {
-    if (new ONewDeltaSyncImporter()
-        .importDelta(server, dbName, backupStream, plugin.getLocalNodeName())) {
+    if (new ONewDeltaSyncImporter().importDelta(this, dbName, backupStream, getNodeName())) {
       getDatabase(dbName).setOnline();
       return true;
     } else {
@@ -418,12 +449,16 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     }
   }
 
+  public String getNodeName() {
+    return plugin.getLocalNodeName();
+  }
+
   private void offlineOnShutdown() {
     // SET ALL DATABASES TO NOT_AVAILABLE
     for (String dbName : listLodadedDatabases()) {
 
       try {
-        plugin.setDatabaseStatus(plugin.getLocalNodeName(), dbName, DB_STATUS.NOT_AVAILABLE);
+        plugin.setDatabaseStatus(getNodeName(), dbName, DB_STATUS.NOT_AVAILABLE);
       } catch (Exception t) {
         // IGNORE IT
       }
@@ -441,9 +476,9 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
 
   public ODistributedDatabaseImpl unregisterDatabase(final String iDatabaseName) {
     try {
-      plugin.setDatabaseStatus(plugin.getLocalNodeName(), iDatabaseName, DB_STATUS.OFFLINE);
+      plugin.setDatabaseStatus(getNodeName(), iDatabaseName, DB_STATUS.OFFLINE);
     } catch (Exception t) {
-      logger.warnNode(plugin.getLocalNodeName(), "error un-registering database", t);
+      logger.warnNode(getNodeName(), "error un-registering database", t);
       // IGNORE IT
     }
 
@@ -452,6 +487,27 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
       db.onDropShutdown();
     }
     return db;
+  }
+
+  @Override
+  public void create(
+      String name,
+      String user,
+      String password,
+      ODatabaseType type,
+      OrientDBConfig config,
+      ODatabaseTask<Void> createOps) {
+    super.create(name, user, password, type, config, createOps);
+    if (!isDistributedDisabled(name)) {
+      Set<String> nodes = plugin.getActiveServers();
+      for (String node : nodes) {
+        try {
+          plugin.waitUntilNodeOnline(node, name);
+        } catch (InterruptedException e) {
+          break;
+        }
+      }
+    }
   }
 
   public void distributedSetOnline(String database) {
@@ -533,6 +589,11 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
     }
   }
 
+  public ODistributedConfiguration getDefaultDistributedConfiguration(String database) {
+    ODistributedConfigurationManager cm = getOrInitConfigurationManager(database);
+    return cm.getDefaultConfiguration();
+  }
+
   public ODistributedConfiguration getDistributedConfiguration(String database) {
     ODistributedConfigurationManager cm = getConfigurationManager(database);
     if (cm != null) {
@@ -592,10 +653,73 @@ public class OrientDBDistributed extends OrientDBEmbedded implements OServerAwar
   public void close() {
     if (!isOpen()) return;
     offlineOnShutdown();
+    this.messageService.shutdown();
     super.close();
   }
 
   public int getActiveDatabaseCount() {
     return this.dbCount.get();
+  }
+
+  public ODistributedMessageService getMessageService() {
+    return messageService;
+  }
+
+  public Optional<OAcceptResult> distributedOperation(OOperationMessage operation) {
+    var start = getNodeState().start(new OStandardCompleteAction(this));
+    OProposeOp propose = new OProposeOp(start.promise(), operation);
+    sendMessage(start.nodes(), propose);
+    try {
+      return start.result().get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw OException.wrapException(
+          new OInterruptedException("Interrupted distributed future"), e);
+    } catch (ExecutionException e) {
+      throw OException.wrapException(
+          new OInterruptedException("Execution exception distributed future"), e);
+    }
+  }
+
+  public synchronized ONodeState getNodeState() {
+    if (nodeState == null) {
+      // TODO: provide minimum quorum;
+      ONodeId nodeId = new ONodeId(getPlugin().getLocalNodeName());
+      OSystemStateStore store = new OSystemStateStore(getSystemDatabase());
+      nodeState = new ONodeState(nodeId, 0, store);
+      nodeState.initFromStore();
+    }
+    return this.nodeState;
+  }
+
+  @Override
+  public ONetworkMessage newNetworkMessage() {
+    return new ONetworkMessageStructural(this);
+  }
+
+  public void firstConnect(ONodeId nodeId, ONodeStateNetwork state) {
+    ONodeState localState = getNodeState();
+    ODiscoverAction action = localState.nodeJoinStart(nodeId, state);
+    action.execute(this);
+  }
+
+  public void connected(ONodeId node) {
+    sendFirstConnect(node);
+  }
+
+  private void sendFirstConnect(ONodeId nodeId) {
+    ONodeStateNetwork st = getNodeState().getNetworkState();
+    this.sendMessage(
+        Collections.singleton(nodeId), new ONodeFirstConnect(getNodeState().getNodeId(), st));
+  }
+
+  public void registerNode(ONodeId node, long version) {
+    getNodeState().register(node, version);
+    // This should make aware of the added node of the fact it joined the network
+    sendFirstConnect(node);
+  }
+
+  public void cancelRegisterPromise() {
+    getNodeState().cancelRegisterPromise();
   }
 }

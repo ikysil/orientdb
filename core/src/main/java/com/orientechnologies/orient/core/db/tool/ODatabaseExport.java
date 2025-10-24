@@ -35,6 +35,7 @@ import com.orientechnologies.orient.core.index.OIndexManagerAbstract;
 import com.orientechnologies.orient.core.index.ORuntimeKeyIndexDefinition;
 import com.orientechnologies.orient.core.iterator.ORecordIteratorCluster;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.metadata.schema.OClassAllocation;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OSchemaShared;
@@ -616,6 +617,21 @@ public class ODatabaseExport extends ODatabaseImpExpAbstract {
         if (!custom.isEmpty()) {
           writer.writeAttribute(0, false, "customFields", custom);
         }
+        OClassAllocation all = cls.getAllocation();
+        if (all != null) {
+          List<String> nodes = all.getDefinedNodes();
+          if (nodes != null) {
+            writer.beginCollection(4, true, "allocations");
+            for (String node : nodes) {
+              List<String> clusters = all.getAllocationClusters(node);
+              writer.beginObject(5, true, null);
+              writer.writeAttribute(0, false, "node", node);
+              writer.writeAttribute(0, false, "clusters", clusters);
+              writer.endObject(0, false);
+            }
+            writer.endCollection(4, true);
+          }
+        }
         writer.endObject(3, true);
       }
       writer.endCollection(2, true);
@@ -629,7 +645,7 @@ public class ODatabaseExport extends ODatabaseImpExpAbstract {
   private boolean exportRecord(long recordTot, long recordNum, ORecord rec, Set<ORID> brokenRids) {
     if (rec != null)
       try {
-        if (rec.getIdentity().isValid()) rec.reload();
+        if (rec.getIdentity().isValid()) database.reload(rec, null, true, true);
         if (useLineFeedForRecords) writer.append("\n");
         if (recordExported > 0) writer.append(",");
 
@@ -643,24 +659,22 @@ public class ODatabaseExport extends ODatabaseImpExpAbstract {
 
         return true;
       } catch (final Exception t) {
-        if (rec != null) {
-          final ORID rid = rec.getIdentity().copy();
+        final ORID rid = rec.getIdentity().copy();
 
-          if (rid != null) {
-            brokenRids.add(rid);
-          }
-
-          final byte[] buffer = rec.toStream();
-
-          logger.error(
-              "\n"
-                  + "Error on exporting record %s. It seems corrupted; size: %d bytes, raw"
-                  + " content (as string):\n"
-                  + "==========\n"
-                  + "%s\n"
-                  + "==========",
-              t, rec.getIdentity(), buffer.length, new String(buffer));
+        if (rid != null) {
+          brokenRids.add(rid);
         }
+
+        final byte[] buffer = rec.toStream();
+
+        logger.error(
+            "\n"
+                + "Error on exporting record %s. It seems corrupted; size: %d bytes, raw"
+                + " content (as string):\n"
+                + "==========\n"
+                + "%s\n"
+                + "==========",
+            t, rec.getIdentity(), buffer.length, new String(buffer));
       }
 
     return false;

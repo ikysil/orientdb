@@ -8,6 +8,7 @@ import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.orient.client.binary.OChannelBinaryAsynchClient;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
+import com.orientechnologies.orient.enterprise.channel.OSocketFactory;
 import com.orientechnologies.orient.enterprise.channel.binary.OChannelBinaryProtocol;
 
 /** Created by tglman on 01/10/15. */
@@ -15,29 +16,32 @@ public class ORemoteConnectionPool
     implements OResourcePoolListener<String, OChannelBinaryAsynchClient> {
   private static final OLogger logger = OLogManager.instance().logger(ORemoteConnectionPool.class);
 
-  private OResourcePool<String, OChannelBinaryAsynchClient> pool;
+  private final OResourcePool<String, OChannelBinaryAsynchClient> pool;
+  private final String host;
+  private final int port;
+  private final OSocketFactory socketFactory;
+  private final OContextConfiguration conf;
 
-  public ORemoteConnectionPool(int iMaxResources) {
-    pool = new OResourcePool<>(iMaxResources, this);
+  public ORemoteConnectionPool(
+      int iMaxResources, String host, int port, OContextConfiguration conf) {
+    this.pool = new OResourcePool<>(iMaxResources, this);
+    this.host = host;
+    this.port = port;
+    this.conf = conf;
+    this.socketFactory = new OSocketFactory(conf);
   }
 
-  protected OChannelBinaryAsynchClient createNetworkConnection(
-      String serverURL, final OContextConfiguration clientConfiguration) throws OIOException {
-    if (serverURL == null) throw new IllegalArgumentException("server url is null");
-
+  protected OChannelBinaryAsynchClient createNetworkConnection() throws OIOException {
     // TRY WITH CURRENT URL IF ANY
     try {
-      logger.debug("Trying to connect to the remote host %s...", serverURL);
-
-      int sepPos = serverURL.indexOf(":");
-      final String remoteHost = serverURL.substring(0, sepPos);
-      final int remotePort = Integer.parseInt(serverURL.substring(sepPos + 1));
+      logger.debug("Trying to connect to the remote host %s:%d...", this.host, this.port);
 
       final OChannelBinaryAsynchClient ch =
           new OChannelBinaryAsynchClient(
-              remoteHost,
-              remotePort,
-              clientConfiguration,
+              host,
+              port,
+              this.conf,
+              socketFactory,
               OChannelBinaryProtocol.CURRENT_PROTOCOL_VERSION);
 
       return ch;
@@ -46,20 +50,19 @@ public class ORemoteConnectionPool
       // RE-THROW IT
       throw e;
     } catch (Exception e) {
-      logger.debug("Error on connecting to %s", e, serverURL);
-      throw OException.wrapException(new OIOException("Error on connecting to " + serverURL), e);
+      logger.debug("Error on connecting to  %s:%d", e, this.host, this.port);
+      throw OException.wrapException(
+          new OIOException("Error on connecting to " + this.host + ":" + this.port), e);
     }
   }
 
   @Override
-  public OChannelBinaryAsynchClient createNewResource(
-      final String iKey, final Object... iAdditionalArgs) {
-    return createNetworkConnection(iKey, (OContextConfiguration) iAdditionalArgs[0]);
+  public OChannelBinaryAsynchClient createNewResource(final String iKey) {
+    return createNetworkConnection();
   }
 
   @Override
-  public boolean reuseResource(
-      final String iKey, final Object[] iAdditionalArgs, final OChannelBinaryAsynchClient iValue) {
+  public boolean reuseResource(final String iKey, final OChannelBinaryAsynchClient iValue) {
     final boolean canReuse = iValue.isConnected();
     if (!canReuse)
       // CANNOT REUSE: CLOSE IT PROPERLY

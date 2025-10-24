@@ -328,7 +328,7 @@ public class HALocalGraphIT extends AbstractServerClusterTxTest {
                             retry = false;
                             break;
                           } catch (OConcurrentModificationException ex) {
-                            vtx1.reload();
+                            graph.reload(vtx1);
                           } catch (ONeedRetryException ex) {
                             if (ex instanceof ODistributedRecordLockedException) {
                               if (k > 20)
@@ -343,10 +343,10 @@ public class HALocalGraphIT extends AbstractServerClusterTxTest {
                                         + (ex.getCause() != null ? ex.getCause() : "--")
                                         + "] for vertex "
                                         + vtx1);
-                              vtx1.reload();
+                              graph.reload(vtx1);
                             } else if (ex instanceof ONeedRetryException
                                 || ex.getCause() instanceof ONeedRetryException) {
-                              vtx1.reload();
+                              graph.reload(vtx1);
                             } else {
                               if (ex.getCause() instanceof ConcurrentModificationException) {
                                 ex.printStackTrace();
@@ -370,7 +370,7 @@ public class HALocalGraphIT extends AbstractServerClusterTxTest {
                             isException = true;
                           } catch (ODistributedException ex) {
                             if (ex.getCause() instanceof ONeedRetryException) {
-                              vtx1.reload();
+                              graph.reload(vtx1);
                             } else {
                               if (ex.getCause() instanceof ConcurrentModificationException) {
                                 ex.printStackTrace();
@@ -434,7 +434,7 @@ public class HALocalGraphIT extends AbstractServerClusterTxTest {
               server.getServerInstance().getContext(),
               getDatabaseName(),
               "admin",
-              "admin",
+              "adminpwd",
               OrientDBConfig.defaultConfig());
     }
     return graphReadFactory;
@@ -460,7 +460,7 @@ public class HALocalGraphIT extends AbstractServerClusterTxTest {
     // ODatabaseDocumentTx(getDatabaseURL(serverInstance.get(0)));
 
     final ODatabaseDocument orientGraph =
-        server.getServerInstance().openDatabase(getDatabaseName(), "admin", "admin");
+        server.getServerInstance().openDatabase(getDatabaseName(), "admin", "adminpwd");
 
     /*
     if (orientGraph.exists()) {
@@ -480,7 +480,7 @@ public class HALocalGraphIT extends AbstractServerClusterTxTest {
       vertex.setProperty("prop1", "v1-" + i);
       vertex.setProperty("prop2", "v2-1");
       vertex.setProperty("prop3", "v3-1");
-      vertex.save();
+      graph.save(vertex);
       graph.commit();
       graph.begin();
       if ((i % 100) == 0) {
@@ -492,7 +492,7 @@ public class HALocalGraphIT extends AbstractServerClusterTxTest {
       vertex.setProperty("prop1", "v1-" + i);
       vertex.setProperty("prop2", "v2-1");
       vertex.setProperty("prop3", "v3-1");
-      vertex.save();
+      graph.save(vertex);
       graph.commit();
       graph.begin();
       if ((i % 10) == 0) {

@@ -59,6 +59,7 @@ import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,7 +79,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-import org.apache.commons.lang.NullArgumentException;
 
 /** Created by tglman on 08/04/16. */
 public class OrientDBEmbedded implements OrientDBInternal {
@@ -108,7 +108,7 @@ public class OrientDBEmbedded implements OrientDBInternal {
   private final ExecutorService ioExecutor;
   private final Timer timer;
   private TimerTask autoCloseTimer = null;
-  private final OScriptManager scriptManager = new OScriptManager();
+  private final OScriptManager scriptManager;
   private final OSystemDatabase systemDatabase;
   private final ODefaultSecuritySystem securitySystem;
   private final OCommandTimeoutChecker timeoutChecker;
@@ -183,6 +183,7 @@ public class OrientDBEmbedded implements OrientDBInternal {
     systemDatabase = new OSystemDatabase(this);
     securitySystem = new ODefaultSecuritySystem();
     securitySystem.activate(this, this.configurations.getSecurityConfig());
+    this.scriptManager = new OScriptManager(this);
   }
 
   private void initAutoClose() {
@@ -1083,8 +1084,8 @@ public class OrientDBEmbedded implements OrientDBInternal {
     if (storage != null) {
       OSharedContext ctx = sharedContexts.remove(iDatabaseName);
       dbCount.decrementAndGet();
-      ctx.getViewManager().close();
       if (ctx != null) {
+        ctx.getViewManager().close();
         ctx.close();
       }
       storage.shutdown();
@@ -1216,9 +1217,7 @@ public class OrientDBEmbedded implements OrientDBInternal {
   }
 
   private void checkDatabaseName(String name) {
-    if (name == null) {
-      throw new NullArgumentException("database");
-    }
+    Objects.requireNonNull(name, "Database name is null");
     if (name.contains("/") || name.contains(":")) {
       throw new ODatabaseException(String.format("Invalid database name:'%s'", name));
     }

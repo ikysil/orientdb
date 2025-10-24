@@ -41,6 +41,7 @@ import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
+import com.orientechnologies.orient.core.db.ONetworkMessage;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OCoreException;
 import com.orientechnologies.orient.core.exception.ODatabaseException;
@@ -65,7 +66,6 @@ import com.orientechnologies.orient.enterprise.channel.binary.OTokenSecurityExce
 import com.orientechnologies.orient.server.OClientConnection;
 import com.orientechnologies.orient.server.OConnectionBinaryExecutor;
 import com.orientechnologies.orient.server.OServer;
-import com.orientechnologies.orient.server.OServerAware;
 import com.orientechnologies.orient.server.distributed.ODistributedDatabase;
 import com.orientechnologies.orient.server.distributed.ODistributedException;
 import com.orientechnologies.orient.server.distributed.ODistributedRequest;
@@ -190,11 +190,8 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
 
   private boolean isDistributed(int requestType) {
     return requestType == OChannelBinaryProtocol.DISTRIBUTED_REQUEST
-        || requestType == OChannelBinaryProtocol.DISTRIBUTED_RESPONSE;
-  }
-
-  private boolean isCoordinated(int requestType) {
-    return requestType == OChannelBinaryProtocol.COORDINATED_DISTRIBUTED_MESSAGE;
+        || requestType == OChannelBinaryProtocol.DISTRIBUTED_RESPONSE
+        || requestType == OChannelBinaryProtocol.DISTRIBUTED_MESSAGE;
   }
 
   @Override
@@ -242,9 +239,7 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
       // GET THE CONNECTION IF EXIST
       OClientConnection connection =
           server.getClientConnectionManager().getConnection(clientTxId, this);
-      if (isCoordinated(requestType)) {
-        coordinatedRequest(connection, requestType, clientTxId);
-      } else if (isDistributed(requestType)) {
+      if (isDistributed(requestType)) {
         distributedRequest(connection, requestType, clientTxId);
       } else sessionRequest(connection, requestType, clientTxId);
     } catch (IOException e) {
@@ -252,14 +247,6 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
       sendShutdown();
       throw e;
     }
-  }
-
-  private void coordinatedRequest(OClientConnection connection, int requestType, int clientTxId)
-      throws IOException {
-    byte[] tokenBytes = channel.readBytes();
-    connection = onBeforeOperationalRequest(connection, tokenBytes);
-    ((OServerAware) server.getDatabases())
-        .coordinatedRequest(connection, requestType, clientTxId, channel);
   }
 
   private void handleHandshake() throws IOException {
@@ -435,7 +422,7 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
               timer,
               "server.network.requests");
 
-      OSerializationThreadLocal.INSTANCE.get().clear();
+      OSerializationThreadLocal.instance().get().clear();
     }
   }
 
@@ -502,6 +489,9 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
 
           case OChannelBinaryProtocol.DISTRIBUTED_RESPONSE:
             executeDistributedResponse(connection);
+            break;
+          case OChannelBinaryProtocol.DISTRIBUTED_MESSAGE:
+            executeDistributedMessage(connection);
             break;
         }
       } finally {
@@ -591,13 +581,11 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
       final ODistributedServerManager manager = server.getDistributedManager();
       if (manager != null && connection.hasDatabase())
         try {
-          if (manager.getMessageService() != null) {
-            String databaseName = connection.getDatabaseName();
-            final ODistributedDatabase dDatabase = manager.getDatabase(databaseName);
-            if (dDatabase != null) {
-              dDatabase.waitForOnline();
-            } else manager.waitUntilNodeOnline(manager.getLocalNodeName(), databaseName);
-          }
+          String databaseName = connection.getDatabaseName();
+          final ODistributedDatabase dDatabase = manager.getDatabase(databaseName);
+          if (dDatabase != null) {
+            dDatabase.waitForOnline();
+          } else manager.waitUntilNodeOnline(manager.getLocalNodeName(), databaseName);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           throw OException.wrapException(new OInterruptedException("Request interrupted"), e);
@@ -676,6 +664,17 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
     }
   }
 
+  private void executeDistributedMessage(OClientConnection connection) throws IOException {
+    setDataCommandInfo(connection, "Distributed request");
+
+    checkServerAccess("server.replication", connection);
+
+    ONetworkMessage message = server.getDatabases().newNetworkMessage();
+
+    message.deserialize(channel.getDataInput());
+    message.execute();
+  }
+
   private void executeDistributedResponse(OClientConnection connection) throws IOException {
     setDataCommandInfo(connection, "Distributed response");
 
@@ -685,14 +684,6 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
     final ODistributedResponse response = new ODistributedResponse();
 
     response.fromStream(channel.getDataInput());
-
-    // WHILE MSG SERVICE IS UP & RUNNING
-    while (manager.getMessageService() == null)
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        return;
-      }
 
     manager.getMessageService().dispatchResponseToThread(response);
   }
@@ -920,16 +911,17 @@ public class ONetworkProtocolBinary extends ONetworkProtocol {
   public static byte[] getRecordBytes(OClientConnection connection, final ORecord iRecord) {
     final byte[] stream;
     String dbSerializerName = null;
-    if (ODatabaseRecordThreadLocal.instance().getIfDefined() != null)
-      dbSerializerName =
-          ((ODatabaseDocumentInternal) iRecord.getDatabase()).getSerializer().toString();
+    ODatabaseDocumentInternal database = ODatabaseRecordThreadLocal.instance().getIfDefined();
+    if (database != null) dbSerializerName = database.getSerializer().toString();
     String name = connection.getData().getSerializationImpl();
     if (ORecordInternal.getRecordType(iRecord) == ODocument.RECORD_TYPE
         && (dbSerializerName == null || !dbSerializerName.equals(name))) {
       ((ODocument) iRecord).deserializeFields();
       ORecordSerializer ser = ORecordSerializerFactory.instance().getFormat(name);
       stream = ser.toStream(iRecord);
-    } else stream = iRecord.toStream();
+    } else {
+      stream = iRecord.toStream();
+    }
 
     return stream;
   }

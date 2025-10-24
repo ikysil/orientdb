@@ -20,12 +20,15 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
+import com.orientechnologies.orient.core.serialization.serializer.record.OSerializationContext;
+import com.orientechnologies.orient.core.serialization.serializer.record.OSerializationContextImpl;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializerDeltaDistributed;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkDistributed;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkV37;
 import com.orientechnologies.orient.core.storage.ORecordDuplicatedException;
 import com.orientechnologies.orient.core.storage.OStorage;
-import com.orientechnologies.orient.core.tx.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionIdPromise;
 import com.orientechnologies.orient.core.tx.OTransactionInternal;
 import com.orientechnologies.orient.core.tx.ValidationResult;
 import com.orientechnologies.orient.server.OServer;
@@ -76,7 +79,7 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
   private transient int retryCount = 0;
   private volatile boolean finished;
   private TimerTask notYetFinishedTask;
-  private OTransactionId transactionId;
+  private OTransactionIdPromise promise;
 
   public OTransactionPhase1Task() {
     ops = new ArrayList<>();
@@ -86,12 +89,12 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
 
   public OTransactionPhase1Task(
       List<ORecordOperation> ops,
-      OTransactionId transactionId,
+      OTransactionIdPromise promise,
       SortedSet<OTransactionUniqueKey> uniqueIndexKeys) {
     this.ops = ops;
     operations = new ArrayList<>();
     this.uniqueIndexKeys = uniqueIndexKeys;
-    this.transactionId = transactionId;
+    this.promise = promise;
     genOps(ops);
   }
 
@@ -161,12 +164,7 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
     try {
       res1 =
           executeTransaction(
-              requestId,
-              transactionId,
-              (ODatabaseDocumentDistributed) database,
-              tx,
-              false,
-              retryCount);
+              requestId, promise, (ODatabaseDocumentDistributed) database, tx, false, retryCount);
     } catch (Exception e) {
       this.finished = true;
       if (this.notYetFinishedTask != null) {
@@ -206,7 +204,7 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
 
   public static OTransactionResultPayload executeTransaction(
       ODistributedRequestId requestId,
-      OTransactionId id,
+      OTransactionIdPromise id,
       ODatabaseDocumentDistributed database,
       OTransactionInternal tx,
       boolean isCoordinator,
@@ -230,8 +228,6 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
                   (ODistributedDatabaseImpl) localDistributedDatabase, requestId, tx, id);
           txContext.setStatus(TIMEDOUT);
           database.register(requestId, localDistributedDatabase, txContext);
-          // This send OK to the sender even if already present, the second phase will skip the
-          // apply if already present
           return new OTxInvalidSequential();
         }
       }
@@ -261,7 +257,7 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
 
   @Override
   public void fromStream(DataInput in, ORemoteTaskFactory factory) throws IOException {
-    this.transactionId = OTransactionId.read(in);
+    this.promise = OTransactionIdPromise.readNetwork(in);
     int size = in.readInt();
     for (int i = 0; i < size; i++) {
       ORecordOperationRequest req = OMessageHelper.readTransactionEntry(in);
@@ -345,7 +341,7 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
 
   @Override
   public void toStream(DataOutput out) throws IOException {
-    transactionId.write(out);
+    promise.writeNetwork(out);
     out.writeInt(operations.size());
 
     for (ORecordOperationRequest operation : operations) {
@@ -353,17 +349,18 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
     }
 
     ORecordSerializerNetworkDistributed serializer = ORecordSerializerNetworkDistributed.INSTANCE;
-    writeTxUniqueIndexKeys(uniqueIndexKeys, serializer, out);
+    writeTxUniqueIndexKeys(uniqueIndexKeys, serializer, out, new OSerializationContextImpl());
   }
 
   public static void writeTxUniqueIndexKeys(
       SortedSet<OTransactionUniqueKey> uniqueIndexKeys,
       ORecordSerializerNetworkV37 serializer,
-      DataOutput out)
+      DataOutput out,
+      OSerializationContext ctx)
       throws IOException {
     out.writeInt(uniqueIndexKeys.size());
     for (OTransactionUniqueKey pair : uniqueIndexKeys) {
-      pair.write(serializer, out);
+      pair.write(serializer, out, ctx);
     }
   }
 
@@ -372,8 +369,8 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
     return FACTORYID;
   }
 
-  public void init(final OTransactionId transactionId, final OTransactionInternal tx) {
-    this.transactionId = transactionId;
+  public void init(final OTransactionIdPromise transactionId, final OTransactionInternal tx) {
+    this.promise = transactionId;
     extractUniqueIndexOps(tx);
     this.ops = new ArrayList<>(tx.getRecordOperations());
     genOps(this.ops);
@@ -453,7 +450,7 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
       databases.schedule(notYetFinishedTask, getDistributedTimeout(), getDistributedTimeout());
     }
     if (distributedDatabase instanceof ODistributedDatabaseImpl) {
-      ((ODistributedDatabaseImpl) distributedDatabase).trackTransactions(transactionId);
+      ((ODistributedDatabaseImpl) distributedDatabase).trackTransactions(promise.getId());
     }
   }
 
@@ -463,12 +460,12 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
       notYetFinishedTask.cancel();
     }
     if (distributedDatabase instanceof ODistributedDatabaseImpl) {
-      ((ODistributedDatabaseImpl) distributedDatabase).untrackTransactions(transactionId);
+      ((ODistributedDatabaseImpl) distributedDatabase).untrackTransactions(promise.getId());
     }
   }
 
   public OTransactionId getTransactionId() {
-    return transactionId;
+    return promise.getId();
   }
 
   @Override
@@ -526,5 +523,9 @@ public class OTransactionPhase1Task extends OAbstractRemoteTask implements OLock
     } else {
       return key;
     }
+  }
+
+  public OTransactionIdPromise getPromise() {
+    return promise;
   }
 }

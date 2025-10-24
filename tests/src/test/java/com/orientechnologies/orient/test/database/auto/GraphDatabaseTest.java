@@ -69,7 +69,7 @@ public class GraphDatabaseTest extends DocumentDBBaseTest {
     database.save(motoNode);
 
     database.commit();
-    database.newEdge(carNode, motoNode).save();
+    database.save(database.newEdge(carNode, motoNode));
 
     List<OResult> result =
         database.query("select from GraphVehicle").stream().collect(Collectors.toList());
@@ -398,7 +398,7 @@ public class GraphDatabaseTest extends DocumentDBBaseTest {
 
     ODocument doc = new ODocument();
     doc.field("foo", "bar");
-    doc.save(database.getClusterNameById(database.getDefaultClusterId()));
+    database.save(doc, database.getClusterNameById(database.getDefaultClusterId()));
 
     vertex.setProperty("emb1", doc);
 

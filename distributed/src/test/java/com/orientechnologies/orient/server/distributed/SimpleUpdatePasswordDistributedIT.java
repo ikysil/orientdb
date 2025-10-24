@@ -30,8 +30,8 @@ public class SimpleUpdatePasswordDistributedIT {
         setup.createRemote(
             SimpleDServerConfig.SERVER0, "root", "test", OrientDBConfig.defaultConfig());
     remote.execute(
-        "create database ? plocal users(admin identified by 'admin' role admin)", "test");
-    session = remote.open("test", "admin", "admin");
+        "create database ? plocal users(admin identified by 'adminpwd' role admin)", "test");
+    session = remote.open("test", "admin", "adminpwd");
   }
 
   @Test

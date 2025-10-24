@@ -138,10 +138,10 @@ public class AbstractShardingScenarioTest extends AbstractScenarioTest {
     // checking total amount of records (map-reduce aggregation)
     if (!orientDB.exists(getDatabaseName())) {
       orientDB.execute(
-          "create database ? plocal users(admin identified by 'admin' role admin)",
+          "create database ? plocal users(admin identified by 'adminpwd' role admin)",
           getDatabaseName());
     }
-    ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "admin");
+    ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "adminpwd");
 
     try {
       OResultSet clients = graph.query("select from Client");
@@ -161,10 +161,10 @@ public class AbstractShardingScenarioTest extends AbstractScenarioTest {
         OrientDB orientDB1 = server.getServerInstance().getContext();
         if (!orientDB1.exists(getDatabaseName())) {
           orientDB1.execute(
-              "create database ? plocal users(admin identified by 'admin' role admin)",
+              "create database ? plocal users(admin identified by 'adminpwd' role admin)",
               getDatabaseName());
         }
-        graph = orientDB1.open(getDatabaseName(), "admin", "admin");
+        graph = orientDB1.open(getDatabaseName(), "admin", "adminpwd");
         try {
           String sqlCommand =
               "select from cluster:client_"
@@ -213,10 +213,10 @@ public class AbstractShardingScenarioTest extends AbstractScenarioTest {
       OrientDB context = server.getServerInstance().getContext();
       if (!context.exists(getDatabaseName())) {
         context.execute(
-            "create database ? plocal users(admin identified by 'admin' role admin)",
+            "create database ? plocal users(admin identified by 'adminpwd' role admin)",
             getDatabaseName());
       }
-      ODatabaseSession db = context.open(getDatabaseName(), "admin", "admin");
+      ODatabaseSession db = context.open(getDatabaseName(), "admin", "adminpwd");
       dbs.add(db);
     }
 
@@ -353,10 +353,10 @@ public class AbstractShardingScenarioTest extends AbstractScenarioTest {
         // checking total amount of records (map-reduce aggregation)
         if (!orientDB.exists(getDatabaseName())) {
           orientDB.execute(
-              "create database ? plocal users(admin identified by 'admin' role admin)",
+              "create database ? plocal users(admin identified by 'adminpwd' role admin)",
               getDatabaseName());
         }
-        ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "admin");
+        ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "adminpwd");
 
         for (int i = 0; i < count; i++) {
 
@@ -433,7 +433,7 @@ public class AbstractShardingScenarioTest extends AbstractScenarioTest {
       OVertex client = graph.newVertex("Client");
       client.setProperty("name", uniqueId);
       client.setProperty("updated", false);
-      client.save(shardName);
+      graph.save(client, shardName);
 
       return client;
     }
@@ -441,7 +441,7 @@ public class AbstractShardingScenarioTest extends AbstractScenarioTest {
     protected void updateVertex(ODatabaseDocument graph, int i) {
       OVertex vertex = loadVertex(graph, this.shardName, this.serverId, this.threadId, i);
       vertex.setProperty("updated", true);
-      vertex.save();
+      graph.save(vertex);
     }
 
     protected void checkVertex(ODatabaseDocument graph, int i) {
@@ -451,21 +451,21 @@ public class AbstractShardingScenarioTest extends AbstractScenarioTest {
 
     protected void updateVertex(ODatabaseDocument graph, OVertex vertex) {
       vertex.setProperty("updated", true);
-      vertex.save();
+      graph.save(vertex);
     }
 
     protected void checkVertex(ODatabaseDocument graph, OVertex vertex) {
-      vertex.reload();
+      graph.reload(vertex);
       assertEquals(vertex.getProperty("updated"), Boolean.TRUE);
     }
 
     protected void deleteRecord(ODatabaseDocument graph, OVertex vertex) {
-      vertex.delete();
+      graph.delete(vertex);
     }
 
     protected void checkRecordIsDeleted(ODatabaseDocument graph, OVertex vertex) {
       try {
-        vertex.reload();
+        graph.reload(vertex);
         fail("Record found while it should be deleted");
       } catch (ORecordNotFoundException e) {
       }

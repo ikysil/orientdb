@@ -41,10 +41,10 @@ public class ConcurrentDistributedUpdateIT extends AbstractScenarioTest {
 
     if (!orientDB.exists(getDatabaseName())) {
       orientDB.execute(
-          "create database ? plocal users(admin identified by 'admin' role admin)",
+          "create database ? plocal users(admin identified by 'adminpwd' role admin)",
           getDatabaseName());
     }
-    ODatabaseDocument orientGraph = orientDB.open(getDatabaseName(), "admin", "admin");
+    ODatabaseDocument orientGraph = orientDB.open(getDatabaseName(), "admin", "adminpwd");
     OClass clazz = orientGraph.getClass("Test");
     if (clazz == null) {
       log("Creating vertex type - " + "Test");
@@ -55,16 +55,16 @@ public class ConcurrentDistributedUpdateIT extends AbstractScenarioTest {
 
     if (!orientDB.exists(getDatabaseName())) {
       orientDB.execute(
-          "create database ? plocal users(admin identified by 'admin' role admin)",
+          "create database ? plocal users(admin identified by 'adminpwd' role admin)",
           getDatabaseName());
     }
-    ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "admin");
+    ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "adminpwd");
     for (int i = 0; i < 2; i++) {
       OVertex vertex = graph.newVertex("Test");
       vertex.setProperty("prop1", "v1-" + i);
       vertex.setProperty("prop2", "v2-1");
       vertex.setProperty("prop3", "v3-1");
-      vertex.save();
+      graph.save(vertex);
       if ((i % 100) == 0) {
         log("Created " + i + " nodes");
       }
@@ -90,12 +90,12 @@ public class ConcurrentDistributedUpdateIT extends AbstractScenarioTest {
                   .getServerInstance()
                   .getContext()
                   .execute(
-                      "create database ? plocal users(admin identified by 'admin' role admin)",
+                      "create database ? plocal users(admin identified by 'adminpwd' role admin)",
                       getDatabaseName());
             }
 
             ODatabaseDocument graph =
-                server.getServerInstance().openDatabase(getDatabaseName(), "admin", "admin");
+                server.getServerInstance().openDatabase(getDatabaseName(), "admin", "adminpwd");
             graph.begin();
 
             String query = "select from Test where prop2='v2-1'";
@@ -113,13 +113,13 @@ public class ConcurrentDistributedUpdateIT extends AbstractScenarioTest {
                     OElement vtx1 = vtx;
                     try {
                       vtx1.setProperty("prop5", "prop55");
-                      vtx1.save();
+                      graph.save(vtx1);
                       graph.commit();
                       graph.begin();
                       // log("[" + id + "/" + i + "/" + k + "] OK!\n");
                       break;
                     } catch (OConcurrentModificationException ex) {
-                      vtx1.reload();
+                      graph.reload(vtx1);
                     } catch (ODistributedRecordLockedException ex) {
                       log(
                           "["
@@ -133,9 +133,9 @@ public class ConcurrentDistributedUpdateIT extends AbstractScenarioTest {
                               + " for vertex "
                               + vtx1
                               + " \n");
-                      //                    ex.printStackTrace();
+                      // ex.printStackTrace();
                       update = false;
-                      //                    isRunning = false;
+                      // isRunning = false;
                       break;
                     } catch (Exception ex) {
                       log(

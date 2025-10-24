@@ -51,7 +51,7 @@ public class ServerClusterSchemaIT extends AbstractServerClusterTest {
           serverInstance
               .get(s)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
       try {
         System.out.println("Creating vertex class Client" + s + " against server " + g + "...");
@@ -71,7 +71,7 @@ public class ServerClusterSchemaIT extends AbstractServerClusterTest {
           serverInstance
               .get(s)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
       try {
         for (int i = 0; i < SERVERS; ++i) {
@@ -90,12 +90,13 @@ public class ServerClusterSchemaIT extends AbstractServerClusterTest {
           serverInstance
               .get(s)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
       try {
         for (int i = 0; i < SERVERS; ++i) {
           try {
-            final OVertex v = g.newVertex("Client" + i).save();
+            final OVertex v = g.newVertex("Client" + i);
+            g.save(v);
             Assert.assertTrue(false);
           } catch (OValidationException e) {
             // EXPECTED
@@ -113,13 +114,13 @@ public class ServerClusterSchemaIT extends AbstractServerClusterTest {
           serverInstance
               .get(s)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       g.begin();
 
       try {
         for (int i = 0; i < SERVERS; ++i) {
           try {
-            final OVertex v = g.newVertex("Client" + i).save();
+            final OVertex v = g.save(g.newVertex("Client" + i));
             g.commit();
             g.begin();
 

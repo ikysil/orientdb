@@ -43,9 +43,9 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
     OrientDB orientDB = getOrientDB();
     if (!orientDB.exists(dbName)) {
       orientDB.execute(
-          "create database ? plocal users(admin identified by 'admin' role admin)", dbName);
+          "create database ? plocal users(admin identified by 'adminpwd' role admin)", dbName);
     }
-    ODatabaseDocument orientGraph = orientDB.open(dbName, "admin", "admin");
+    ODatabaseDocument orientGraph = orientDB.open(dbName, "admin", "adminpwd");
     createVertexType(orientGraph, "Test");
     createVertexType(orientGraph, "Test1");
     orientGraph.close();
@@ -57,7 +57,7 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
       vertex.setProperty("prop1", "v1-" + i);
       vertex.setProperty("prop2", "v2-1");
       vertex.setProperty("prop3", "v3-1");
-      vertex.save();
+      graph.save(vertex);
       graph.commit();
       graph.begin();
       if ((i % 100) == 0) {
@@ -69,7 +69,7 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
       vertex.setProperty("prop1", "v1-" + i);
       vertex.setProperty("prop2", "v2-1");
       vertex.setProperty("prop3", "v3-1");
-      vertex.save();
+      graph.save(vertex);
       graph.commit();
       graph.begin();
       if ((i % 10) == 0) {
@@ -213,7 +213,7 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
                           try {
                             vtx1.setProperty("prop5", "prop55");
                             vtx1.setProperty("updateTime", new Date().toString());
-                            vtx1.save();
+                            graph.save(vtx1);
                             graph.commit();
                             graph.begin();
                             if (isException) {
@@ -224,11 +224,11 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
                             retry = false;
                             break;
                           } catch (OConcurrentModificationException ex) {
-                            vtx1.reload();
+                            graph.reload(vtx1);
                           } catch (ONeedRetryException ex) {
                             if (ex instanceof ONeedRetryException
                                 || ex.getCause() instanceof ONeedRetryException) {
-                              vtx1.reload();
+                              graph.reload(vtx1);
                             } else {
                               if (ex.getCause() instanceof ConcurrentModificationException) {
                                 ex.printStackTrace();
@@ -252,7 +252,7 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
                             isException = true;
                           } catch (ODistributedException ex) {
                             if (ex.getCause() instanceof ONeedRetryException) {
-                              vtx1.reload();
+                              graph.reload(vtx1);
                             } else {
                               if (ex.getCause() instanceof ConcurrentModificationException) {
                                 ex.printStackTrace();
@@ -350,7 +350,7 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
       log("Datastore pool created with size : 10, db location: " + getDBURL());
       graphReadFactory =
           new ODatabasePool(
-              getOrientDB(), dbName, "admin", "admin", OrientDBConfig.defaultConfig());
+              getOrientDB(), dbName, "admin", "adminpwd", OrientDBConfig.defaultConfig());
     }
     return graphReadFactory;
   }
@@ -369,7 +369,7 @@ public final class StandAloneDatabaseJavaThreadPoolTest {
         orientDB.execute(
             "create database "
                 + dbName
-                + " plocal users(admin identified by 'admin' role admin,reader identified by"
+                + " plocal users(admin identified by 'adminpwd' role admin,reader identified by"
                 + " 'reader' role reader,writer identified by 'writer' role writer )");
       } else {
         log(dbName + " database already exists");

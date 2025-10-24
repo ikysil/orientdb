@@ -168,7 +168,6 @@ public class OFunction {
             .getSharedContext()
             .getOrientDB()
             .getScriptManager()
-            .getCommandManager()
             .getScriptExecutor(getLanguage());
 
     return executor.executeFunction(iContext, getName(), args);
@@ -205,7 +204,6 @@ public class OFunction {
             .getSharedContext()
             .getOrientDB()
             .getScriptManager()
-            .getCommandManager()
             .getScriptExecutor(getLanguage());
 
     return executor.executeFunction(iContext, getName(), args);
@@ -219,16 +217,7 @@ public class OFunction {
     while (true) {
       try {
         if (callback != null) return callback.call(iArgs);
-
-        OScriptExecutor executor =
-            database
-                .getSharedContext()
-                .getOrientDB()
-                .getScriptManager()
-                .getCommandManager()
-                .getScriptExecutor(getLanguage());
-
-        result = executor.execute(database, getCode(), iArgs);
+        result = database.execute(getLanguage(), getCode(), iArgs);
 
         break;
 

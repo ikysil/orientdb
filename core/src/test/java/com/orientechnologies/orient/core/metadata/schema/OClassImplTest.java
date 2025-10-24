@@ -8,9 +8,14 @@ import static org.junit.Assert.assertTrue;
 
 import com.orientechnologies.BaseMemoryInternalDatabase;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
+import com.orientechnologies.orient.core.db.tool.ODatabaseExport;
+import com.orientechnologies.orient.core.db.tool.ODatabaseImport;
 import com.orientechnologies.orient.core.exception.OSchemaException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,8 +33,7 @@ import org.junit.Test;
 public class OClassImplTest extends BaseMemoryInternalDatabase {
 
   /**
-   * If class was not abstract and we call {@code setAbstract(false)} clusters should not be
-   * changed.
+   * If class was not abstract and we call {@code setAbstract(false)} clusters should not be changed.
    *
    * @throws Exception
    */
@@ -46,8 +50,7 @@ public class OClassImplTest extends BaseMemoryInternalDatabase {
   }
 
   /**
-   * If class was abstract and we call {@code setAbstract(false)} a new non default cluster should
-   * be created.
+   * If class was abstract and we call {@code setAbstract(false)} a new non default cluster should be created.
    *
    * @throws Exception
    */
@@ -500,7 +503,7 @@ public class OClassImplTest extends BaseMemoryInternalDatabase {
 
     ODocument record = db.newInstance(className);
     record.field("name", "foo");
-    record.save();
+    db.save(record);
 
     oClass.createProperty("name", OType.ANY);
 
@@ -519,5 +522,144 @@ public class OClassImplTest extends BaseMemoryInternalDatabase {
 
     oClass.setCustom("custom.attribute", "value2");
     assertEquals("value2", oClass.getCustom("custom.attribute"));
+  }
+
+  @Test
+  public void assignClusterBalanced() {
+    OSchema schema = db.getMetadata().getSchema();
+    OClass cl = schema.createClass("AutoClusterAssign", 6);
+    Set<String> nodes = new HashSet<>();
+    nodes.add("node1");
+    nodes.add("node2");
+    nodes.add("node3");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, false);
+
+    assertEquals(cl.getAllocation().getDefinedNodes().size(), 3);
+    assertEquals(cl.getAllocation().getAllocationClusters("node1").size(), 2);
+    assertEquals(cl.getAllocation().getAllocationClusters("node2").size(), 2);
+    assertEquals(cl.getAllocation().getAllocationClusters("node3").size(), 2);
+  }
+
+  @Test
+  public void reassignClusterBalanced() {
+    OSchema schema = db.getMetadata().getSchema();
+    OClass cl = schema.createClass("AutoClusterAssign", 12);
+    Set<String> nodes = new HashSet<>();
+    nodes.add("node1");
+    nodes.add("node2");
+    nodes.add("node3");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, false);
+
+    assertEquals(cl.getAllocation().getDefinedNodes().size(), 3);
+    assertEquals(cl.getAllocation().getAllocationClusters("node1").size(), 4);
+    assertEquals(cl.getAllocation().getAllocationClusters("node2").size(), 4);
+    assertEquals(cl.getAllocation().getAllocationClusters("node3").size(), 4);
+
+    nodes.add("node4");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, false);
+
+    assertEquals(cl.getAllocation().getDefinedNodes().size(), 4);
+    assertEquals(cl.getAllocation().getAllocationClusters("node1").size(), 3);
+    assertEquals(cl.getAllocation().getAllocationClusters("node2").size(), 3);
+    assertEquals(cl.getAllocation().getAllocationClusters("node3").size(), 3);
+    assertEquals(cl.getAllocation().getAllocationClusters("node4").size(), 3);
+  }
+
+  @Test
+  public void assignClusterBalancedShort() {
+    OSchema schema = db.getMetadata().getSchema();
+    OClass cl = schema.createClass("AutoClusterAssign", 2);
+    Set<String> nodes = new HashSet<>();
+    nodes.add("node1");
+    nodes.add("node2");
+    nodes.add("node3");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, false);
+
+    assertEquals(cl.getAllocation().getDefinedNodes().size(), 2);
+    for (String node : cl.getAllocation().getDefinedNodes()) {
+      assertEquals(cl.getAllocation().getAllocationClusters(node).size(), 1);
+    }
+  }
+
+  @Test
+  public void createClustersAndAssign() {
+    OSchema schema = db.getMetadata().getSchema();
+    OClass cl = schema.createClass("AutoClusterAssign", 2);
+    Set<String> nodes = new HashSet<>();
+    nodes.add("node1");
+    nodes.add("node2");
+    nodes.add("node3");
+    nodes.add("node4");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, true);
+
+    assertEquals(4, cl.getClusterIds().length);
+    assertEquals(4, cl.getAllocation().getDefinedNodes().size());
+    for (String node : cl.getAllocation().getDefinedNodes()) {
+      assertEquals(1, cl.getAllocation().getAllocationClusters(node).size());
+    }
+  }
+
+  @Test
+  public void expandClustersAndAssign() {
+    OSchema schema = db.getMetadata().getSchema();
+    OClass cl = schema.createClass("AutoClusterAssign", 2);
+    Set<String> nodes = new HashSet<>();
+    nodes.add("node1");
+    nodes.add("node2");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, true);
+
+    assertEquals(2, cl.getClusterIds().length);
+    assertEquals(2, cl.getAllocation().getDefinedNodes().size());
+    for (String node : cl.getAllocation().getDefinedNodes()) {
+      assertEquals(1, cl.getAllocation().getAllocationClusters(node).size());
+    }
+
+    nodes.add("node3");
+    nodes.add("node4");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, true);
+
+    assertEquals(4, cl.getClusterIds().length);
+    assertEquals(4, cl.getAllocation().getDefinedNodes().size());
+    for (String node : cl.getAllocation().getDefinedNodes()) {
+      assertEquals(1, cl.getAllocation().getAllocationClusters(node).size());
+    }
+  }
+
+  @Test
+  public void testExportImportAllocation() throws IOException {
+    OSchema schema = db.getMetadata().getSchema();
+    OClass cl = schema.createClass("AutoClusterAssign", 2);
+    Set<String> nodes = new HashSet<>();
+    nodes.add("node1");
+    nodes.add("node2");
+    nodes.add("node3");
+    nodes.add("node4");
+    ((OClassEmbedded) cl).autoAssignClusterOwnership(db, nodes, true);
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    ODatabaseExport export = new ODatabaseExport(db, bytes, iText -> {});
+    export.exportDatabase();
+    export.close();
+    context
+        .execute(
+            "create database allocationImport memory users(admin identified by 'adminpwd' role"
+                + " admin) ")
+        .close();
+    ODatabaseDocumentInternal impDb =
+        (ODatabaseDocumentInternal) context.open("allocationImport", "admin", "adminpwd");
+    ODatabaseImport imp =
+        new ODatabaseImport(impDb, new ByteArrayInputStream(bytes.toByteArray()), iText -> {});
+    imp.importDatabase();
+    imp.close();
+    ODatabaseDocumentInternal read =
+        (ODatabaseDocumentInternal) context.open("allocationImport", "admin", "adminpwd");
+
+    cl = read.getClass("AutoClusterAssign");
+    assertEquals(4, cl.getClusterIds().length);
+    assertEquals(4, cl.getAllocation().getDefinedNodes().size());
+    for (String node : cl.getAllocation().getDefinedNodes()) {
+      assertEquals(1, cl.getAllocation().getAllocationClusters(node).size());
+    }
+    // this is just for superclass compatibility
+    db = (ODatabaseDocumentInternal) context.open(getDatabaseName(), "admin", "adminpwd");
   }
 }

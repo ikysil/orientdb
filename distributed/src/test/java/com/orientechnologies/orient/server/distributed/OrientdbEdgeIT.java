@@ -81,7 +81,7 @@ public class OrientdbEdgeIT {
         new OrientDB("remote:localhost", "root", "root", OrientDBConfig.defaultConfig());
     if (!orientDB.exists("test")) {
       orientDB.execute(
-          "create database ? plocal users(admin identified by 'admin' role admin)", "test");
+          "create database ? plocal users(admin identified by 'adminpwd' role admin)", "test");
     }
 
     ODatabaseDocument t = orientDB.open("test", "root", "root");
@@ -129,7 +129,8 @@ public class OrientdbEdgeIT {
             //        + "                <parameter name=\"graph.pool.max\" value=\"50\"/>\n" + "
             //         </parameters>\n"
             //        + "        </handler>\n" + "       \n"
-            + "<handler class=\"com.orientechnologies.orient.server.hazelcast.OHazelcastPlugin\">\n"
+            + "<handler"
+            + " class=\"com.orientechnologies.orient.server.distributed.impl.ODistributedPlugin\">\n"
             + "            <parameters>\n"
             + "                <parameter name=\"nodeName\" value=\"unittest\" />\n"
             + "                <parameter name=\"enabled\" value=\"true\"/>\n"
@@ -169,8 +170,6 @@ public class OrientdbEdgeIT {
             + "\n"
             + "        <!-- LOG: enable/Disable logging. Levels are: finer, fine, finest, info,"
             + " warning -->\n"
-            + "        <entry name=\"log.console.level\" value=\"info\"/>\n"
-            + "        <entry name=\"log.file.level\" value=\"info\"/>\n"
             + "    </properties>\n"
             + " <isAfterFirstTime>true</isAfterFirstTime></orient-server>");
 
@@ -204,15 +203,15 @@ public class OrientdbEdgeIT {
     t.begin();
     try {
       OVertex v1 = t.newVertex("some-v-label");
-      v1.save();
+      t.save(v1);
       OVertex v2 = t.newVertex("some-v-label");
       v1.setProperty("_id", "v1");
       v2.setProperty("_id", "v2");
-      v2.save();
+      t.save(v2);
 
       OEdge edge = v1.addEdge(v2, "some-label");
       edge.setProperty("some", "thing");
-      edge.save();
+      t.save(edge);
       t.commit();
       t.close();
 

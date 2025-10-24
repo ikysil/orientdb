@@ -53,7 +53,7 @@ public class ServerRemoteDocumentIT extends AbstractServerClusterTest {
   protected void executeTest() throws Exception {
     String id = String.valueOf(Math.random());
     try (OrientDB orientDB = new OrientDB("remote:localhost", OrientDBConfig.defaultConfig())) {
-      ODatabaseDocument db = orientDB.open(getDatabaseName(), "admin", "admin");
+      ODatabaseDocument db = orientDB.open(getDatabaseName(), "admin", "adminpwd");
 
       db.getMetadata().getSchema().createClass("Client");
       db.getMetadata().getSchema().createClass("Matter");
@@ -67,14 +67,14 @@ public class ServerRemoteDocumentIT extends AbstractServerClusterTest {
         List clientMatters = new ArrayList();
         clientMatters.add(matter);
         client.field("matters", clientMatters);
-        client.save();
-        matter.save();
+        db.save(client);
+        db.save(matter);
         db.commit();
       } finally {
         db.close();
       }
 
-      ODatabaseDocument db2 = orientDB.open(getDatabaseName(), "admin", "admin");
+      ODatabaseDocument db2 = orientDB.open(getDatabaseName(), "admin", "adminpwd");
       db2.begin();
       try {
         ODocument matter = null;
@@ -88,8 +88,8 @@ public class ServerRemoteDocumentIT extends AbstractServerClusterTest {
           throw new Exception("Matter not found with id" + id);
         }
         matter.field(
-            "client", new ODocument().save(db2.getClusterNameById(db2.getDefaultClusterId())));
-        matter.save();
+            "client", db2.save(new ODocument(), db2.getClusterNameById(db2.getDefaultClusterId())));
+        db2.save(matter);
         db2.commit();
       } finally {
         db2.close();

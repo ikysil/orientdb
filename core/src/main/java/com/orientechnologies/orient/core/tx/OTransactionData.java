@@ -12,6 +12,7 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentInternal;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ODocumentSerializerDelta;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkDistributed;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -29,7 +30,7 @@ public class OTransactionData {
   }
 
   public static OTransactionData read(DataInput dataInput) throws IOException {
-    OTransactionId transactionId = OTransactionId.read(dataInput);
+    OTransactionId transactionId = OTransactionId.readNetwork(dataInput);
     int entries = dataInput.readInt();
     OTransactionData data = new OTransactionData(transactionId);
     while (entries-- > 0) {
@@ -62,7 +63,7 @@ public class OTransactionData {
   }
 
   public void write(DataOutput output) throws IOException {
-    transactionId.write(output);
+    transactionId.writeNetwork(output);
     output.writeInt(changes.size());
     for (OTransactionDataChange change : changes) {
       change.serialize(output);

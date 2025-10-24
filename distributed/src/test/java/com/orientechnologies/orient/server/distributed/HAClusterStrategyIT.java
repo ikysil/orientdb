@@ -36,7 +36,10 @@ public class HAClusterStrategyIT extends AbstractHARemoveNode {
   @Override
   public void executeTest() throws Exception {
     final ODatabaseDocument g =
-        serverInstance.get(0).getServerInstance().openDatabase(getDatabaseName(), "admin", "admin");
+        serverInstance
+            .get(0)
+            .getServerInstance()
+            .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
     g.createVertexClass("Test");
     g.close();
@@ -49,7 +52,7 @@ public class HAClusterStrategyIT extends AbstractHARemoveNode {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       graph.begin();
 
       // should always be 'local', but eventually changes to 'round-robin'
@@ -67,7 +70,7 @@ public class HAClusterStrategyIT extends AbstractHARemoveNode {
       OVertex v = graph.newVertex("Test");
       v.setProperty("firstName", "Roger");
       v.setProperty("lastName", "Smith");
-      v.save();
+      graph.save(v);
 
       graph.commit();
 

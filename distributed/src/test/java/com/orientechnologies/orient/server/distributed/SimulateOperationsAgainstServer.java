@@ -42,7 +42,7 @@ public class SimulateOperationsAgainstServer {
       new String[] {"remote:localhost:2424/test", "remote:localhost:2425/test"};
   protected String className = "Customer";
   protected String userName = "admin";
-  protected String userPassword = "admin";
+  protected String userPassword = "adminpwd";
 
   private OrientDB ctx;
 
@@ -123,7 +123,7 @@ public class SimulateOperationsAgainstServer {
       for (int i = 0; i < iProperties; ++i) {
         doc.field("prop" + i, "propValue" + i);
       }
-      doc.save();
+      db.save(doc);
     } finally {
       db.close();
     }
@@ -171,7 +171,7 @@ public class SimulateOperationsAgainstServer {
         else {
           doc = (ODocument) result.get(0).getElement().get();
           doc.field("updated", "" + (doc.getVersion() + 1));
-          doc.save();
+          db.save(doc);
           log(threadId, iCycle, dbUrl, " updated item " + iSkip + " RID=" + result.get(0));
         }
 
@@ -190,7 +190,7 @@ public class SimulateOperationsAgainstServer {
                 + "/"
                 + MAX_RETRY
                 + "...");
-        if (doc != null) doc.reload(null, true);
+        if (doc != null) db.reload(doc, null, true);
 
       } catch (ORecordNotFoundException e) {
         log(threadId, iCycle, dbUrl, " update no item " + iSkip + " because not found");
@@ -219,7 +219,7 @@ public class SimulateOperationsAgainstServer {
           log(threadId, iCycle, dbUrl, " delete no item " + iSkip + " because out of range");
         else {
           doc = result.get(0).getElement().get().getRecord();
-          doc.delete();
+          db.delete(doc);
           log(threadId, iCycle, dbUrl, " deleted item " + iSkip + " RID=" + result.get(0));
         }
         break;
@@ -235,7 +235,7 @@ public class SimulateOperationsAgainstServer {
                 + "/"
                 + MAX_RETRY
                 + "...");
-        if (doc != null) doc.reload(null, true);
+        if (doc != null) db.reload(doc, null, true);
       } catch (ORecordNotFoundException e) {
         log(threadId, iCycle, dbUrl, " delete no item " + iSkip + " because not found");
       } finally {

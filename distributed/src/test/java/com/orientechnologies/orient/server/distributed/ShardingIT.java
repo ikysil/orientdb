@@ -84,15 +84,15 @@ public class ShardingIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       graph.begin();
 
       try {
         product = graph.newVertex("Product-Type");
-        product.save();
+        graph.save(product);
         fishing = graph.newVertex("Hobby-Type");
         fishing.setProperty("name-property", "Fishing");
-        fishing.save();
+        graph.save(fishing);
         graph.commit();
       } finally {
         graph.close();
@@ -112,11 +112,11 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(i)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
         try {
 
           vertices[i] = graph.newVertex("Client-Type");
-          vertices[i].save();
+          graph.save(vertices[i]);
 
           final int clId = vertices[i].getIdentity().getClusterId();
 
@@ -144,13 +144,13 @@ public class ShardingIT extends AbstractServerClusterTest {
             // CREATE A LIGHT-WEIGHT EDGE
             final OEdge e = vertices[i].addEdge(vertices[i - 1], "Knows-Type");
             e.setProperty("blob", new byte[1000]);
-            e.save();
+            graph.save(e);
           }
 
           // CREATE A REGULAR EDGE
           final OEdge edge = vertices[i].addEdge(product, "Buy-Type");
           edge.setProperty("price", 1000 * i);
-          edge.save();
+          graph.save(edge);
 
         } finally {
           graph.close();
@@ -167,7 +167,7 @@ public class ShardingIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       try {
         for (int i = 0; i < vertices.length; ++i)
           System.out.println("Created vertex " + i + ": " + vertices[i].getRecord());
@@ -181,7 +181,7 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(i)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
         try {
 
           // CREATE A REGULAR EDGE
@@ -198,10 +198,10 @@ public class ShardingIT extends AbstractServerClusterTest {
           Assert.assertEquals(e.getProperty("real"), true);
 
           Assert.assertEquals(1, e.getRecord().getVersion());
-          e.getFrom().getRecord().reload();
+          graph.reload(e.getFrom().getRecord());
           Assert.assertEquals(versions[i] + 1, e.getFrom().getRecord().getVersion());
 
-          e.getTo().getRecord().reload();
+          graph.reload(e.getTo().getRecord());
           Assert.assertEquals(
               fishing.getRecord().getVersion() + i + 1, e.getTo().getRecord().getVersion());
 
@@ -222,7 +222,7 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(server)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
 
         System.out.println("Query from server " + server + "...");
 
@@ -275,7 +275,7 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(0)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
         try {
           // MISC QUERIES
           OResultSet result =
@@ -312,7 +312,7 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(server)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
         try {
 
           OResultSet result = g.command("select from `Client-Type`");
@@ -345,7 +345,7 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(server)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
         try {
 
           OResultSet result =
@@ -373,7 +373,7 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(server)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
         try {
 
           OResultSet result =
@@ -406,7 +406,7 @@ public class ShardingIT extends AbstractServerClusterTest {
             serverInstance
                 .get(server)
                 .getServerInstance()
-                .openDatabase(getDatabaseName(), "admin", "admin");
+                .openDatabase(getDatabaseName(), "admin", "adminpwd");
         try {
 
           OResultSet result = g.command("select `name-property`, count(*) from `Client-Type`");
@@ -435,7 +435,7 @@ public class ShardingIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       try {
         OResultSet countResultBeforeDelete = g.command("select from `Client-Type`");
         long totalBeforeDelete = countResultBeforeDelete.stream().count();
@@ -449,7 +449,7 @@ public class ShardingIT extends AbstractServerClusterTest {
 
           if (count % 2 == 0) {
             // DELETE ONLY EVEN INSTANCES
-            v.delete();
+            g.delete(v);
             count++;
           }
         }
@@ -477,16 +477,16 @@ public class ShardingIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       gTx.begin();
       try {
         v1 = gTx.newVertex("Client-Type");
         v1.setProperty("name-property", "test1");
-        v1.save();
+        gTx.save(v1);
 
         v2 = gTx.newVertex("Client-Type");
         v2.setProperty("name-property", "test1");
-        v2.save();
+        gTx.save(v2);
         gTx.commit();
       } finally {
         gTx.close();
@@ -496,12 +496,12 @@ public class ShardingIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       gTx.begin();
       try {
         // DELETE IN TX
-        v1.delete();
-        v2.delete();
+        gTx.delete(v1);
+        gTx.delete(v2);
         gTx.commit();
       } finally {
         gTx.close();
@@ -511,7 +511,7 @@ public class ShardingIT extends AbstractServerClusterTest {
           serverInstance
               .get(0)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       gTx.begin();
       try {
         OResultSet countResultAfterFullDelete = gTx.command("select from `Client-Type`");
@@ -539,7 +539,7 @@ public class ShardingIT extends AbstractServerClusterTest {
           serverInstance
               .get(server)
               .getServerInstance()
-              .openDatabase(getDatabaseName(), "admin", "admin");
+              .openDatabase(getDatabaseName(), "admin", "adminpwd");
       try {
 
         OResultSet result =

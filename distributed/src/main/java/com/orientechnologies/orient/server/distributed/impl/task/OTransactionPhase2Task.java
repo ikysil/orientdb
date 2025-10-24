@@ -9,9 +9,12 @@ import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
+import com.orientechnologies.orient.core.serialization.serializer.record.OSerializationContext;
+import com.orientechnologies.orient.core.serialization.serializer.record.OSerializationContextImpl;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkDistributed;
 import com.orientechnologies.orient.core.serialization.serializer.record.binary.ORecordSerializerNetworkV37;
-import com.orientechnologies.orient.core.tx.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionIdPromise;
 import com.orientechnologies.orient.server.OServer;
 import com.orientechnologies.orient.server.distributed.ODistributedRequestId;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
@@ -31,7 +34,7 @@ public class OTransactionPhase2Task extends OAbstractRemoteTask implements OLock
 
   public static final int FACTORYID = 44;
 
-  private OTransactionId transactionId;
+  private OTransactionIdPromise transactionId;
   private ODistributedRequestId firstPhaseId;
   // whether to commit or abort.
   private boolean success;
@@ -45,7 +48,7 @@ public class OTransactionPhase2Task extends OAbstractRemoteTask implements OLock
       boolean success,
       SortedSet<ORID> rids,
       SortedSet<OTransactionUniqueKey> uniqueIndexKeys,
-      OTransactionId transactionId) {
+      OTransactionIdPromise transactionId) {
     this.firstPhaseId = firstPhaseId;
     this.success = success;
     this.involvedRids = rids;
@@ -67,7 +70,7 @@ public class OTransactionPhase2Task extends OAbstractRemoteTask implements OLock
 
   @Override
   public void fromStream(DataInput in, ORemoteTaskFactory factory) throws IOException {
-    this.transactionId = OTransactionId.read(in);
+    this.transactionId = OTransactionIdPromise.readNetwork(in);
     int nodeId = in.readInt();
     long messageId = in.readLong();
     this.firstPhaseId = new ODistributedRequestId(nodeId, messageId);
@@ -96,7 +99,7 @@ public class OTransactionPhase2Task extends OAbstractRemoteTask implements OLock
 
   @Override
   public void toStream(DataOutput out) throws IOException {
-    this.transactionId.write(out);
+    this.transactionId.writeNetwork(out);
     out.writeInt(firstPhaseId.getNodeId());
     out.writeLong(firstPhaseId.getMessageId());
     out.writeInt(involvedRids.size());
@@ -105,17 +108,18 @@ public class OTransactionPhase2Task extends OAbstractRemoteTask implements OLock
     }
     out.writeBoolean(success);
     ORecordSerializerNetworkDistributed serializer = ORecordSerializerNetworkDistributed.INSTANCE;
-    writeTxUniqueIndexKeys(uniqueIndexKeys, serializer, out);
+    writeTxUniqueIndexKeys(uniqueIndexKeys, serializer, out, new OSerializationContextImpl());
   }
 
   public static void writeTxUniqueIndexKeys(
       SortedSet<OTransactionUniqueKey> uniqueIndexKeys,
       ORecordSerializerNetworkV37 serializer,
-      DataOutput out)
+      DataOutput out,
+      OSerializationContext ctx)
       throws IOException {
     out.writeInt(uniqueIndexKeys.size());
     for (OTransactionUniqueKey pair : uniqueIndexKeys) {
-      pair.write(serializer, out);
+      pair.write(serializer, out, ctx);
     }
   }
 
@@ -233,6 +237,6 @@ public class OTransactionPhase2Task extends OAbstractRemoteTask implements OLock
   }
 
   public OTransactionId getTransactionId() {
-    return transactionId;
+    return transactionId.getId();
   }
 }

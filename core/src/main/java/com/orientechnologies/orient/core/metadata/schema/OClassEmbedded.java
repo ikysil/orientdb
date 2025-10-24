@@ -1,9 +1,12 @@
 package com.orientechnologies.orient.core.metadata.schema;
 
+import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.util.OArrays;
+import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
+import com.orientechnologies.orient.core.db.ODatabaseInternal;
 import com.orientechnologies.orient.core.db.OScenarioThreadLocal;
 import com.orientechnologies.orient.core.exception.ODatabaseException;
 import com.orientechnologies.orient.core.exception.OSchemaException;
@@ -16,9 +19,12 @@ import com.orientechnologies.orient.core.storage.OCluster;
 import com.orientechnologies.orient.core.storage.OStorage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /** Created by tglman on 14/06/17. */
@@ -815,5 +821,187 @@ public class OClassEmbedded extends OClassImpl {
 
     final OIndexManager indexManager = getDatabase().getMetadata().getIndexManager();
     for (String indexName : indexesToAdd) indexManager.addClusterToIndex(clusterName, indexName);
+  }
+
+  public void addAllocations(
+      ODatabaseDocumentInternal database, String node, List<String> clusters) {
+    database.checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_UPDATE);
+
+    acquireSchemaWriteLock(database);
+    try {
+      for (String cl : clusters) {
+        if (!hasClusterId(database.getClusterIdByName(cl))) {
+          throw new OSchemaException(
+              String.format("Cluster '%s' is not associated to the class", cl));
+        }
+      }
+
+      if (this.allocation == null) {
+        this.allocation = new OClassAllocationImpl();
+      }
+      this.allocation.addNodeClusters(node, clusters);
+    } finally {
+      releaseSchemaWriteLock(database, true);
+    }
+  }
+
+  public void removeAllocations(
+      ODatabaseDocumentInternal database, String node, List<String> clusters) {
+    database.checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_UPDATE);
+
+    acquireSchemaWriteLock(database);
+    try {
+      if (this.allocation != null) {
+        this.allocation.removeNodeClusters(node, clusters);
+      }
+    } finally {
+      releaseSchemaWriteLock(database, true);
+    }
+  }
+
+  public void removeAllocations(ODatabaseDocumentInternal database, List<String> clusters) {
+    database.checkSecurity(ORule.ResourceGeneric.SCHEMA, ORole.PERMISSION_UPDATE);
+
+    acquireSchemaWriteLock(database);
+    try {
+      if (this.allocation != null) {
+        this.allocation.removeClusters(clusters);
+      }
+    } finally {
+      releaseSchemaWriteLock(database, true);
+    }
+  }
+
+  public void autoAssignClusterOwnership(
+      final ODatabaseDocumentInternal db,
+      final Set<String> availableNodes,
+      final boolean canCreateNewClusters) {
+
+    if (availableNodes.isEmpty())
+      // NO MASTER, AVOID REASSIGNMENT
+      return;
+
+    if (this.isAbstract()) return;
+
+    if (getClusterIds().length < availableNodes.size()) {
+      boolean enabledCreateCluster =
+          db.getConfiguration()
+              .getValueAsBoolean(OGlobalConfiguration.DISTRIBUTED_AUTO_CREATE_CLUSTERS);
+      if (canCreateNewClusters && enabledCreateCluster) {
+        int toCreate = availableNodes.size() - getClusterIds().length;
+        // CREATE A NEW CLUSTER WHERE THE LOCAL NODE IS THE MASTER
+        String newClusterName;
+        for (int i = 1; toCreate > 0; ++i) {
+          newClusterName = getName().toLowerCase(Locale.ENGLISH) + "_" + i;
+          if (!db.existsCluster(newClusterName)) {
+            addCluster(newClusterName);
+            toCreate--;
+          }
+        }
+      }
+    }
+
+    final int[] clusterIds = getClusterIds();
+
+    final Set<String> clusterNames = new HashSet<>(clusterIds.length);
+    for (int clusterId : clusterIds) {
+      final String clusterName = db.getClusterNameById(clusterId);
+      if (clusterName != null) clusterNames.add(clusterName);
+    }
+
+    // RE-BALANCE THE CLUSTER BASED ON AN AVERAGE OF NUMBER OF NODES
+    reassignClusters(db, availableNodes, clusterNames);
+
+    Collection<String> allClusterNames = db.getClusterNames();
+  }
+
+  public void internalAddCluster(final ODatabaseInternal db, final String newClusterName) {
+    try {
+      OScenarioThreadLocal.executeAsDefault(
+          () -> {
+            addCluster(newClusterName);
+            return null;
+          });
+    } catch (Exception e) {
+      if (!db.getClusterNames().contains(newClusterName)) {
+        // NOT CREATED
+        throw OException.wrapException(
+            new ODatabaseException(
+                "Error on creating cluster '" + newClusterName + "' in class '" + this + "'"),
+            e);
+      }
+    }
+  }
+
+  protected void reassignClusters(
+      ODatabaseDocumentInternal db, Set<String> availableNodes, Set<String> clusterNames) {
+    if (getAllocation() == null) {
+      int size = clusterNames.size() / availableNodes.size();
+      if (size == 0) {
+        size = 1;
+      }
+      List<String> all = new ArrayList<>(clusterNames);
+      int cursor = size;
+      for (String node : availableNodes) {
+        if (cursor > all.size()) {
+          var overflow = cursor - all.size();
+          var newSize = size - overflow;
+          if (newSize > 0) {
+            addAllocations(db, node, all.subList(all.size() - newSize, all.size()));
+          }
+          break;
+        } else {
+          addAllocations(db, node, all.subList(cursor - size, cursor));
+          cursor += size;
+        }
+      }
+    } else {
+      int size = clusterNames.size() / availableNodes.size();
+      if (size == 0) {
+        return;
+      }
+      List<String> unassigned = new ArrayList<>(clusterNames);
+      List<String> definedNodes = new ArrayList<>(getAllocation().getDefinedNodes());
+      List<String> toRemoveNodes = new ArrayList<>(definedNodes);
+      toRemoveNodes.removeAll(availableNodes);
+      definedNodes.retainAll(availableNodes);
+      List<String> toReassing = new ArrayList<>();
+      List<String> toReceive = new ArrayList<>(availableNodes);
+      toReceive.removeAll(definedNodes);
+      for (String node : toRemoveNodes) {
+        List<String> assigned = getAllocation().getAllocationClusters(node);
+        List<String> toMove = assigned.subList(size, assigned.size());
+        removeAllocations(db, node, toMove);
+        toReassing.addAll(toMove);
+      }
+
+      for (String node : definedNodes) {
+        List<String> assigned = getAllocation().getAllocationClusters(node);
+        unassigned.removeAll(assigned);
+        if (assigned.size() > size) {
+          List<String> toMove = assigned.subList(size, assigned.size());
+          toReassing.addAll(toMove);
+          removeAllocations(db, node, toMove);
+        } else if (assigned.size() < size) {
+          toReceive.add(node);
+        }
+      }
+      toReassing.addAll(unassigned);
+      int cursor = size;
+      for (String node : toReceive) {
+        if (cursor > toReassing.size()) {
+          var overflow = cursor - toReassing.size();
+          var newSize = size - overflow;
+          if (newSize > 0) {
+            addAllocations(
+                db, node, toReassing.subList(toReassing.size() - newSize, toReassing.size()));
+          }
+          break;
+        } else {
+          addAllocations(db, node, toReassing.subList(cursor - size, cursor));
+          cursor += size;
+        }
+      }
+    }
   }
 }

@@ -129,7 +129,7 @@ public class WWConflictAndNodeInDeadlockScenarioIT extends AbstractScenarioTest 
       dbServer1.activateOnCurrentThread();
       ODocument r1onServer1 =
           new ODocument("Person").fields("id", "R001", "firstName", "Han", "lastName", "Solo");
-      r1onServer1.save();
+      dbServer1.save(r1onServer1);
       Thread.sleep(200);
       r1onServer1 =
           retrieveRecord(
@@ -185,11 +185,11 @@ public class WWConflictAndNodeInDeadlockScenarioIT extends AbstractScenarioTest 
       ODocument r1onServer3 = retrieveRecord(serverInstance.get(2), "R001");
 
       dbServer1.activateOnCurrentThread();
-      r1onServer1.reload();
+      dbServer1.reload(r1onServer1);
       dbServer2.activateOnCurrentThread();
-      r1onServer2.reload();
+      dbServer2.reload(r1onServer2);
       dbServer3.activateOnCurrentThread();
-      r1onServer3.reload();
+      dbServer3.reload(r1onServer3);
 
       /**
        * Checking records' values - CASE 1 - r1 on server1 has the values set by the client c1 - r1

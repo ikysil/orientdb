@@ -3,13 +3,14 @@ package com.orientechnologies.orient.server.distributed.impl.task;
 import static org.junit.Assert.assertTrue;
 
 import com.orientechnologies.orient.core.db.OrientDB;
-import com.orientechnologies.orient.core.tx.OTransactionId;
+import com.orientechnologies.orient.core.transaction.ONodeId;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionIdPromise;
 import com.orientechnologies.orient.server.OServer;
 import com.orientechnologies.orient.server.distributed.ODistributedRequestId;
 import com.orientechnologies.orient.server.distributed.impl.ODatabaseDocumentDistributed;
 import com.orientechnologies.orient.server.distributed.impl.task.transaction.OTxSuccess;
 import java.io.IOException;
-import java.util.Optional;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,19 +27,20 @@ public class ODDLPhasesExecutionTests {
     server.activate();
     OrientDB orientDB = server.getContext();
     orientDB.execute(
-        "create database ? plocal users(admin identified by 'admin' role admin)",
+        "create database ? plocal users(admin identified by 'adminpwd' role admin)",
         ODDLPhasesExecutionTests.class.getSimpleName());
   }
 
   @Test
   public void testExecuteFirstAndSecondPhase() throws Exception {
     OrientDB orientDB = server.getContext();
+    ONodeId nodeId = new ONodeId("node");
     ODatabaseDocumentDistributed session =
         (ODatabaseDocumentDistributed)
-            orientDB.open(ODDLPhasesExecutionTests.class.getSimpleName(), "admin", "admin");
+            orientDB.open(ODDLPhasesExecutionTests.class.getSimpleName(), "admin", "adminpwd");
     String command = "create cluster bla";
-    OTransactionId first = new OTransactionId(Optional.of("node"), 10, 1);
-    OTransactionId second = new OTransactionId(Optional.of("node"), 30, 1);
+    OTransactionIdPromise first = new OTransactionIdPromise(nodeId, new OTransactionId(10, 1));
+    OTransactionIdPromise second = new OTransactionIdPromise(nodeId, new OTransactionId(30, 1));
 
     OSQLCommandTaskFirstPhase message = new OSQLCommandTaskFirstPhase(command, first, second);
     ODistributedRequestId requestId = new ODistributedRequestId(1, 10);

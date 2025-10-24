@@ -24,7 +24,6 @@ import com.orientechnologies.orient.core.exception.ORecordNotFoundException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OClass.INDEX_TYPE;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.record.OElement;
 import com.orientechnologies.orient.core.record.OVertex;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
 import com.orientechnologies.orient.core.storage.ORecordDuplicatedException;
@@ -162,12 +161,12 @@ public final class DistributedConfigReloadIT {
                     boolean needRetry = true;
                     for (int i = 0; i < 10 && needRetry; i++) {
                       try {
-                        vtx.delete();
+                        graph.delete(vtx);
                         graph.commit();
                         needRetry = false;
                       } catch (ONeedRetryException ex) {
                         try {
-                          ((OElement) vtx).reload();
+                          graph.reload(vtx);
                         } catch (ORecordNotFoundException e) {
                           // BY LUCA
                           log(
@@ -392,9 +391,9 @@ public final class DistributedConfigReloadIT {
       if (!orientDB.exists(dbName)) {
         log("Database does not exists. New database is created");
         orientDB.execute(
-            "create database ? plocal users(admin identified by 'admin' role admin)", dbName);
+            "create database ? plocal users(admin identified by 'adminpwd' role admin)", dbName);
 
-        ODatabaseDocument orientGraph = orientDB.open(dbName, "admin", "admin");
+        ODatabaseDocument orientGraph = orientDB.open(dbName, "admin", "adminpwd");
         orientGraph.command("ALTER DATABASE custom strictSQL=false").close();
         orientGraph.close();
         isNewDB = true;

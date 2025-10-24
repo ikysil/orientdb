@@ -559,10 +559,7 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
             "Cannot execute query on non idempotent statement: " + query);
       }
       OResultSet original = statement.execute(this, args, true);
-      OLocalResultSetLifecycleDecorator result =
-          new OLocalResultSetLifecycleDecorator((OResultSetInternal) original, newQueryId());
-      queryStarted(result);
-      return result;
+      return attachQuery(original);
     } finally {
       cleanQueryState();
       getSharedContext().getOrientDB().endCommand();
@@ -582,10 +579,7 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
             "Cannot execute query on non idempotent statement: " + query);
       }
       OResultSet original = statement.execute(this, args, true);
-      OLocalResultSetLifecycleDecorator result =
-          new OLocalResultSetLifecycleDecorator((OResultSetInternal) original, newQueryId());
-      queryStarted(result);
-      return result;
+      return attachQuery(original);
     } finally {
       cleanQueryState();
       getSharedContext().getOrientDB().endCommand();
@@ -602,18 +596,16 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
     try {
       OStatement statement = OSQLEngine.parse(query, this);
       OResultSet original = statement.execute(this, args, true);
-      OLocalResultSetLifecycleDecorator result;
+      OResultSet result;
       if (!statement.isIdempotent()) {
         // fetch all, close and detach
         OResultSetReady prefetched = new OResultSetReady();
         original.forEachRemaining(x -> prefetched.add(x));
         original.close();
         queryCompleted();
-        result = new OLocalResultSetLifecycleDecorator(prefetched, newQueryId());
+        result = attachQuery(prefetched);
       } else {
-        // stream, keep open and attach to the current DB
-        result = new OLocalResultSetLifecycleDecorator((OResultSetInternal) original, newQueryId());
-        queryStarted(result);
+        result = attachQuery(original);
       }
       return result;
     } finally {
@@ -676,17 +668,12 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
     getSharedContext().getOrientDB().startCommand(Optional.empty());
     try {
       preQueryStart();
-      OScriptExecutor executor =
-          sharedContext
-              .getOrientDB()
-              .getScriptManager()
-              .getCommandManager()
-              .getScriptExecutor(language);
+
       OResultSet original;
 
       this.storage.pauseConfigurationUpdateNotifications();
       try {
-        original = executor.execute(this, script, params);
+        original = this.execute(language, script, params);
       } finally {
         this.storage.fireConfigurationUpdateNotifications();
       }
@@ -711,19 +698,17 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
 
       OStatement statement = OSQLEngine.parse(query, this);
       OResultSet original = statement.execute(this, args, true);
-      OLocalResultSetLifecycleDecorator result;
+      OResultSet result;
       if (!statement.isIdempotent()) {
         // fetch all, close and detach
         OResultSetReady prefetched = new OResultSetReady();
         original.forEachRemaining(x -> prefetched.add(x));
         original.close();
         queryCompleted();
-        result = new OLocalResultSetLifecycleDecorator(prefetched, newQueryId());
+        result = attachQuery(prefetched);
       } else {
         // stream, keep open and attach to the current DB
-        result = new OLocalResultSetLifecycleDecorator((OResultSetInternal) original, newQueryId());
-
-        queryStarted(result);
+        result = attachQuery(original);
       }
 
       return result;
@@ -744,11 +729,7 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
     try {
       preQueryStart();
       OScriptExecutor executor =
-          getSharedContext()
-              .getOrientDB()
-              .getScriptManager()
-              .getCommandManager()
-              .getScriptExecutor(language);
+          getSharedContext().getOrientDB().getScriptManager().getScriptExecutor(language);
 
       this.storage.pauseConfigurationUpdateNotifications();
       OResultSet original;
@@ -757,13 +738,22 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
       } finally {
         this.storage.fireConfigurationUpdateNotifications();
       }
-      OLocalResultSetLifecycleDecorator result =
-          new OLocalResultSetLifecycleDecorator((OResultSetInternal) original, newQueryId());
-      queryStarted(result);
-      return result;
+      return attachQuery(original);
     } finally {
       cleanQueryState();
       getSharedContext().getOrientDB().endCommand();
+    }
+  }
+
+  private OResultSet attachQuery(OResultSet original) {
+    OResultSetInternal internal = (OResultSetInternal) original;
+    if (!(internal instanceof OLocalResultSetLifecycleDecorator)) {
+      OLocalResultSetLifecycleDecorator result =
+          new OLocalResultSetLifecycleDecorator(internal, newQueryId());
+      queryStarted(result);
+      return result;
+    } else {
+      return original;
     }
   }
 
@@ -772,12 +762,12 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
   }
 
   private void queryCompleted() {
-    OQueryDatabaseState state = this.queryState.peekLast();
+    OQueryDatabaseState state = this.queryState.peekFirst();
     state.closeInternal(this);
   }
 
   private void queryStarted(OLocalResultSetLifecycleDecorator result) {
-    OQueryDatabaseState state = this.queryState.peekLast();
+    OQueryDatabaseState state = this.queryState.peekFirst();
     state.setResultSet(result);
     this.queryStarted(result.getQueryId(), state);
     result.addLifecycleListener(this);
@@ -798,11 +788,7 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
     try {
       preQueryStart();
       OScriptExecutor executor =
-          sharedContext
-              .getOrientDB()
-              .getScriptManager()
-              .getCommandManager()
-              .getScriptExecutor(language);
+          sharedContext.getOrientDB().getScriptManager().getScriptExecutor(language);
       OResultSet original;
 
       this.storage.fireConfigurationUpdateNotifications();
@@ -811,19 +797,14 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
       } finally {
         this.storage.fireConfigurationUpdateNotifications();
       }
-
-      OLocalResultSetLifecycleDecorator result =
-          new OLocalResultSetLifecycleDecorator((OResultSetInternal) original, newQueryId());
-      queryStarted(result);
-      return result;
+      return attachQuery(original);
     } finally {
       cleanQueryState();
       getSharedContext().getOrientDB().endCommand();
     }
   }
 
-  public OLocalResultSetLifecycleDecorator query(
-      OInternalExecutionPlan plan, Map<Object, Object> params) {
+  public OResultSet query(OInternalExecutionPlan plan, Map<Object, Object> params) {
     checkOpenness();
     checkIfActive();
     getSharedContext().getOrientDB().startCommand(Optional.empty());
@@ -835,11 +816,8 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
       OResultSetInternal result =
           new OExecutionResultSet(
               ((OInternalExecutionPlan) plan).start(ctx), ctx, (OInternalExecutionPlan) plan);
-      OLocalResultSetLifecycleDecorator decorator =
-          new OLocalResultSetLifecycleDecorator(result, newQueryId());
-      queryStarted(decorator);
 
-      return decorator;
+      return attachQuery(result);
     } finally {
       cleanQueryState();
       getSharedContext().getOrientDB().endCommand();
@@ -850,14 +828,14 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
     OSharedContext sharedContext = getSharedContext();
     ViewManager viewManager = sharedContext.getViewManager();
     viewManager.startUsingViewCluster(clusterId);
-    this.queryState.peekLast().addViewUseCluster(clusterId);
+    this.queryState.peekFirst().addViewUseCluster(clusterId);
   }
 
   public void queryStartUsingViewIndex(String index) {
     OSharedContext sharedContext = getSharedContext();
     ViewManager viewManager = sharedContext.getViewManager();
     viewManager.startUsingViewIndex(index);
-    this.queryState.peekLast().addViewUseIndex(index);
+    this.queryState.peekFirst().addViewUseIndex(index);
   }
 
   @Override
@@ -995,7 +973,7 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
       return id;
     } else if (res == ORecordHook.RESULT.RECORD_REPLACED
         || triggerChanged == ORecordHook.RESULT.RECORD_REPLACED) {
-      ORecord replaced = OHookReplacedRecordThreadLocal.INSTANCE.get();
+      ORecord replaced = OHookReplacedRecordThreadLocal.instance().get();
       if (replaced instanceof ODocument) {
         ((ODocument) replaced).validate();
       }
@@ -1052,7 +1030,7 @@ public class ODatabaseDocumentEmbedded extends ODatabaseDocumentAbstract
       return id;
     } else if (res == ORecordHook.RESULT.RECORD_REPLACED
         || triggerChanged == ORecordHook.RESULT.RECORD_REPLACED) {
-      ORecord replaced = OHookReplacedRecordThreadLocal.INSTANCE.get();
+      ORecord replaced = OHookReplacedRecordThreadLocal.instance().get();
       if (replaced instanceof ODocument) {
         ((ODocument) replaced).validate();
       }

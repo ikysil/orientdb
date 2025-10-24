@@ -11,6 +11,7 @@ import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseSession;
 import com.orientechnologies.orient.core.db.ODatabaseType;
 import com.orientechnologies.orient.core.db.OrientDB;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentEmbedded;
 import com.orientechnologies.orient.core.db.record.ORecordOperation;
 import com.orientechnologies.orient.core.db.tool.ODatabaseExport;
 import com.orientechnologies.orient.core.db.tool.ODatabaseImport;
@@ -18,10 +19,12 @@ import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.executor.OResultSet;
+import com.orientechnologies.orient.core.transaction.OTransactionId;
+import com.orientechnologies.orient.core.transaction.OTransactionIdPromise;
 import com.orientechnologies.orient.core.tx.OTransactionData;
 import com.orientechnologies.orient.core.tx.OTransactionDataChange;
-import com.orientechnologies.orient.core.tx.OTransactionId;
 import com.orientechnologies.orient.core.tx.OTransactionInternal;
+import com.orientechnologies.orient.core.tx.OTransactionOptimistic;
 import com.orientechnologies.orient.server.OServer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,7 +41,7 @@ public class OTransactionDataTest {
 
   @Test
   public void testReadWriteTransactionData() throws IOException {
-    OTransactionData data = new OTransactionData(new OTransactionId(Optional.of("one"), 1, 2));
+    OTransactionData data = new OTransactionData(new OTransactionId(1, 2));
     byte[] recordData = new byte[] {1, 2, 3};
     ORecordId recordId = new ORecordId(10, 10);
     OTransactionDataChange change =
@@ -77,6 +80,9 @@ public class OTransactionDataTest {
         db.begin();
         ODocument doc = new ODocument("test");
         db.save(doc);
+        ((ODatabaseDocumentEmbedded) db)
+            .getStorage()
+            .preallocateRids((OTransactionOptimistic) db.getTransaction());
         ((OTransactionInternal) db.getTransaction()).prepareSerializedOperations();
         Iterator<byte[]> res =
             ((OTransactionInternal) db.getTransaction()).getSerializedOperations();
@@ -136,6 +142,8 @@ public class OTransactionDataTest {
                 (ODatabaseDocumentInternal) db,
                 new ByteArrayInputStream(backup.toByteArray()),
                 iText -> {});
+        imp.setPreserveRids(true);
+        imp.setPreserveVersions(true);
         imp.importDatabase();
         imp.close();
       }
@@ -149,6 +157,9 @@ public class OTransactionDataTest {
         db.command("update test set field='value3' where field='value1'").close();
         db.command("delete from test where field='value0'").close();
 
+        ((ODatabaseDocumentEmbedded) db)
+            .getStorage()
+            .preallocateRids((OTransactionOptimistic) db.getTransaction());
         ((OTransactionInternal) db.getTransaction()).prepareSerializedOperations();
         Iterator<byte[]> res =
             ((OTransactionInternal) db.getTransaction()).getSerializedOperations();
@@ -157,16 +168,16 @@ public class OTransactionDataTest {
         }
         db.commit();
       }
-      OTransactionId id = server0.getDistributedManager().getDatabase("test1").nextId().get();
+      OTransactionIdPromise id =
+          server0.getDistributedManager().getDatabase("test1").nextId().get();
       server0.getDistributedManager().getDatabase("test1").rollback(id);
-      OTransactionData data = new OTransactionData(id);
+      OTransactionData data = new OTransactionData(id.getId());
       for (byte[] change : changes) {
         data.addRecord(change);
       }
       try (final ODatabaseSession db =
           orientDB.open("test1", "admin", OCreateDatabaseUtil.NEW_ADMIN_PASSWORD)) {
         ((ODatabaseDocumentInternal) db).syncCommit(data);
-
         assertEquals(2, db.countClass("test"));
         try (OResultSet r = db.query("select count(*) as count from test where field='value3'")) {
           assertEquals((Long) 1L, r.next().getProperty("count"));

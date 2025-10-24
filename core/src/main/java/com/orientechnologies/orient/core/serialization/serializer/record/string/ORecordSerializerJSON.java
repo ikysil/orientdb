@@ -27,6 +27,7 @@ import com.orientechnologies.common.log.OLogger;
 import com.orientechnologies.common.parser.OStringParser;
 import com.orientechnologies.common.util.OCommonConst;
 import com.orientechnologies.orient.core.Orient;
+import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
@@ -166,16 +167,15 @@ public class ORecordSerializerJSON extends ORecordSerializerStringAbstract {
             '\r',
             '\t');
 
-    if (fields.size() % 2 != 0)
-      throw new OSerializationException(
-          "Error on unmarshalling JSON content: wrong format \""
-              + source
-              + "\". Use <field> : <value>");
-
     Map<String, Character> fieldTypes = null;
 
     if (fields != null && fields.size() > 0) {
       // SEARCH FOR FIELD TYPES IF ANY
+      if (fields.size() % 2 != 0)
+        throw new OSerializationException(
+            "Error on unmarshalling JSON content: wrong format \""
+                + source
+                + "\". Use <field> : <value>");
       for (int i = 0; i < fields.size(); i += 2) {
         final String fieldName = OIOUtils.getStringContent(fields.get(i));
         final String fieldValue = fields.get(i + 1);
@@ -327,7 +327,10 @@ public class ORecordSerializerJSON extends ORecordSerializerStringAbstract {
           }
         } else if (v instanceof ODocument && type != null && type.isLink()) {
           String className1 = ((ODocument) v).getClassName();
-          if (className1 != null && className1.length() > 0) ((ODocument) v).save();
+          if (className1 != null && className1.length() > 0) {
+            ODatabaseDocumentInternal session = ODatabaseRecordThreadLocal.instance().get();
+            session.save((ORecord) v);
+          }
         }
 
       if (type == null && fieldTypes != null && fieldTypes.containsKey(fieldName))

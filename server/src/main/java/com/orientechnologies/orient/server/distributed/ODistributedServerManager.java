@@ -22,7 +22,9 @@ package com.orientechnologies.orient.server.distributed;
 import com.orientechnologies.common.util.OCallable;
 import com.orientechnologies.orient.core.db.ODatabaseDocumentInternal;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.distributed.ONodeConfig;
 import com.orientechnologies.orient.server.OServer;
+import com.orientechnologies.orient.server.distributed.config.OClusterConfiguration;
 import com.orientechnologies.orient.server.distributed.task.ORemoteTask;
 import java.io.File;
 import java.io.IOException;
@@ -37,24 +39,6 @@ import java.util.Set;
  */
 public interface ODistributedServerManager {
   String FILE_DISTRIBUTED_DB_CONFIG = "distributed-config.json";
-
-  /** Server status. */
-  enum NODE_STATUS {
-    /** The server was never started or the shutdown is complete. */
-    OFFLINE,
-
-    /** The server is STARTING. */
-    STARTING,
-
-    /** The server is ONLINE. */
-    ONLINE,
-
-    /** The server starts to merge to another cluster. */
-    MERGING,
-
-    /** The server is shutting down. */
-    SHUTTINGDOWN
-  };
 
   /** Database status. */
   enum DB_STATUS {
@@ -101,9 +85,6 @@ public interface ODistributedServerManager {
 
   Set<String> getAvailableNodeNotLocalNames(String databaseName);
 
-  @Deprecated
-  String getCoordinatorServer();
-
   void waitUntilNodeOnline() throws InterruptedException;
 
   void waitUntilNodeOnline(String nodeName, String databaseName) throws InterruptedException;
@@ -129,8 +110,6 @@ public interface ODistributedServerManager {
 
   void setNodeStatus(NODE_STATUS iStatus);
 
-  boolean checkNodeStatus(NODE_STATUS status);
-
   void removeServer(String nodeLeftName, boolean removeOnlyDynamicServers);
 
   DB_STATUS getDatabaseStatus(String iNode, String iDatabaseName);
@@ -155,15 +134,9 @@ public interface ODistributedServerManager {
 
   long getNextMessageIdCounter();
 
-  String getNodeUuidByName(String name);
-
   void updateLastClusterChange();
 
-  void reassignClustersOwnership(
-      String iNode,
-      String databaseName,
-      OModifiableDistributedConfiguration cfg,
-      boolean canCreateNewClusters);
+  void reassignClustersOwnership(String iNode, String databaseName, boolean canCreateNewClusters);
 
   /** Available means not OFFLINE, so ONLINE or SYNCHRONIZING. */
   boolean isNodeAvailable(String iNodeName, String databaseName);
@@ -171,11 +144,7 @@ public interface ODistributedServerManager {
   /** Returns true if the node status is ONLINE. */
   boolean isNodeOnline(String iNodeName, String databaseName);
 
-  int getTotalNodes(String iDatabaseName);
-
   int getAvailableNodes(String iDatabaseName);
-
-  int getAvailableNodes(Collection<String> iNodes, String databaseName);
 
   boolean isOffline();
 
@@ -183,15 +152,15 @@ public interface ODistributedServerManager {
 
   String getLocalNodeName();
 
-  ODocument getClusterConfiguration();
+  OClusterConfiguration getClusterConfiguration();
 
   String getNodeNameById(int id);
 
   int getNodeIdByName(String node);
 
-  ODocument getNodeConfigurationByUuid(String iNode, boolean useCache);
+  ONodeConfig getNodeConfigurationByUuid(String iNode, boolean useCache);
 
-  ODocument getLocalNodeConfiguration();
+  ONodeConfig getLocalNodeConfiguration();
 
   ODistributedConfiguration getDatabaseConfiguration(String iDatabaseName);
 
@@ -224,10 +193,6 @@ public interface ODistributedServerManager {
       Object localResult,
       ODistributedResponseManagerFactory responseManagerFactory);
 
-  ODocument getStats();
-
-  Throwable convertException(Throwable original);
-
   List<String> getOnlineNodes(String iDatabaseName);
 
   List<String> getOnlineNodesNotLocal(String iDatabaseName);
@@ -245,19 +210,7 @@ public interface ODistributedServerManager {
 
   Set<String> getActiveServerNotLocal();
 
-  /**
-   * Returns the cluster-wide time in milliseconds.
-   *
-   * <p>Cluster tries to keep a cluster-wide time which might be different than the member's own
-   * system time. Cluster-wide time is -almost- the same on all members of the cluster.
-   */
-  long getClusterTime();
-
   File getDefaultDatabaseConfigFile();
-
-  ODistributedLockManager getLockManagerRequester();
-
-  ODistributedLockManager getLockManagerExecutor();
 
   /**
    * Executes an operation protected by a distributed lock (one per database).
@@ -284,9 +237,6 @@ public interface ODistributedServerManager {
   void notifyClients(String databaseName);
 
   default void messageReceived(ODistributedRequest request) {}
-
-  default void messagePartitionCalculate(
-      ODistributedRequest request, Set<Integer> involvedWorkerQueues) {}
 
   default void messageBeforeOp(String op, ODistributedRequestId requestId) {}
 

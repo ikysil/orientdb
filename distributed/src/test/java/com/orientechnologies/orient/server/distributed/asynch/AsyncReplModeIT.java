@@ -32,7 +32,7 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
     synchronized (LOCK) {
       OrientDB context = servers[0].getServer().getContext();
       context.createIfNotExists(getDatabaseName(), ODatabaseType.PLOCAL);
-      ODatabaseDocument graph = context.open(getDatabaseName(), "admin", "admin");
+      ODatabaseDocument graph = context.open(getDatabaseName(), "admin", "adminpwd");
       graph.createVertexClass("vertextype1");
       graph.createVertexClass("vertextype2");
       graph.createVertexClass("vertextype3");
@@ -44,14 +44,14 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
       try {
         // Create 2 parent vertices.
         OVertex parentV1 = graph.newVertex("vertextype1");
-        parentV1.save();
+        graph.save(parentV1);
         graph.commit();
         graph.begin();
         assertEquals(1, parentV1.getRecord().getVersion());
         parentV1Id = parentV1.getIdentity();
 
         OVertex parentV2 = graph.newVertex("vertextype2");
-        parentV2.save();
+        graph.save(parentV2);
         graph.commit();
         graph.begin();
         assertEquals(1, parentV2.getRecord().getVersion());
@@ -64,13 +64,13 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
           if (exceptionInThread != null) break;
           //          sleep(500);
           OVertex vertex = graph.newVertex("vertextype3");
-          vertex.save();
+          graph.save(vertex);
           graph.commit();
           graph.begin();
           assertEquals(1, vertex.getRecord().getVersion());
 
           vertex.setProperty("num", i);
-          vertex.save();
+          graph.save(vertex);
           graph.commit();
           graph.begin();
           assertEquals(2, vertex.getRecord().getVersion());
@@ -103,8 +103,8 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
             } catch (OConcurrentModificationException c) {
               System.out.println("***********ROLLBACK***************");
               graph.rollback();
-              parentV1.reload();
-              vertex.reload();
+              graph.reload(parentV1);
+              graph.reload(vertex);
             }
           }
 
@@ -136,8 +136,8 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
             } catch (OConcurrentModificationException c) {
               System.out.println("***********ROLLBACK***************");
               graph.rollback();
-              parentV2.reload();
-              vertex.reload();
+              graph.reload(parentV2);
+              graph.reload(vertex);
             }
           }
         }
@@ -157,7 +157,7 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
   protected void dbClient2(BareBonesServer[] servers) {
     synchronized (LOCK) {
       OrientDB orientDB = new OrientDB("remote:localhost:2424", OrientDBConfig.defaultConfig());
-      ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "admin");
+      ODatabaseDocument graph = orientDB.open(getDatabaseName(), "admin", "adminpwd");
       graph.begin();
       OElement parentV1 = null;
       OElement parentV2 = null;
@@ -180,7 +180,7 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
               graph.commit();
             } catch (OConcurrentModificationException c) {
               graph.rollback();
-              parentV1.reload();
+              graph.reload(parentV1);
             }
           }
 
@@ -194,7 +194,7 @@ public class AsyncReplModeIT extends BareBoneBase2ClientTest {
               graph.commit();
             } catch (OConcurrentModificationException c) {
               graph.rollback();
-              parentV2.reload();
+              graph.reload(parentV2);
             }
           }
         }
